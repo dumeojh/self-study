@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>안성여고 야간 자율학습 신청</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
     <style>
         :root {
             --primary: #007bff;
@@ -68,9 +72,7 @@
         .schedule-table th { background: #f8f9fa; padding: 10px; font-size: 13px; border: 1px solid #eee; }
         .schedule-table td { padding: 5px; border: 1px solid #eee; text-align: center; }
 
-        .time-chk {
-            display: none;
-        }
+        .time-chk { display: none; }
         .time-label {
             display: block;
             padding: 8px 0;
@@ -113,11 +115,11 @@
     
     <div class="input-group">
         <label>학번</label>
-        <input type="number" id="stu-id" placeholder="예: 20101">
+        <input type="number" id="stu-id" placeholder="예: 20101" oninput="validateForm()">
     </div>
     <div class="input-group">
         <label>이름</label>
-        <input type="text" id="stu-name" placeholder="실명을 입력하세요">
+        <input type="text" id="stu-name" placeholder="실명을 입력하세요" oninput="validateForm()">
     </div>
 
     <label>신청 종류</label>
@@ -139,33 +141,34 @@
                 <th>3타임</th>
             </tr>
         </thead>
-        <tbody id="schedule-body">
-            </tbody>
+        <tbody id="schedule-body"></tbody>
     </table>
 
-    <button id="submit-btn" onclick="submitForm()">신청하기</button>
+    <button id="submit-btn" onclick="submitForm()" disabled>신청하기</button>
 </div>
 
-<script type="module">
-    // 1. 파이어베이스의 기능들을 웹에서 직접 불러옵니다.
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+<script>
+    // -----------------------------------------------------------------
+    // 1. 파이어베이스 연결 설정
+    // -----------------------------------------------------------------
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
+  authDomain: "self-study-project-82bdf.firebaseapp.com",
+  projectId: "self-study-project-82bdf",
+  storageBucket: "self-study-project-82bdf.firebasestorage.app",
+  messagingSenderId: "482006075036",
+  appId: "1:482006075036:web:473445e0f86d48cd22cf59"
+};
 
-    // 🌟 2. 방금 파이어베이스 콘솔에서 복사한 선생님의 firebaseConfig를 여기에 붙여넣으세요!
-    const firebaseConfig = {
-        apiKey: "여기에_붙여넣으세요",
-        authDomain: "여기에_붙여넣으세요",
-        projectId: "여기에_붙여넣으세요",
-        storageBucket: "여기에_붙여넣으세요",
-        messagingSenderId: "여기에_붙여넣으세요",
-        appId: "여기에_붙여넣으세요"
-    };
 
-    // 3. 파이어베이스 시동 걸기
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    // 초기화
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-    // 기존 요일 변수와 체크박스 생성 로직 (그대로 유지)
+    // -----------------------------------------------------------------
+    // 2. 화면 구성 및 기존 로직
+    // -----------------------------------------------------------------
     const days = ['월', '화', '수', '목', '금', '토', '일'];
     const daysEng = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
     let selectedType = null;
@@ -176,7 +179,7 @@
             <td><strong>${day}</strong></td>
             ${[1, 2, 3].map(t => `
                 <td>
-                    <input type="checkbox" class="time-chk day-${idx}" id="${daysEng[idx]}-${t}" value="${t}" onchange="window.validateForm()">
+                    <input type="checkbox" class="time-chk" id="${daysEng[idx]}-${t}" value="${t}" onchange="validateForm()">
                     <label class="time-label" for="${daysEng[idx]}-${t}">${t}T</label>
                 </td>
             `).join('')}
@@ -184,19 +187,19 @@
         tbody.innerHTML += row;
     });
 
-    // 화면 버튼 조작 함수들 (html에서 부를 수 있게 window에 등록)
-    window.selectType = function(type) {
+    function selectType(type) {
         selectedType = type;
         document.querySelectorAll('.type-btn').forEach(btn => {
             btn.classList.toggle('active', parseInt(btn.dataset.type) === type);
         });
-        window.validateForm();
-    };
+        validateForm();
+    }
 
-    window.validateForm = function() {
+    function validateForm() {
         const id = document.getElementById('stu-id').value;
         const name = document.getElementById('stu-name').value;
         const btn = document.getElementById('submit-btn');
+        
         let selectedDays = 0;
         daysEng.forEach(day => {
             if(document.querySelectorAll(`[id^="${day}-"]:checked`).length > 0) selectedDays++;
@@ -208,20 +211,23 @@
         let isConditionOk = true;
 
         if (selectedType === 1 && selectedDays < 3) isConditionOk = false;
-        btn.disabled = !(isIdOk && isNameOk && isTypeOk && isConditionOk);
-    };
 
-    // 🌟 4. 완전히 새로워진 파이어베이스 전송 함수!
-    window.submitForm = async function() {
-        const idValue = document.getElementById('stu-id').value;
-        
-        // 보낼 데이터 정리
+        btn.disabled = !(isIdOk && isNameOk && isTypeOk && isConditionOk);
+    }
+
+    // -----------------------------------------------------------------
+    // 3. 파이어베이스로 데이터 전송 (핵심 수정 부분)
+    // -----------------------------------------------------------------
+    async function submitForm() {
+        const btn = document.getElementById('submit-btn');
+        btn.innerText = "전송 중...";
+        btn.disabled = true;
+
         const payload = {
-            id: idValue,
-            name: document.getElementById('stu-name').value,
-            type: selectedType,
-            dayCount: 0,
-            timestamp: new Date().toISOString() // 언제 신청했는지 시간도 저장!
+            stuId: document.getElementById('stu-id').value,
+            stuName: document.getElementById('stu-name').value,
+            type: selectedType === 1 ? "고정석" : "자율석",
+            timestamp: new Date() // 신청 시간 자동 기록
         };
 
         let totalDays = 0;
@@ -232,23 +238,20 @@
         });
         payload.dayCount = totalDays;
 
-        document.getElementById('submit-btn').innerText = "저장 중...";
-        document.getElementById('submit-btn').disabled = true;
-
         try {
-            // 🔥 파이어베이스 마법의 한 줄: 'reservations' 폴더에 학번 이름으로 문서를 만들어 덮어씁니다.
-            await setDoc(doc(db, "reservations", idValue), payload);
+            // Firestore의 'applications'라는 폴더(컬렉션)에 데이터를 저장합니다.
+            await db.collection("applications").add(payload);
             
-            alert("신청이 완벽하게 저장되었습니다!");
-            location.reload();
-            
+            alert("신청이 성공적으로 완료되었습니다!");
+            location.reload(); // 성공 시 새로고침
         } catch (e) {
-            console.error(e);
-            alert("저장 실패: " + e.message);
-            document.getElementById('submit-btn').innerText = "신청하기";
-            document.getElementById('submit-btn').disabled = false;
+            console.error("전송 에러:", e);
+            alert("🚨 신청 실패!\n원인: " + e.message + "\n\n데이터베이스 보안 규칙(테스트 모드)을 확인해 주세요.");
+        } finally {
+            btn.innerText = "신청하기";
+            btn.disabled = false;
         }
-    };
+    }
 </script>
 
 </body>
