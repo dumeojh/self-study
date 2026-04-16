@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>안성여고 - 자율학습 관리자 시스템</title>
+    <title>안성여고 - 자율학습 관리자 시스템 (월별 통계)</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -13,14 +13,12 @@
         :root { --primary: #007bff; --success: #28a745; --warning: #ffc107; --danger: #dc3545; --gray: #6c757d; }
         body { font-family: 'Malgun Gothic', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; color: #333; }
         .container { max-width: 1100px; margin: 0 auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        
         h2 { text-align: center; color: #1a1a1a; margin-bottom: 30px; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
 
         /* 탭 메뉴 스타일 */
         .tab-menu { display: flex; gap: 5px; margin-bottom: 25px; background: #eee; padding: 5px; border-radius: 10px; }
         .tab-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; background: transparent; cursor: pointer; font-weight: bold; font-size: 15px; transition: 0.3s; }
         .tab-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-
         .tab-content { display: none; animation: fadeIn 0.3s ease; }
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -34,6 +32,7 @@
         .type-tag { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
         .fixed { background: #e3f2fd; color: #0d6efd; }
         .flex { background: #e8f5e9; color: #198754; }
+        .month-tag { background: #fff3cd; color: #856404; padding: 3px 6px; border-radius: 4px; font-size: 12px; font-weight: bold; }
 
         /* 입력 폼 스타일 */
         .form-card { background: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #e9ecef; }
@@ -47,7 +46,6 @@
         .btn-edit { background: var(--warning); color: #212529; font-size: 12px; padding: 5px 10px; }
         .btn-delete { background: var(--danger); font-size: 12px; padding: 5px 10px; }
 
-        /* 엑셀 업로드 박스 */
         .excel-upload-area { border: 2px dashed #ccc; padding: 30px; text-align: center; border-radius: 10px; background: #fff; margin-bottom: 20px; }
         .search-box { padding: 10px; width: 250px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 10px; }
     </style>
@@ -58,23 +56,38 @@
     <h2>안성여고 야간 자율학습 통합 관리자</h2>
     
     <div class="tab-menu">
-        <button class="tab-btn active" onclick="switchTab('tab-status', this)">📊 실시간 신청 현황</button>
+        <button class="tab-btn active" onclick="switchTab('tab-status', this)">📊 월별 신청 현황</button>
         <button class="tab-btn" onclick="switchTab('tab-manual', this)">📝 개별 수정/추가</button>
         <button class="tab-btn" onclick="switchTab('tab-roster', this)">⚙️ 기초 명단 관리</button>
     </div>
 
     <div id="tab-status" class="tab-content active">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <div id="status-summary" style="font-weight: bold; font-size: 16px;">데이터 로딩 중...</div>
+            <div>
+                <select id="filter-month" onchange="renderStatusTable()" style="padding: 8px; border-radius: 5px; border: 2px solid var(--primary); font-weight: bold;">
+                    <option value="all">📅 1년 전체보기</option>
+                    <option value="3월" selected>3월 신청자</option>
+                    <option value="4월">4월 신청자</option>
+                    <option value="5월">5월 신청자</option>
+                    <option value="6월">6월 신청자</option>
+                    <option value="7월">7월 신청자</option>
+                    <option value="8월">8월 신청자</option>
+                    <option value="9월">9월 신청자</option>
+                    <option value="10월">10월 신청자</option>
+                    <option value="11월">11월 신청자</option>
+                    <option value="12월">12월 신청자</option>
+                </select>
+                <span id="status-summary" style="font-weight: bold; font-size: 16px; margin-left: 15px;">데이터 로딩 중...</span>
+            </div>
             <button class="btn btn-excel" onclick="downloadCSV()">CSV 엑셀 다운로드</button>
         </div>
         <div style="overflow-x: auto;">
             <table id="status-table">
                 <thead>
                     <tr>
-                        <th>학번</th><th>이름</th><th>종류</th>
+                        <th>적용 월</th><th>학번</th><th>이름</th><th>종류</th>
                         <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th><th>일</th>
-                        <th>신청시간</th>
+                        <th>입력시간</th>
                     </tr>
                 </thead>
                 <tbody id="status-body"></tbody>
@@ -88,21 +101,33 @@
             <p style="color: #666; font-size: 13px;">※ 현황표에서 이름을 클릭하면 자동으로 정보가 입력됩니다.</p>
             <input type="hidden" id="edit-doc-id">
             
-            <div class="form-group">
-                <label>학번</label>
-                <input type="number" id="m-id" placeholder="예: 20101">
+            <div style="display: flex; gap: 15px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>적용 월</label>
+                    <select id="m-targetMonth" style="border: 2px solid var(--warning);">
+                        <option value="3월">3월</option><option value="4월">4월</option><option value="5월">5월</option>
+                        <option value="6월">6월</option><option value="7월">7월</option><option value="8월">8월</option>
+                        <option value="9월">9월</option><option value="10월">10월</option><option value="11월">11월</option>
+                        <option value="12월">12월</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>학번</label>
+                    <input type="number" id="m-id" placeholder="예: 20101">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>이름</label>
+                    <input type="text" id="m-name" placeholder="이름">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>신청 종류</label>
+                    <select id="m-type">
+                        <option value="고정석">고정석</option>
+                        <option value="자율석">자율석</option>
+                    </select>
+                </div>
             </div>
-            <div class="form-group">
-                <label>이름</label>
-                <input type="text" id="m-name" placeholder="이름">
-            </div>
-            <div class="form-group">
-                <label>신청 종류</label>
-                <select id="m-type">
-                    <option value="고정석">고정석</option>
-                    <option value="자율석">자율석</option>
-                </select>
-            </div>
+
             <div class="form-group">
                 <label>요일별 타임 (예: 1,2)</label>
                 <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;">
@@ -127,22 +152,15 @@
             <input type="file" id="excel-input" accept=".xlsx, .xls, .csv">
             <button class="btn btn-excel" onclick="handleExcelUpload()">서버에 명단 등록</button>
         </div>
-
         <hr>
-
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
             <h3>현재 등록된 기초 명단 (<span id="roster-count">0</span>명)</h3>
             <input type="text" id="roster-search" class="search-box" placeholder="학번 또는 이름 검색..." oninput="displayRoster()">
         </div>
-        
         <div style="max-height: 500px; overflow-y: auto;">
             <table>
                 <thead>
-                    <tr>
-                        <th style="width: 30%;">학번</th>
-                        <th style="width: 40%;">이름</th>
-                        <th style="width: 30%;">관리</th>
-                    </tr>
+                    <tr><th style="width: 30%;">학번</th><th style="width: 40%;">이름</th><th style="width: 30%;">관리</th></tr>
                 </thead>
                 <tbody id="roster-body"></tbody>
             </table>
@@ -165,7 +183,7 @@
 
     // 전역 변수
     let currentRoster = {}; 
-    let applicationData = {};
+    let applicationData = {}; // 서버에서 불러온 전체 데이터 저장소
 
     // --- [탭 공통] 탭 전환 ---
     function switchTab(tabId, btn) {
@@ -173,23 +191,37 @@
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
         btn.classList.add('active');
-
         if (tabId === 'tab-roster') fetchRoster();
     }
 
-    // --- [현황] 실시간 데이터 감시 ---
+    // --- [현황] 실시간 데이터 감시 및 화면 그리기 ---
     db.collection("applications").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+        applicationData = {}; // 데이터 갱신 시 초기화
+        snapshot.forEach((doc) => {
+            applicationData[doc.id] = doc.data();
+        });
+        renderStatusTable(); // 데이터 다 가져오면 표 그리기 실행
+    });
+
+    // ★ 월별 필터 적용하여 표 그리기 함수
+    function renderStatusTable() {
         const tbody = document.getElementById('status-body');
+        const filterMonth = document.getElementById('filter-month').value;
         tbody.innerHTML = "";
         let count = 0;
-        
-        snapshot.forEach((doc) => {
-            const data = doc.data();
-            applicationData[doc.id] = data;
+
+        for (const docId in applicationData) {
+            const data = applicationData[docId];
+            const targetMonth = data.targetMonth || "미지정"; // 예전 데이터 처리용
+
+            // 필터가 'all(전체)'이 아니면서, 선택한 월과 다르면 그리지 않고 건너뜀
+            if (filterMonth !== "all" && targetMonth !== filterMonth) continue;
+
             count++;
-            
             const date = data.timestamp ? data.timestamp.toDate().toLocaleString('ko-KR', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '-';
-            const row = `<tr onclick="fillEditForm('${doc.id}')">
+            
+            const row = `<tr onclick="fillEditForm('${docId}')">
+                <td><span class="month-tag">${targetMonth}</span></td>
                 <td>${data.stuId}</td>
                 <td>${data.stuName}</td>
                 <td><span class="type-tag ${data.type === '고정석' ? 'fixed' : 'flex'}">${data.type}</span></td>
@@ -198,14 +230,15 @@
                 <td style="font-size:11px; color:#999;">${date}</td>
             </tr>`;
             tbody.innerHTML += row;
-        });
-        document.getElementById('status-summary').innerText = `총 신청 인원: ${count}명`;
-    });
+        }
+        document.getElementById('status-summary').innerText = `조회 인원: ${count}명`;
+    }
 
     // --- [수정] 현황 클릭 시 폼 채우기 ---
     function fillEditForm(docId) {
         const data = applicationData[docId];
         document.getElementById('edit-doc-id').value = docId;
+        document.getElementById('m-targetMonth').value = data.targetMonth || "3월";
         document.getElementById('m-id').value = data.stuId;
         document.getElementById('m-name').value = data.stuName;
         document.getElementById('m-type').value = data.type;
@@ -215,9 +248,11 @@
         switchTab('tab-manual', document.querySelectorAll('.tab-btn')[1]);
     }
 
+    // ★ 저장 시 대상 '월(Month)' 정보 포함
     async function saveManualEntry() {
         const docId = document.getElementById('edit-doc-id').value;
         const payload = {
+            targetMonth: document.getElementById('m-targetMonth').value, // 월 추가
             stuId: document.getElementById('m-id').value,
             stuName: document.getElementById('m-name').value,
             type: document.getElementById('m-type').value,
@@ -232,6 +267,7 @@
                 await db.collection("applications").doc(docId).update(payload);
                 alert("성공적으로 수정되었습니다.");
             } else {
+                // 특정 학생이 같은 월에 여러 번 입력되지 않도록 방어하는 로직이 필요하다면 여기에 추가
                 await db.collection("applications").add(payload);
                 alert("새로운 신청 내역이 추가되었습니다.");
             }
@@ -242,16 +278,13 @@
 
     function resetManualForm() {
         document.getElementById('edit-doc-id').value = "";
-        document.querySelectorAll('#tab-manual input').forEach(i => i.value = "");
+        document.querySelectorAll('#tab-manual input[type="text"], #tab-manual input[type="number"]').forEach(i => i.value = "");
     }
 
     // --- [기초 명단] 관리 ---
     async function fetchRoster() {
         const doc = await db.collection("settings").doc("roster").get();
-        if (doc.exists) {
-            currentRoster = JSON.parse(doc.data().list || "{}");
-            displayRoster();
-        }
+        if (doc.exists) { currentRoster = JSON.parse(doc.data().list || "{}"); displayRoster(); }
     }
 
     function displayRoster() {
@@ -259,20 +292,14 @@
         const search = document.getElementById('roster-search').value;
         tbody.innerHTML = "";
         let count = 0;
-
         Object.keys(currentRoster).sort().forEach(id => {
             const name = currentRoster[id];
             if (search && !id.includes(search) && !name.includes(search)) return;
-            
             count++;
-            const row = `<tr>
-                <td>${id}</td>
-                <td>${name}</td>
-                <td>
-                    <button class="btn btn-edit" onclick="editRosterItem('${id}', '${name}')">수정</button>
-                    <button class="btn btn-delete" onclick="deleteRosterItem('${id}')">삭제</button>
-                </td>
-            </tr>`;
+            const row = `<tr><td>${id}</td><td>${name}</td><td>
+                <button class="btn btn-edit" onclick="editRosterItem('${id}', '${name}')">수정</button>
+                <button class="btn btn-delete" onclick="deleteRosterItem('${id}')">삭제</button>
+            </td></tr>`;
             tbody.innerHTML += row;
         });
         document.getElementById('roster-count').innerText = count;
@@ -294,43 +321,34 @@
     }
 
     async function saveRosterToServer(msg) {
-        await db.collection("settings").doc("roster").set({
-            list: JSON.stringify(currentRoster),
-            lastUpdated: new Date()
-        });
-        alert(msg);
-        displayRoster();
+        await db.collection("settings").doc("roster").set({ list: JSON.stringify(currentRoster), lastUpdated: new Date() });
+        alert(msg); displayRoster();
     }
 
-    // 엑셀 업로드
     function handleExcelUpload() {
         const file = document.getElementById('excel-input').files[0];
         if (!file) return alert("파일을 선택하세요.");
-
         const reader = new FileReader();
         reader.onload = function(e) {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, {type: 'array'});
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
             const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
-
             let newRoster = {};
             rows.forEach((row, idx) => {
-                if (idx === 0) return; // 제목행 제외
-                const id = String(row[0]).trim();
-                const name = String(row[1]).trim();
+                if (idx === 0) return; 
+                const id = String(row[0]).trim(); const name = String(row[1]).trim();
                 if (id && name && id !== "undefined") newRoster[id] = name;
             });
-
             currentRoster = newRoster;
             saveRosterToServer("엑셀 명단이 업로드되었습니다.");
         };
         reader.readAsArrayBuffer(file);
     }
 
-    // CSV 다운로드
     function downloadCSV() {
         const table = document.getElementById("status-table");
+        const currentMonth = document.getElementById('filter-month').value;
         let csv = "\uFEFF"; 
         for (let i = 0; i < table.rows.length; i++) {
             let row = [];
@@ -342,7 +360,7 @@
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = "야간자율학습_신청현황.csv";
+        link.download = `야간자율학습_신청현황_${currentMonth}.csv`;
         link.click();
     }
 </script>
