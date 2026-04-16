@@ -131,10 +131,37 @@
                 <div class="form-group" style="flex: 1;"><label>종류</label><select id="m-type"><option value="고정석">고정석</option><option value="자율석">자율석</option></select></div>
                 <div class="form-group" style="flex: 1;"><label>좌석 번호</label><input type="text" id="m-seatNum" placeholder="예: 83 또는 F1"></div>
             </div>
-            <div class="form-group">
+<div class="form-group">
                 <label>요일별 타임 (예: 1,2)</label>
-                <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;">
-                    <input type="text" id="m-mon" placeholder="월"><input type="text" id="m-tue" placeholder="화"><input type="text" id="m-wed" placeholder="수"><input type="text" id="m-thu" placeholder="목"><input type="text" id="m-fri" placeholder="금"><input type="text" id="m-sat" placeholder="토"><input type="text" id="m-sun" placeholder="일">
+                <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center;">
+                    <div>
+                        <div style="font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #495057;">월</div>
+                        <input type="text" id="m-mon" style="text-align: center; padding: 10px 5px;">
+                    </div>
+                    <div>
+                        <div style="font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #495057;">화</div>
+                        <input type="text" id="m-tue" style="text-align: center; padding: 10px 5px;">
+                    </div>
+                    <div>
+                        <div style="font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #495057;">수</div>
+                        <input type="text" id="m-wed" style="text-align: center; padding: 10px 5px;">
+                    </div>
+                    <div>
+                        <div style="font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #495057;">목</div>
+                        <input type="text" id="m-thu" style="text-align: center; padding: 10px 5px;">
+                    </div>
+                    <div>
+                        <div style="font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #495057;">금</div>
+                        <input type="text" id="m-fri" style="text-align: center; padding: 10px 5px;">
+                    </div>
+                    <div>
+                        <div style="font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #0d6efd;">토</div>
+                        <input type="text" id="m-sat" style="text-align: center; padding: 10px 5px;">
+                    </div>
+                    <div>
+                        <div style="font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #dc3545;">일</div>
+                        <input type="text" id="m-sun" style="text-align: center; padding: 10px 5px;">
+                    </div>
                 </div>
             </div>
             <button class="btn btn-primary" onclick="saveManualEntry()">저장하기</button>
