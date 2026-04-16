@@ -93,12 +93,16 @@
     // -----------------------------------------------------------------
     // [설정 1] 파이어베이스 연결 (★선생님의 Config를 꼭 넣으세요!)
     // -----------------------------------------------------------------
-    const firebaseConfig = {
-        // apiKey: "...",
-        // authDomain: "...",
-        // projectId: "...",
-        // ...
-    };
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
+  authDomain: "self-study-project-82bdf.firebaseapp.com",
+  projectId: "self-study-project-82bdf",
+  storageBucket: "self-study-project-82bdf.firebasestorage.app",
+  messagingSenderId: "482006075036",
+  appId: "1:482006075036:web:473445e0f86d48cd22cf59"
+};
+
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
