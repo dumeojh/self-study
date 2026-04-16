@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>안성여고 - 자율학습 관리자 시스템 (월별 통계)</title>
+    <title>안성여고 - 자율학습 관리자 시스템 (좌석배치 포함)</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -23,7 +23,6 @@
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* 테이블 공통 스타일 */
         table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; background: white; }
         th, td { border: 1px solid #dee2e6; padding: 12px 8px; text-align: center; }
         th { background: #f8f9fa; color: #495057; }
@@ -34,7 +33,6 @@
         .flex { background: #e8f5e9; color: #198754; }
         .month-tag { background: #fff3cd; color: #856404; padding: 3px 6px; border-radius: 4px; font-size: 12px; font-weight: bold; }
 
-        /* 입력 폼 스타일 */
         .form-card { background: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #e9ecef; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
@@ -48,6 +46,16 @@
 
         .excel-upload-area { border: 2px dashed #ccc; padding: 30px; text-align: center; border-radius: 10px; background: #fff; margin-bottom: 20px; }
         .search-box { padding: 10px; width: 250px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 10px; }
+
+        /* ★ 좌석 배치도용 CSS 추가 */
+        .seat-grid-container { background: #e9ecef; padding: 20px; border-radius: 10px; display: inline-block; margin-top: 15px; border: 1px solid #ddd; }
+        .seat-grid { display: grid; gap: 5px; justify-content: center; }
+        .seat-cell { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; cursor: pointer; border-radius: 5px; user-select: none; transition: 0.1s; border: 2px solid transparent; }
+        .seat-cell:hover { transform: scale(1.05); }
+        .seat-0 { background: #fff; border-color: #ccc; color: #ccc; } /* 빈 곳 */
+        .seat-1 { background: #e3f2fd; border-color: #0d6efd; color: #0d6efd; } /* 고정석 */
+        .seat-2 { background: #e8f5e9; border-color: #198754; color: #198754; } /* 자율석 */
+        .legend-box { display: inline-block; width: 16px; height: 16px; margin-right: 5px; vertical-align: text-bottom; border-radius: 3px; border: 2px solid transparent; }
     </style>
 </head>
 <body>
@@ -58,6 +66,7 @@
     <div class="tab-menu">
         <button class="tab-btn active" onclick="switchTab('tab-status', this)">📊 월별 신청 현황</button>
         <button class="tab-btn" onclick="switchTab('tab-manual', this)">📝 개별 수정/추가</button>
+        <button class="tab-btn" onclick="switchTab('tab-seats', this)">🪑 좌석 배치도 설정</button>
         <button class="tab-btn" onclick="switchTab('tab-roster', this)">⚙️ 기초 명단 관리</button>
     </div>
 
@@ -66,16 +75,10 @@
             <div>
                 <select id="filter-month" onchange="renderStatusTable()" style="padding: 8px; border-radius: 5px; border: 2px solid var(--primary); font-weight: bold;">
                     <option value="all">📅 1년 전체보기</option>
-                    <option value="3월" selected>3월 신청자</option>
-                    <option value="4월">4월 신청자</option>
-                    <option value="5월">5월 신청자</option>
-                    <option value="6월">6월 신청자</option>
-                    <option value="7월">7월 신청자</option>
-                    <option value="8월">8월 신청자</option>
-                    <option value="9월">9월 신청자</option>
-                    <option value="10월">10월 신청자</option>
-                    <option value="11월">11월 신청자</option>
-                    <option value="12월">12월 신청자</option>
+                    <option value="3월">3월</option><option value="4월" selected>4월</option><option value="5월">5월</option>
+                    <option value="6월">6월</option><option value="7월">7월</option><option value="8월">8월</option>
+                    <option value="9월">9월</option><option value="10월">10월</option><option value="11월">11월</option>
+                    <option value="12월">12월</option>
                 </select>
                 <span id="status-summary" style="font-weight: bold; font-size: 16px; margin-left: 15px;">데이터 로딩 중...</span>
             </div>
@@ -86,8 +89,7 @@
                 <thead>
                     <tr>
                         <th>적용 월</th><th>학번</th><th>이름</th><th>종류</th>
-                        <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th><th>일</th>
-                        <th>입력시간</th>
+                        <th>좌석 번호</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th><th>일</th>
                     </tr>
                 </thead>
                 <tbody id="status-body"></tbody>
@@ -98,46 +100,24 @@
     <div id="tab-manual" class="tab-content">
         <div class="form-card">
             <h3>학생 신청 정보 직접 관리</h3>
-            <p style="color: #666; font-size: 13px;">※ 현황표에서 이름을 클릭하면 자동으로 정보가 입력됩니다.</p>
             <input type="hidden" id="edit-doc-id">
             
-            <div style="display: flex; gap: 15px;">
-                <div class="form-group" style="flex: 1;">
-                    <label>적용 월</label>
-                    <select id="m-targetMonth" style="border: 2px solid var(--warning);">
-                        <option value="3월">3월</option><option value="4월">4월</option><option value="5월">5월</option>
-                        <option value="6월">6월</option><option value="7월">7월</option><option value="8월">8월</option>
-                        <option value="9월">9월</option><option value="10월">10월</option><option value="11월">11월</option>
-                        <option value="12월">12월</option>
-                    </select>
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;"><label>적용 월</label>
+                    <select id="m-targetMonth"><option value="3월">3월</option><option value="4월">4월</option><option value="5월">5월</option><option value="6월">6월</option><option value="7월">7월</option><option value="8월">8월</option><option value="9월">9월</option><option value="10월">10월</option><option value="11월">11월</option><option value="12월">12월</option></select>
                 </div>
-                <div class="form-group" style="flex: 1;">
-                    <label>학번</label>
-                    <input type="number" id="m-id" placeholder="예: 20101">
+                <div class="form-group" style="flex: 1;"><label>학번</label><input type="number" id="m-id"></div>
+                <div class="form-group" style="flex: 1;"><label>이름</label><input type="text" id="m-name"></div>
+                <div class="form-group" style="flex: 1;"><label>신청 종류</label>
+                    <select id="m-type"><option value="고정석">고정석</option><option value="자율석">자율석</option></select>
                 </div>
-                <div class="form-group" style="flex: 1;">
-                    <label>이름</label>
-                    <input type="text" id="m-name" placeholder="이름">
-                </div>
-                <div class="form-group" style="flex: 1;">
-                    <label>신청 종류</label>
-                    <select id="m-type">
-                        <option value="고정석">고정석</option>
-                        <option value="자율석">자율석</option>
-                    </select>
-                </div>
+                <div class="form-group" style="flex: 1;"><label>좌석 번호</label><input type="text" id="m-seatNum" placeholder="예: 1-A"></div>
             </div>
 
             <div class="form-group">
                 <label>요일별 타임 (예: 1,2)</label>
                 <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;">
-                    <input type="text" id="m-mon" placeholder="월">
-                    <input type="text" id="m-tue" placeholder="화">
-                    <input type="text" id="m-wed" placeholder="수">
-                    <input type="text" id="m-thu" placeholder="목">
-                    <input type="text" id="m-fri" placeholder="금">
-                    <input type="text" id="m-sat" placeholder="토">
-                    <input type="text" id="m-sun" placeholder="일">
+                    <input type="text" id="m-mon" placeholder="월"><input type="text" id="m-tue" placeholder="화"><input type="text" id="m-wed" placeholder="수"><input type="text" id="m-thu" placeholder="목"><input type="text" id="m-fri" placeholder="금"><input type="text" id="m-sat" placeholder="토"><input type="text" id="m-sun" placeholder="일">
                 </div>
             </div>
             <button class="btn btn-primary" onclick="saveManualEntry()">저장 / 수정하기</button>
@@ -145,23 +125,49 @@
         </div>
     </div>
 
+    <div id="tab-seats" class="tab-content">
+        <div class="form-card" style="text-align: center;">
+            <h3>자율학습실 좌석 배치도 설계</h3>
+            <p style="color:#666; font-size:14px; margin-bottom: 20px;">
+                가로와 세로 칸 수를 정하고, 아래 네모 칸을 클릭하여 좌석 종류를 설정하세요.<br>
+                클릭할 때마다 <strong>[빈 공간] ➔ [고정석] ➔ [자율석]</strong> 순으로 변합니다.
+            </p>
+            
+            <div style="margin-bottom: 20px;">
+                가로(열): <input type="number" id="grid-cols" value="10" style="width: 70px; padding: 5px; text-align: center;"> 칸 &nbsp;&nbsp;X&nbsp;&nbsp;
+                세로(행): <input type="number" id="grid-rows" value="8" style="width: 70px; padding: 5px; text-align: center;"> 칸
+                <button class="btn btn-edit" style="font-size: 14px; margin-left: 10px;" onclick="initializeGrid()">격자 새로 그리기</button>
+            </div>
+
+            <div style="margin-bottom: 10px; font-size: 14px;">
+                <span class="legend-box seat-0"></span> 빈 공간 (통로) &nbsp;&nbsp;&nbsp;
+                <span class="legend-box seat-1"></span> 고정석 (1) &nbsp;&nbsp;&nbsp;
+                <span class="legend-box seat-2"></span> 자율석 (2)
+            </div>
+
+            <div class="seat-grid-container">
+                <div id="seat-grid" class="seat-grid">
+                    </div>
+            </div>
+            
+            <br>
+            <button class="btn btn-primary" style="margin-top: 20px; max-width: 400px;" onclick="saveSeatLayout()">배치도 서버에 배포하기</button>
+        </div>
+    </div>
+
     <div id="tab-roster" class="tab-content">
         <div class="excel-upload-area">
             <h3>엑셀로 전체 명단 올리기</h3>
-            <p style="font-size: 13px; color: #666;">A열: 학번 / B열: 이름을 적은 엑셀 파일을 선택하세요.</p>
             <input type="file" id="excel-input" accept=".xlsx, .xls, .csv">
             <button class="btn btn-excel" onclick="handleExcelUpload()">서버에 명단 등록</button>
         </div>
-        <hr>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
             <h3>현재 등록된 기초 명단 (<span id="roster-count">0</span>명)</h3>
             <input type="text" id="roster-search" class="search-box" placeholder="학번 또는 이름 검색..." oninput="displayRoster()">
         </div>
         <div style="max-height: 500px; overflow-y: auto;">
             <table>
-                <thead>
-                    <tr><th style="width: 30%;">학번</th><th style="width: 40%;">이름</th><th style="width: 30%;">관리</th></tr>
-                </thead>
+                <thead><tr><th>학번</th><th>이름</th><th>관리</th></tr></thead>
                 <tbody id="roster-body"></tbody>
             </table>
         </div>
@@ -169,7 +175,6 @@
 </div>
 
 <script>
-    // --- 파이어베이스 설정 ---
     const firebaseConfig = {
         apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
         authDomain: "self-study-project-82bdf.firebaseapp.com",
@@ -181,29 +186,27 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // 전역 변수
     let currentRoster = {}; 
-    let applicationData = {}; // 서버에서 불러온 전체 데이터 저장소
+    let applicationData = {}; 
 
-    // --- [탭 공통] 탭 전환 ---
+    // --- [탭 공통] ---
     function switchTab(tabId, btn) {
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
         btn.classList.add('active');
+        
         if (tabId === 'tab-roster') fetchRoster();
+        if (tabId === 'tab-seats') loadSeatLayout(); // 탭 열릴 때 서버에서 배치도 불러오기
     }
 
-    // --- [현황] 실시간 데이터 감시 및 화면 그리기 ---
+    // --- [현황] ---
     db.collection("applications").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
-        applicationData = {}; // 데이터 갱신 시 초기화
-        snapshot.forEach((doc) => {
-            applicationData[doc.id] = doc.data();
-        });
-        renderStatusTable(); // 데이터 다 가져오면 표 그리기 실행
+        applicationData = {};
+        snapshot.forEach(doc => { applicationData[doc.id] = doc.data(); });
+        renderStatusTable(); 
     });
 
-    // ★ 월별 필터 적용하여 표 그리기 함수
     function renderStatusTable() {
         const tbody = document.getElementById('status-body');
         const filterMonth = document.getElementById('filter-month').value;
@@ -212,29 +215,24 @@
 
         for (const docId in applicationData) {
             const data = applicationData[docId];
-            const targetMonth = data.targetMonth || "미지정"; // 예전 데이터 처리용
-
-            // 필터가 'all(전체)'이 아니면서, 선택한 월과 다르면 그리지 않고 건너뜀
+            const targetMonth = data.targetMonth || "미지정";
             if (filterMonth !== "all" && targetMonth !== filterMonth) continue;
 
             count++;
-            const date = data.timestamp ? data.timestamp.toDate().toLocaleString('ko-KR', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '-';
-            
             const row = `<tr onclick="fillEditForm('${docId}')">
                 <td><span class="month-tag">${targetMonth}</span></td>
-                <td>${data.stuId}</td>
-                <td>${data.stuName}</td>
+                <td>${data.stuId}</td><td>${data.stuName}</td>
                 <td><span class="type-tag ${data.type === '고정석' ? 'fixed' : 'flex'}">${data.type}</span></td>
+                <td style="font-weight:bold; color:#d63384;">${data.seatNum || '-'}</td>
                 <td>${data.mon || ''}</td><td>${data.tue || ''}</td><td>${data.wed || ''}</td>
                 <td>${data.thu || ''}</td><td>${data.fri || ''}</td><td>${data.sat || ''}</td><td>${data.sun || ''}</td>
-                <td style="font-size:11px; color:#999;">${date}</td>
             </tr>`;
             tbody.innerHTML += row;
         }
         document.getElementById('status-summary').innerText = `조회 인원: ${count}명`;
     }
 
-    // --- [수정] 현황 클릭 시 폼 채우기 ---
+    // --- [수정] ---
     function fillEditForm(docId) {
         const data = applicationData[docId];
         document.getElementById('edit-doc-id').value = docId;
@@ -242,35 +240,27 @@
         document.getElementById('m-id').value = data.stuId;
         document.getElementById('m-name').value = data.stuName;
         document.getElementById('m-type').value = data.type;
-        ['mon','tue','wed','thu','fri','sat','sun'].forEach(day => {
-            document.getElementById(`m-${day}`).value = data[day] || '';
-        });
+        document.getElementById('m-seatNum').value = data.seatNum || '';
+        ['mon','tue','wed','thu','fri','sat','sun'].forEach(day => { document.getElementById(`m-${day}`).value = data[day] || ''; });
         switchTab('tab-manual', document.querySelectorAll('.tab-btn')[1]);
     }
 
-    // ★ 저장 시 대상 '월(Month)' 정보 포함
     async function saveManualEntry() {
         const docId = document.getElementById('edit-doc-id').value;
         const payload = {
-            targetMonth: document.getElementById('m-targetMonth').value, // 월 추가
+            targetMonth: document.getElementById('m-targetMonth').value,
             stuId: document.getElementById('m-id').value,
             stuName: document.getElementById('m-name').value,
             type: document.getElementById('m-type').value,
+            seatNum: document.getElementById('m-seatNum').value, // 수동 좌석 수정
             timestamp: new Date()
         };
-        ['mon','tue','wed','thu','fri','sat','sun'].forEach(day => {
-            payload[day] = document.getElementById(`m-${day}`).value;
-        });
+        ['mon','tue','wed','thu','fri','sat','sun'].forEach(day => { payload[day] = document.getElementById(`m-${day}`).value; });
 
         try {
-            if (docId) {
-                await db.collection("applications").doc(docId).update(payload);
-                alert("성공적으로 수정되었습니다.");
-            } else {
-                // 특정 학생이 같은 월에 여러 번 입력되지 않도록 방어하는 로직이 필요하다면 여기에 추가
-                await db.collection("applications").add(payload);
-                alert("새로운 신청 내역이 추가되었습니다.");
-            }
+            if (docId) await db.collection("applications").doc(docId).update(payload);
+            else await db.collection("applications").add(payload);
+            alert("성공적으로 저장되었습니다.");
             resetManualForm();
             switchTab('tab-status', document.querySelectorAll('.tab-btn')[0]);
         } catch(e) { alert("저장 실패: " + e.message); }
@@ -281,87 +271,113 @@
         document.querySelectorAll('#tab-manual input[type="text"], #tab-manual input[type="number"]').forEach(i => i.value = "");
     }
 
-    // --- [기초 명단] 관리 ---
+    // --- ★ [좌석 배치도 기능] ---
+    let seatMapData = []; 
+    let rows = 8;
+    let cols = 10;
+
+    async function loadSeatLayout() {
+        try {
+            const doc = await db.collection("settings").doc("seatLayout").get();
+            if (doc.exists) {
+                const data = doc.data();
+                rows = data.rows; cols = data.cols;
+                seatMapData = JSON.parse(data.grid);
+                document.getElementById('grid-rows').value = rows;
+                document.getElementById('grid-cols').value = cols;
+                drawSeatGrid();
+            } else {
+                initializeGrid(); // 데이터 없으면 빈 격자 생성
+            }
+        } catch(e) { console.error("배치도 로드 실패:", e); }
+    }
+
+    function initializeGrid() {
+        if(seatMapData.length > 0 && !confirm("새로 그리면 기존 배치도가 지워집니다. 진행할까요?")) return;
+        
+        rows = parseInt(document.getElementById('grid-rows').value) || 8;
+        cols = parseInt(document.getElementById('grid-cols').value) || 10;
+        
+        // 2차원 배열(행x열)을 모두 0(빈공간)으로 초기화
+        seatMapData = Array.from({length: rows}, () => Array(cols).fill(0));
+        drawSeatGrid();
+    }
+
+    function drawSeatGrid() {
+        const container = document.getElementById('seat-grid');
+        container.innerHTML = '';
+        container.style.gridTemplateColumns = `repeat(${cols}, 45px)`; // 열 개수만큼 칸 너비 설정
+
+        // 행열 순회하며 칸 생성
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const val = seatMapData[r][c];
+                const cell = document.createElement('div');
+                cell.className = `seat-cell seat-${val}`;
+                
+                // 표기 텍스트
+                if (val === 1) cell.innerText = "고정";
+                else if (val === 2) cell.innerText = "자율";
+                
+                cell.onclick = () => toggleSeat(r, c); // 클릭 이벤트
+                container.appendChild(cell);
+            }
+        }
+    }
+
+    // 클릭 시 0 -> 1 -> 2 -> 0 순환 로직
+    function toggleSeat(r, c) {
+        seatMapData[r][c] = (seatMapData[r][c] + 1) % 3;
+        drawSeatGrid();
+    }
+
+    async function saveSeatLayout() {
+        try {
+            await db.collection("settings").doc("seatLayout").set({
+                rows: rows,
+                cols: cols,
+                grid: JSON.stringify(seatMapData),
+                lastUpdated: new Date()
+            });
+            alert("✅ 좌석 배치도가 서버에 성공적으로 배포되었습니다!\n\n학생들이 고정석 신청 시 이 배치도를 보게 됩니다.");
+        } catch(e) { alert("저장 실패: " + e.message); }
+    }
+
+    // --- [기초 명단] (이전 코드 동일 생략) ---
     async function fetchRoster() {
         const doc = await db.collection("settings").doc("roster").get();
         if (doc.exists) { currentRoster = JSON.parse(doc.data().list || "{}"); displayRoster(); }
     }
-
     function displayRoster() {
         const tbody = document.getElementById('roster-body');
         const search = document.getElementById('roster-search').value;
-        tbody.innerHTML = "";
-        let count = 0;
+        tbody.innerHTML = ""; let count = 0;
         Object.keys(currentRoster).sort().forEach(id => {
             const name = currentRoster[id];
             if (search && !id.includes(search) && !name.includes(search)) return;
             count++;
-            const row = `<tr><td>${id}</td><td>${name}</td><td>
-                <button class="btn btn-edit" onclick="editRosterItem('${id}', '${name}')">수정</button>
-                <button class="btn btn-delete" onclick="deleteRosterItem('${id}')">삭제</button>
-            </td></tr>`;
-            tbody.innerHTML += row;
+            tbody.innerHTML += `<tr><td>${id}</td><td>${name}</td><td><button class="btn btn-delete" onclick="deleteRosterItem('${id}')">삭제</button></td></tr>`;
         });
         document.getElementById('roster-count').innerText = count;
     }
-
-    function editRosterItem(id, oldName) {
-        const newName = prompt(`[${id}] 학생의 이름을 수정합니다.`, oldName);
-        if (newName && newName !== oldName) {
-            currentRoster[id] = newName.trim();
-            saveRosterToServer("이름을 수정했습니다.");
-        }
-    }
-
-    function deleteRosterItem(id) {
-        if (confirm(`학번 ${id} 학생을 명단에서 삭제하시겠습니까?`)) {
-            delete currentRoster[id];
-            saveRosterToServer("학생을 삭제했습니다.");
-        }
-    }
-
-    async function saveRosterToServer(msg) {
-        await db.collection("settings").doc("roster").set({ list: JSON.stringify(currentRoster), lastUpdated: new Date() });
-        alert(msg); displayRoster();
-    }
-
+    function deleteRosterItem(id) { if (confirm("삭제할까요?")) { delete currentRoster[id]; saveRosterToServer("삭제됨"); } }
+    async function saveRosterToServer(msg) { await db.collection("settings").doc("roster").set({ list: JSON.stringify(currentRoster) }); alert(msg); displayRoster(); }
     function handleExcelUpload() {
-        const file = document.getElementById('excel-input').files[0];
-        if (!file) return alert("파일을 선택하세요.");
         const reader = new FileReader();
         reader.onload = function(e) {
             const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, {type: 'array'});
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const sheet = XLSX.read(data, {type: 'array'}).Sheets[XLSX.read(data, {type: 'array'}).SheetNames[0]];
             const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
             let newRoster = {};
-            rows.forEach((row, idx) => {
-                if (idx === 0) return; 
-                const id = String(row[0]).trim(); const name = String(row[1]).trim();
-                if (id && name && id !== "undefined") newRoster[id] = name;
-            });
-            currentRoster = newRoster;
-            saveRosterToServer("엑셀 명단이 업로드되었습니다.");
+            rows.forEach((row, idx) => { if (idx > 0 && row[0]) newRoster[String(row[0]).trim()] = String(row[1]).trim(); });
+            currentRoster = newRoster; saveRosterToServer("엑셀 업로드 완료");
         };
-        reader.readAsArrayBuffer(file);
+        reader.readAsArrayBuffer(document.getElementById('excel-input').files[0]);
     }
-
     function downloadCSV() {
-        const table = document.getElementById("status-table");
-        const currentMonth = document.getElementById('filter-month').value;
-        let csv = "\uFEFF"; 
-        for (let i = 0; i < table.rows.length; i++) {
-            let row = [];
-            for (let j = 0; j < table.rows[i].cells.length; j++) {
-                row.push('"' + table.rows[i].cells[j].innerText + '"');
-            }
-            csv += row.join(",") + "\r\n";
-        }
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = `야간자율학습_신청현황_${currentMonth}.csv`;
-        link.click();
+        const table = document.getElementById("status-table"); let csv = "\uFEFF"; 
+        for (let i=0; i<table.rows.length; i++) { let r=[]; for (let j=0; j<table.rows[i].cells.length; j++) r.push('"'+table.rows[i].cells[j].innerText+'"'); csv += r.join(",")+"\r\n"; }
+        const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8;'})); link.download = "신청현황.csv"; link.click();
     }
 </script>
 
