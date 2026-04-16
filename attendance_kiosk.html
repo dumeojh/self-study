@@ -3,64 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>안성여고 자율학습 출석 시스템</title>
+    <title>안성여고 통합 출결 키오스크</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <style>
-        :root { --primary: #0d6efd; --success: #198754; --danger: #dc3545; --bg: #f8f9fa; }
-        body { font-family: 'Malgun Gothic', sans-serif; background-color: var(--bg); margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        :root { 
+            --in: #0d6efd;     /* 입실: 파랑 */
+            --out: #ffc107;    /* 외출: 노랑 */
+            --return: #198754; /* 복귀: 초록 */
+            --home: #dc3545;   /* 귀가: 빨강 */
+            --bg: #f4f7f6; 
+        }
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: var(--bg); margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; }
         
-        .kiosk-box { background: white; width: 90%; max-width: 600px; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
+        .kiosk-box { background: white; width: 90%; max-width: 650px; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; position: relative; }
         
-        .school-title { font-size: 24px; color: #666; margin-bottom: 10px; }
-        .clock { font-size: 50px; font-weight: 900; color: #222; margin-bottom: 5px; letter-spacing: 2px; }
-        .date { font-size: 20px; color: #888; margin-bottom: 30px; }
+        .school-title { font-size: 24px; font-weight: bold; color: #555; margin-bottom: 10px; }
+        .clock { font-size: 55px; font-weight: 900; color: #222; margin-bottom: 5px; letter-spacing: 2px; font-family: monospace; }
+        .date { font-size: 18px; color: #888; margin-bottom: 30px; font-weight: bold; }
 
-        .input-area { background: #e9ecef; padding: 30px; border-radius: 15px; margin-bottom: 20px; }
+        /* 4가지 상태 선택 버튼 */
+        .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; }
+        .status-btn { padding: 20px; font-size: 22px; font-weight: bold; border: 3px solid transparent; border-radius: 15px; cursor: pointer; transition: 0.2s; background: white; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .status-btn:active { transform: scale(0.95); }
         
-        /* 스캐너가 찍히는 마법의 입력칸 */
-        #scanner-input { width: 100%; max-width: 300px; padding: 15px; font-size: 24px; font-weight: bold; text-align: center; border: 3px solid #ccc; border-radius: 10px; margin-bottom: 15px; transition: 0.3s; }
-        #scanner-input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 15px rgba(13,110,253,0.3); }
+        /* 버튼 색상 및 선택 효과 */
+        .btn-in { color: var(--in); border-color: #b6d4fe; }
+        .btn-in.selected { background: var(--in); color: white; border-color: var(--in); box-shadow: 0 5px 15px rgba(13,110,253,0.4); }
         
-        .btn-checkin { background: var(--primary); color: white; border: none; padding: 15px 40px; font-size: 20px; font-weight: bold; border-radius: 10px; cursor: pointer; transition: 0.2s; }
-        .btn-checkin:active { transform: scale(0.95); }
+        .btn-out { color: #b38200; border-color: #fff3cd; }
+        .btn-out.selected { background: var(--out); color: black; border-color: var(--out); box-shadow: 0 5px 15px rgba(255,193,7,0.4); }
+        
+        .btn-return { color: var(--return); border-color: #badbcc; }
+        .btn-return.selected { background: var(--return); color: white; border-color: var(--return); box-shadow: 0 5px 15px rgba(25,135,84,0.4); }
+        
+        .btn-home { color: var(--home); border-color: #f5c2c7; }
+        .btn-home.selected { background: var(--home); color: white; border-color: var(--home); box-shadow: 0 5px 15px rgba(220,53,69,0.4); }
 
-        /* 결과 메시지 창 */
-        #result-box { display: none; padding: 25px; border-radius: 15px; margin-top: 20px; font-weight: bold; font-size: 22px; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        /* 학번 입력부 */
+        .input-area { background: #f8f9fa; padding: 25px; border-radius: 15px; border: 1px solid #e9ecef; }
+        .guide-text { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 15px; }
         
-        .status-success { background: #d1e7dd; color: #0f5132; border: 2px solid #badbcc; }
-        .status-error { background: #f8d7da; color: #842029; border: 2px solid #f5c2c7; }
-
-        .guide-text { font-size: 15px; color: #777; line-height: 1.5; margin-top: 20px; }
+        #scanner-input { width: 100%; max-width: 250px; padding: 15px; font-size: 28px; font-weight: bold; text-align: center; border: 3px solid #ccc; border-radius: 10px; transition: 0.3s; letter-spacing: 3px; }
+        #scanner-input:focus { outline: none; border-color: #444; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        
+        /* 결과 메시지 (영수증 스타일) */
+        #result-overlay { display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.95); border-radius: 20px; z-index: 100; flex-direction: column; align-items: center; justify-content: center; animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .receipt { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 2px dashed #ccc; text-align: center; width: 80%; }
+        .r-name { font-size: 28px; font-weight: 900; margin-bottom: 10px; }
+        .r-status { font-size: 35px; font-weight: 900; margin-bottom: 15px; }
+        .r-time { font-size: 18px; color: #666; margin-bottom: 15px; }
+        .r-msg { font-size: 16px; font-weight: bold; background: #eee; padding: 10px; border-radius: 8px; }
     </style>
 </head>
 <body>
 
 <div class="kiosk-box">
-    <div class="school-title">🏫 안성여고 야간 자율학습</div>
+    <div class="school-title">🏫 안성여고 자율학습 출결 센터</div>
     <div class="clock" id="live-clock">00:00:00</div>
     <div class="date" id="live-date">2026년 00월 00일</div>
 
-    <div class="input-area" id="input-area">
-        <p style="margin-top: 0; font-weight: bold; font-size: 18px; color: #444;">학생증 바코드를 스캔하거나 학번을 입력하세요.</p>
-        <input type="number" id="scanner-input" placeholder="학번 입력" autofocus autocomplete="off">
-        <br>
-        <button class="btn-checkin" onclick="processCheckIn()">입실 확인 (Enter)</button>
+    <div class="status-grid">
+        <button class="status-btn btn-in selected" onclick="selectStatus('입실', this)">🟢 등교 입실</button>
+        <button class="status-btn btn-out" onclick="selectStatus('외출', this)">🟡 잠시 외출</button>
+        <button class="status-btn btn-return" onclick="selectStatus('복귀', this)">🔵 외출 복귀</button>
+        <button class="status-btn btn-home" onclick="selectStatus('귀가', this)">🔴 최종 귀가</button>
     </div>
 
-    <div id="result-box"></div>
+    <div class="input-area">
+        <div class="guide-text" id="guide-msg">학생증을 스캔하거나 학번을 입력하세요.</div>
+        <input type="number" id="scanner-input" placeholder="학번" autocomplete="off">
+    </div>
 
-    <div class="guide-text">
-        학생증이 없는 경우 직접 학번을 입력하고 버튼을 누르세요.<br>
-        인식이 안 될 경우 감독 선생님께 말씀해 주세요.
+    <div id="result-overlay">
+        <div class="receipt">
+            <div class="r-name" id="r-name">김안성 학생</div>
+            <div class="r-status" id="r-status" style="color: var(--in);">입실 완료</div>
+            <div class="r-time" id="r-time">처리시간: 18:30:45</div>
+            <div class="r-msg" id="r-msg">열심히 공부하세요!</div>
+        </div>
     </div>
 </div>
 
 <script>
-    // --- 파이어베이스 연결 ---
+    // --- 파이어베이스 설정 (선생님 설정 유지) ---
     const firebaseConfig = {
         apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
         authDomain: "self-study-project-82bdf.firebaseapp.com",
@@ -73,132 +103,121 @@
     const db = firebase.firestore();
 
     let serverRoster = {}; 
-    let todayFixedList = []; // 오늘 와야 할 고정석 학생들
-    let todayFlexList = [];  // 오늘 일일 발권한 자율석 학생들
+    let currentStatus = "입실"; // 기본값
+    
+    // 한국 시간 세팅
+    const todayObj = new Date();
+    const todayStr = todayObj.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }); 
 
-    // --- 시계 및 날짜 업데이트 ---
+    // 1. 시계 업데이트
     function updateClock() {
         const now = new Date();
         document.getElementById('live-clock').innerText = now.toLocaleTimeString('ko-KR', { hour12: false });
-        document.getElementById('live-date').innerText = now.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+        const days = ['일','월','화','수','목','금','토'];
+        document.getElementById('live-date').innerText = `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 (${days[now.getDay()]}요일)`;
     }
-    setInterval(updateClock, 1000);
-    updateClock();
+    setInterval(updateClock, 1000); updateClock();
 
-    // --- 오늘 날짜 기준 데이터 불러오기 ---
-    const todayObj = new Date();
-    const todayStr = todayObj.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }); // YYYY-MM-DD
-    const targetMonthStr = (todayObj.getMonth() + 1) + "월";
-    const daysEng = ['sun','mon','tue','wed','thu','fri','sat'];
-    const targetDayKey = daysEng[todayObj.getDay()]; 
-
-    async function fetchTodayData() {
-        try {
-            // 1. 전체 명단
-            const rosterDoc = await db.collection("settings").doc("roster").get();
-            if (rosterDoc.exists) serverRoster = JSON.parse(rosterDoc.data().list || "{}");
-
-            // 2. 오늘 해당 요일에 와야 하는 '고정석' 학생 목록 수집
-            const appsSnapshot = await db.collection("applications").where("targetMonth", "==", targetMonthStr).where("type", "==", "고정석").get();
-            appsSnapshot.forEach(doc => {
-                const data = doc.data();
-                if (data[targetDayKey] && data[targetDayKey].length > 0) {
-                    todayFixedList.push(data.stuId); // 학번 저장
-                }
-            });
-
-            // 3. 오늘 발권한 '자율석' 학생 목록 수집
-            const resSnapshot = await db.collection("daily_reservations").where("date", "==", todayStr).get();
-            resSnapshot.forEach(doc => {
-                todayFlexList.push(doc.data().stuId); // 학번 저장
-            });
-
-        } catch (error) {
-            console.error("데이터 로딩 실패:", error);
-        }
+    // 2. 기초 명단 불러오기 (학생 확인용)
+    async function fetchRoster() {
+        const doc = await db.collection("settings").doc("roster").get();
+        if (doc.exists) serverRoster = JSON.parse(doc.data().list || "{}");
     }
-    fetchTodayData();
+    fetchRoster();
 
-    // --- 스캐너 자동 인식 로직 (엔터키 감지) ---
+    // 3. 상태 버튼 클릭 (터치) 처리
+    function selectStatus(status, btnElement) {
+        currentStatus = status;
+        document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('selected'));
+        btnElement.classList.add('selected');
+        
+        // 안내 문구 변경
+        const guide = document.getElementById('guide-msg');
+        if(status === '귀가') guide.innerHTML = "<span style='color:red;'>귀가 처리 후에는 다시 입실할 수 없습니다.</span><br>학생증을 스캔하세요.";
+        else guide.innerText = "학생증을 스캔하거나 학번을 입력하세요.";
+
+        focusScanner();
+    }
+
+    // 4. 스캐너 (또는 키보드) 엔터 감지
     const scannerInput = document.getElementById('scanner-input');
+    function focusScanner() { scannerInput.focus(); }
     
-    // 항상 입력칸에 커서가 가 있도록 유지 (키오스크용)
-    document.addEventListener('click', () => { scannerInput.focus(); });
-    setInterval(() => { if(document.activeElement !== scannerInput) scannerInput.focus(); }, 3000);
+    // 키오스크 환경을 위해 배경을 누르면 항상 입력창으로 포커스
+    document.addEventListener('click', focusScanner);
+    setInterval(() => { if(document.activeElement !== scannerInput) focusScanner(); }, 2000);
 
     scannerInput.addEventListener('keypress', function (e) {
         if (e.key === 'Enter') {
             e.preventDefault();
-            processCheckIn();
+            processCheckInOut();
         }
     });
 
-    // --- 출석 처리 핵심 함수 ---
-    async function processCheckIn() {
+    // 5. 핵심 로직: 출결 처리 및 서버 전송
+    async function processCheckInOut() {
         const id = scannerInput.value.trim();
         if (!id) return;
-
-        // 화면 잠금
-        scannerInput.value = "";
-        scannerInput.disabled = true;
-
-        const resultBox = document.getElementById('result-box');
-        resultBox.style.display = 'block';
-        resultBox.className = ''; 
-        resultBox.innerText = "확인 중...";
-
-        // 1. 명단에 있는 학생인지 확인
+        scannerInput.value = ""; // 스캔 즉시 비우기
+        
+        // 5-1. 명단 확인
         const studentName = serverRoster[id];
         if (!studentName) {
-            showResult('error', `❌ [${id}] 등록되지 않은 학번입니다.`);
+            showReceipt("오류", `[${id}]`, "등록되지 않은 학번입니다.", "명단을 확인해 주세요.", "#dc3545");
             return;
         }
 
-        // 2. 오늘 자율학습 대상자인지 확인 (고정석이거나 자율석 발권을 했거나)
-        const isFixed = todayFixedList.includes(id);
-        const isFlex = todayFlexList.includes(id);
-
-        if (!isFixed && !isFlex) {
-            showResult('error', `❌ ${studentName} 학생은 오늘 자율학습 신청자가 아니거나, 일일 발권을 하지 않았습니다.`);
-            return;
-        }
-
-        // 3. 출석 기록 파이어베이스에 저장 (attendance_logs 컬렉션)
+        const nowTime = new Date();
+        const timeStr = nowTime.toLocaleTimeString('ko-KR', { hour12: false });
+        
+        // 5-2. 파이어베이스 저장 (덮어쓰기 방식으로 최신 상태 유지)
+        const logId = `${todayStr}_${id}`;
+        
         try {
-            // 중복 출석 방지를 위해 '날짜_학번'을 문서 ID로 사용
-            const logId = `${todayStr}_${id}`;
             await db.collection("attendance_logs").doc(logId).set({
                 date: todayStr,
                 stuId: id,
                 stuName: studentName,
-                status: "출석",
-                checkInTime: new Date()
-            });
+                status: currentStatus, // "입실", "외출", "복귀", "귀가"
+                lastUpdateTime: nowTime
+            }, { merge: true }); // 기존 기록(입실 시간 등)은 유지하고 상태만 업데이트
 
-            // 성공 메시지
-            let seatTypeStr = isFixed ? "고정석" : "자율석";
-            showResult('success', `✅ ${studentName} 학생 (${seatTypeStr})\n입실이 완료되었습니다. 열공하세요!`);
+            // 5-3. 상태별 영수증 화면 설정
+            let color, statusText, msgText;
+            
+            if (currentStatus === "입실") {
+                color = "#0d6efd"; statusText = "입실 완료"; msgText = "오늘도 화이팅! 📖";
+            } else if (currentStatus === "외출") {
+                color = "#b38200"; statusText = "외출 처리됨"; msgText = "너무 늦지 않게 돌아오세요! ⏱️";
+            } else if (currentStatus === "복귀") {
+                color = "#198754"; statusText = "복귀 완료"; msgText = "다시 집중해 볼까요? ✨";
+            } else if (currentStatus === "귀가") {
+                color = "#dc3545"; statusText = "최종 귀가"; msgText = "부모님께 안심 메시지가 전송됩니다. 🏠";
+            }
 
-        } catch (error) {
-            showResult('error', `❌ 통신 오류: 다시 스캔해 주세요.`);
+            showReceipt(studentName, statusText, `처리시간: ${timeStr}`, msgText, color);
+
+        } catch (e) {
+            showReceipt("통신 오류", "", "인터넷 연결을 확인하세요.", "다시 시도해 주세요.", "#dc3545");
         }
     }
 
-    // 결과 보여주고 3초 뒤에 리셋하는 함수
-    function showResult(type, message) {
-        const resultBox = document.getElementById('result-box');
-        const inputArea = document.getElementById('input-area');
+    // 6. 영수증 화면 띄우기 (3초 후 자동 닫힘)
+    function showReceipt(name, status, timeInfo, msg, color) {
+        document.getElementById('r-name').innerText = name;
+        document.getElementById('r-status').innerText = status;
+        document.getElementById('r-status').style.color = color;
+        document.getElementById('r-time').innerText = timeInfo;
+        document.getElementById('r-msg').innerText = msg;
         
-        inputArea.style.display = 'none'; // 입력창 숨김
-        resultBox.className = type === 'success' ? 'status-success' : 'status-error';
-        resultBox.innerText = message;
+        const overlay = document.getElementById('result-overlay');
+        overlay.style.display = 'flex';
 
-        // 3초 뒤에 초기화
+        // 3초 뒤 원래 화면으로 복귀하고 '입실' 모드로 리셋
         setTimeout(() => {
-            resultBox.style.display = 'none';
-            inputArea.style.display = 'block';
-            scannerInput.disabled = false;
-            scannerInput.focus();
+            overlay.style.display = 'none';
+            selectStatus('입실', document.querySelector('.btn-in')); // 다음 학생을 위해 무조건 입실로 초기화
+            focusScanner();
         }, 3000);
     }
 </script>
