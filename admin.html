@@ -314,15 +314,164 @@
     }
     async function saveSeatLayout() { await db.collection("settings").doc("seatLayout").set({ rows, cols, grid: JSON.stringify(seatMapData) }); alert("배포 완료!"); }
 
-    // --- 기타 현황, 수동, 엑셀 로직 (생략 없이 축약 보존) ---
-    function renderStatusTable() { /* 위쪽에 동일 작성 */ }
-    function fillEditForm(id) { /* 위쪽에 동일 작성 */ }
-    async function saveManualEntry() { /* 위쪽에 동일 작성 */ }
-    function resetManualForm() { /* 위쪽에 동일 작성 */ }
-    function downloadCSV() { /* 위쪽에 동일 작성 */ }
-    async function fetchRoster() { /* 위쪽에 동일 작성 */ }
-    function displayRoster() { /* 위쪽에 동일 작성 */ }
-    function handleExcelUpload() { /* 위쪽에 동일 작성 */ }
+// --- 기타 현황, 수동, 엑셀 로직 (생략되었던 진짜 코드들) ---
+
+    // [1. 현황표 그리기]
+    function renderStatusTable() {
+        const tbody = document.getElementById('status-body');
+        const filterMonth = document.getElementById('filter-month').value;
+        tbody.innerHTML = ""; let count = 0;
+
+        for (const docId in applicationData) {
+            const data = applicationData[docId];
+            if (filterMonth !== "all" && (data.targetMonth || "미지정") !== filterMonth) continue;
+            count++;
+            tbody.innerHTML += `<tr onclick="fillEditForm('${docId}')">
+                <td><span class="month-tag">${data.targetMonth || "미지정"}</span></td>
+                <td>${data.stuId}</td><td>${data.stuName}</td>
+                <td><span class="type-tag ${data.type === '고정석' ? 'fixed' : 'flex'}">${data.type}</span></td>
+                <td style="font-weight:bold; color:#d63384;">${data.seatNum || '-'}</td>
+                <td>${data.mon || ''}</td><td>${data.tue || ''}</td><td>${data.wed || ''}</td>
+                <td>${data.thu || ''}</td><td>${data.fri || ''}</td><td>${data.sat || ''}</td><td>${data.sun || ''}</td>
+            </tr>`;
+        }
+        document.getElementById('status-summary').innerText = `조회: ${count}명`;
+    }
+
+    // [2. 개별 수정 폼 채우기]
+    function fillEditForm(docId) {
+        const d = applicationData[docId];
+        document.getElementById('edit-doc-id').value = docId;
+        document.getElementById('m-targetMonth').value = d.targetMonth || "4월";
+        document.getElementById('m-id').value = d.stuId; document.getElementById('m-name').value = d.stuName;
+        document.getElementById('m-type').value = d.type; document.getElementById('m-seatNum').value = d.seatNum || '';
+        ['mon','tue','wed','thu','fri','sat','sun'].forEach(day => document.getElementById(`m-${day}`).value = d[day]||'');
+        
+        // 탭 이동 (수동 관리 탭은 3번째 버튼(인덱스 2)에 해당)
+        switchTab('tab-manual', document.querySelectorAll('.tab-btn')[2]);
+    }
+
+    // [3. 개별 수정 저장하기]
+    async function saveManualEntry() {
+        const docId = document.getElementById('edit-doc-id').value;
+        const p = { 
+            targetMonth: document.getElementById('m-targetMonth').value, 
+            stuId: document.getElementById('m-id').value, 
+            stuName: document.getElementById('m-name').value, 
+            type: document.getElementById('m-type').value, 
+            seatNum: document.getElementById('m-seatNum').value, 
+            timestamp: new Date() 
+        };
+        ['mon','tue','wed','thu','fri','sat','sun'].forEach(day => p[day] = document.getElementById(`m-${day}`).value);
+        
+        try {
+            if (docId) await db.collection("applications").doc(docId).update(p); 
+            else await db.collection("applications").add(p);
+            alert("저장 성공!"); 
+            resetManualForm(); 
+            // 탭 이동 (현황 탭은 2번째 버튼(인덱스 1)에 해당)
+            switchTab('tab-status', document.querySelectorAll('.tab-btn')[1]);
+        } catch(e) { alert("저장 실패: " + e.message); }
+    }
+
+    // [4. 입력창 비우기]
+    function resetManualForm() { 
+        document.getElementById('edit-doc-id').value = ""; 
+        document.querySelectorAll('#tab-manual input[type="text"], #tab-manual input[type="number"]').forEach(i => i.value = ""); 
+    }
+
+    // [5. 엑셀 다운로드]
+    function downloadCSV() {
+        const table = document.getElementById("status-table"); let csv = "\uFEFF";
+        for (let i=0; i<table.rows.length; i++) { 
+            let r=[]; 
+            for (let j=0; j<table.rows[i].cells.length; j++) r.push('"'+table.rows[i].cells[j].innerText+'"'); 
+            csv += r.join(",")+"\r\n"; 
+        }
+        const link = document.createElement("a"); 
+        link.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8;'})); 
+        link.download = "야간자율학습현황.csv"; 
+        link.click();
+    }
+
+    // [6. 기초 명단 불러오기]
+    async function fetchRoster() { 
+        const doc = await db.collection("settings").doc("roster").get(); 
+        if (doc.exists) { 
+            currentRoster = JSON.parse(doc.data().list || "{}"); 
+            displayRoster(); 
+        } 
+    }
+
+    // [7. 기초 명단 화면에 표시 및 삭제]
+    function displayRoster() {
+        const tbody = document.getElementById('roster-body'); 
+        const s = document.getElementById('roster-search').value; 
+        tbody.innerHTML = ""; let count = 0;
+        
+        Object.keys(currentRoster).sort().forEach(id => { 
+            const name = currentRoster[id]; 
+            if (s && !id.includes(s) && !name.includes(s)) return; 
+            count++; 
+            tbody.innerHTML += `<tr><td>${id}</td><td>${name}</td><td><button class="btn btn-delete" onclick="deleteRosterItem('${id}')">삭제</button></td></tr>`; 
+        });
+        document.getElementById('roster-count').innerText = count;
+    }
+    
+    function deleteRosterItem(id) { 
+        if(confirm("이 학생을 명단에서 삭제하시겠습니까?")){ 
+            delete currentRoster[id]; 
+            db.collection("settings").doc("roster").set({ list: JSON.stringify(currentRoster) }); 
+            displayRoster(); 
+        } 
+    }
+
+    // [8. 엑셀 명단 업로드 (안전장치 강화 버전)]
+    function handleExcelUpload() {
+        const fileInput = document.getElementById('excel-input');
+        if (!fileInput.files || fileInput.files.length === 0) return alert("🚨 엑셀 파일을 먼저 선택해 주세요.");
+        
+        const btn = document.querySelector('.btn-excel'); 
+        btn.innerText = "데이터 읽는 중..."; btn.disabled = true;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result); 
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheet = workbook.Sheets[workbook.SheetNames[0]]; 
+                const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
+                
+                let newRoster = {}; let count = 0;
+                rows.forEach((row, idx) => {
+                    if (idx > 0) {
+                        const id = row[0] ? String(row[0]).trim() : ""; 
+                        const name = row[1] ? String(row[1]).trim() : "";
+                        if (id !== "" && name !== "" && id !== "undefined") { 
+                            newRoster[id] = name; count++; 
+                        }
+                    }
+                });
+                
+                if (count === 0) { 
+                    alert("🚨 명단 데이터를 찾을 수 없습니다."); 
+                    btn.innerText = "서버에 등록"; btn.disabled = false; return; 
+                }
+                
+                db.collection("settings").doc("roster").set({ list: JSON.stringify(newRoster), lastUpdated: new Date() }).then(() => {
+                    currentRoster = newRoster; 
+                    alert(`✅ 총 ${count}명 등록 성공!`); 
+                    displayRoster(); 
+                    btn.innerText = "서버에 등록"; btn.disabled = false; 
+                    fileInput.value = "";
+                });
+            } catch (error) { 
+                alert("🚨 오류 발생: " + error.message); 
+                btn.innerText = "서버에 등록"; btn.disabled = false; 
+            }
+        };
+        reader.readAsArrayBuffer(fileInput.files[0]);
+    }
 </script>
 </body>
 </html>
