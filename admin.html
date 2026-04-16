@@ -2,70 +2,158 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>관리자 - 야간 자율학습 신청 현황</title>
+    <title>관리자 - 야간 자율학습 종합 관리</title>
+    
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; background: #f4f7f9; }
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; background: #f4f7f9; margin: 0; }
         .dashboard { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h2 { border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+        
+        /* 탭 메뉴 스타일 */
+        .tab-menu { display: flex; gap: 10px; border-bottom: 2px solid #007bff; padding-bottom: 15px; margin-bottom: 20px; }
+        .tab-btn { padding: 10px 20px; border: none; border-radius: 5px; background: #e9ecef; cursor: pointer; font-weight: bold; font-size: 15px; transition: 0.2s; }
+        .tab-btn.active { background: #007bff; color: white; }
+        
+        /* 탭 콘텐츠 숨김/표시 */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* 테이블 스타일 */
         table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
         th { background: #f8f9fa; font-weight: bold; }
+        tbody tr { cursor: pointer; transition: 0.2s; }
+        tbody tr:hover { background: #fff3cd !important; } /* 클릭 유도 하이라이트 */
         tr:nth-child(even) { background: #fdfdfd; }
         .type-tag { padding: 3px 8px; border-radius: 5px; font-size: 12px; font-weight: bold; }
         .fixed { background: #e3f2fd; color: #1565c0; }
         .flex { background: #e8f5e9; color: #2e7d32; }
+
+        /* 입력 폼 스타일 */
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .btn-save { padding: 12px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; }
+        
+        /* 엑셀 업로드 박스 */
+        .excel-box { border: 2px dashed #007bff; padding: 30px; text-align: center; border-radius: 10px; background: #f8f9fa; }
     </style>
 </head>
 <body>
 
 <div class="dashboard">
-    <h2>야간 자율학습 신청 실시간 현황</h2>
-    <div id="stats">데이터 로딩 중...</div>
+    <h2>🏫 야간 자율학습 종합 관리 시스템</h2>
     
-    <table id="data-table">
-        <thead>
-            <tr>
-                <th>학번</th>
-                <th>이름</th>
-                <th>종류</th>
-                <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th><th>일</th>
-                <th>신청시간</th>
-            </tr>
-        </thead>
-        <tbody id="table-body">
-            </tbody>
-    </table>
+    <div class="tab-menu">
+        <button class="tab-btn active" onclick="switchTab('tab-status', this)">📊 실시간 현황</button>
+        <button class="tab-btn" onclick="switchTab('tab-manual', this)">📝 개별 입력/수정</button>
+        <button class="tab-btn" onclick="switchTab('tab-excel', this)">⚙️ 기초자료(엑셀) 등록</button>
+    </div>
+
+    <div id="tab-status" class="tab-content active">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div id="stats" style="font-weight: bold; color: #007bff;">데이터 로딩 중...</div>
+            <span style="font-size: 13px; color: #666;">※ 명단을 클릭하면 개별 수정 화면으로 이동합니다.</span>
+        </div>
+        <table id="data-table">
+            <thead>
+                <tr>
+                    <th>학번</th><th>이름</th><th>종류</th>
+                    <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th><th>일</th>
+                </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+    </div>
+
+    <div id="tab-manual" class="tab-content">
+        <h3>학생 개별 신청정보 관리</h3>
+        <p style="color: #666; font-size: 13px;">현황표에서 학생을 클릭하여 넘어왔거나, 직접 입력하여 자료를 강제로 추가/수정할 수 있습니다.</p>
+        
+        <input type="hidden" id="edit-doc-id"> <div class="form-group">
+            <label>학번</label>
+            <input type="number" id="m-stuId" placeholder="예: 20101">
+        </div>
+        <div class="form-group">
+            <label>이름</label>
+            <input type="text" id="m-stuName" placeholder="이름 입력">
+        </div>
+        <div class="form-group">
+            <label>신청 종류</label>
+            <select id="m-type">
+                <option value="고정석">고정석</option>
+                <option value="자율석">자율석</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>요일별 타임 입력 (예: 1,2,3 또는 빈칸)</label>
+            <div style="display: flex; gap: 5px;">
+                <input type="text" id="m-mon" placeholder="월">
+                <input type="text" id="m-tue" placeholder="화">
+                <input type="text" id="m-wed" placeholder="수">
+                <input type="text" id="m-thu" placeholder="목">
+                <input type="text" id="m-fri" placeholder="금">
+            </div>
+        </div>
+
+        <button class="btn-save" onclick="saveManualData()">저장하기</button>
+    </div>
+
+    <div id="tab-excel" class="tab-content">
+        <h3>학생 기초자료 업로드</h3>
+        <p>학생용 신청 페이지에서 본인 확인용으로 사용할 명단을 업로드합니다.<br>
+        <strong>엑셀 파일 형식:</strong> 첫 번째 열은 '학번', 두 번째 열은 '이름'으로 구성해 주세요.</p>
+        
+        <div class="excel-box">
+            <input type="file" id="excel-file" accept=".xlsx, .xls, .csv" style="margin-bottom: 15px;">
+            <br>
+            <button class="btn-save" style="width: auto;" onclick="uploadExcel()">데이터베이스에 저장</button>
+        </div>
+        <div id="excel-preview" style="margin-top: 20px; font-size: 14px; color: green;"></div>
+    </div>
+
 </div>
 
 <script>
-    // 1. 파이어베이스 설정 (선생님의 Config로 교체하세요)
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
-  authDomain: "self-study-project-82bdf.firebaseapp.com",
-  projectId: "self-study-project-82bdf",
-  storageBucket: "self-study-project-82bdf.firebasestorage.app",
-  messagingSenderId: "482006075036",
-  appId: "1:482006075036:web:473445e0f86d48cd22cf59"
-};
-
-    firebase.initializeApp(firebaseConfig);
+    // --- 파이어베이스 기본 설정 ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
+        authDomain: "self-study-project-82bdf.firebaseapp.com",
+        projectId: "self-study-project-82bdf",
+        storageBucket: "self-study-project-82bdf.firebasestorage.app",
+        messagingSenderId: "482006075036",
+        appId: "1:482006075036:web:473445e0f86d48cd22cf59"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // 2. 데이터 실시간 불러오기
+    // --- 1. 탭 전환 기능 ---
+    function switchTab(tabId, btn) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        btn.classList.add('active');
+    }
+
+    // --- 2. 실시간 현황 불러오기 ---
+    let currentData = {}; // 데이터를 임시 저장할 객체
+
     db.collection("applications").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
         const tbody = document.getElementById('table-body');
         tbody.innerHTML = "";
-        
         let total = 0;
+        
         snapshot.forEach((doc) => {
             const data = doc.data();
+            currentData[doc.id] = data; // 클릭 시 폼에 넣기 위해 데이터 저장
             total++;
-            const date = data.timestamp ? data.timestamp.toDate().toLocaleString('ko-KR') : '-';
             
-            const row = `<tr>
+            // tr태그에 onclick 이벤트를 걸어 클릭 시 개별 관리 탭으로 이동하게 함
+            const row = `<tr onclick="openEditForm('${doc.id}')">
                 <td>${data.stuId}</td>
                 <td>${data.stuName}</td>
                 <td><span class="type-tag ${data.type === '고정석' ? 'fixed' : 'flex'}">${data.type}</span></td>
@@ -76,13 +164,104 @@ const firebaseConfig = {
                 <td>${data.fri || ''}</td>
                 <td>${data.sat || ''}</td>
                 <td>${data.sun || ''}</td>
-                <td style="font-size:11px; color:#888;">${date}</td>
             </tr>`;
             tbody.innerHTML += row;
         });
-        
-        document.getElementById('stats').innerText = `총 신청: ${total}명 (실시간 업데이트 중)`;
+        document.getElementById('stats').innerText = `총 신청: ${total}명`;
     });
+
+    // --- 3. 표 클릭 시 개별 폼으로 데이터 넘기고 이동 ---
+    function openEditForm(docId) {
+        const data = currentData[docId];
+        
+        // 폼에 값 채워넣기
+        document.getElementById('edit-doc-id').value = docId;
+        document.getElementById('m-stuId').value = data.stuId;
+        document.getElementById('m-stuName').value = data.stuName;
+        document.getElementById('m-type').value = data.type;
+        document.getElementById('m-mon').value = data.mon || '';
+        document.getElementById('m-tue').value = data.tue || '';
+        document.getElementById('m-wed').value = data.wed || '';
+        document.getElementById('m-thu').value = data.thu || '';
+        document.getElementById('m-fri').value = data.fri || '';
+        
+        // 두 번째 탭(개별 입력)으로 화면 강제 전환
+        switchTab('tab-manual', document.querySelectorAll('.tab-btn')[1]);
+    }
+
+    // --- 4. 수동 데이터 저장/수정 로직 ---
+    async function saveManualData() {
+        const docId = document.getElementById('edit-doc-id').value;
+        const payload = {
+            stuId: document.getElementById('m-stuId').value,
+            stuName: document.getElementById('m-stuName').value,
+            type: document.getElementById('m-type').value,
+            mon: document.getElementById('m-mon').value,
+            tue: document.getElementById('m-tue').value,
+            wed: document.getElementById('m-wed').value,
+            thu: document.getElementById('m-thu').value,
+            fri: document.getElementById('m-fri').value,
+            timestamp: new Date()
+        };
+
+        try {
+            if (docId) {
+                // 기존 데이터 수정
+                await db.collection("applications").doc(docId).update(payload);
+                alert("성공적으로 수정되었습니다.");
+            } else {
+                // 완전 신규 강제 추가 (ID가 비어있을 때)
+                await db.collection("applications").add(payload);
+                alert("새로운 학생 자료가 추가되었습니다.");
+            }
+            // 저장 후 폼 비우고 현황 탭으로 복귀
+            document.getElementById('edit-doc-id').value = '';
+            document.querySelectorAll('#tab-manual input').forEach(el => el.value = '');
+            switchTab('tab-status', document.querySelectorAll('.tab-btn')[0]);
+        } catch(e) {
+            alert("저장 오류: " + e.message);
+        }
+    }
+
+    // --- 5. 엑셀 파일 읽기 및 업로드 (명단 데이터베이스화) ---
+    function uploadExcel() {
+        const fileInput = document.getElementById('excel-file');
+        if (fileInput.files.length === 0) return alert("엑셀 파일을 먼저 선택해 주세요.");
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            // 엑셀 시트를 자바스크립트 배열로 변환 (헤더 제외)
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1}); 
+            
+            let rosterObj = {};
+            let count = 0;
+            
+            // 첫 줄(제목행) 제외하고 데이터 가공
+            for (let i = 1; i < jsonData.length; i++) {
+                let id = String(jsonData[i][0]).trim(); // 학번
+                let name = String(jsonData[i][1]).trim(); // 이름
+                if (id && name && id !== "undefined") {
+                    rosterObj[id] = name;
+                    count++;
+                }
+            }
+
+            // 파이어베이스 'settings' 컬렉션에 'roster'라는 문서로 명단을 통째로 저장
+            db.collection("settings").doc("roster").set({ 
+                list: JSON.stringify(rosterObj),
+                lastUpdated: new Date()
+            }).then(() => {
+                document.getElementById('excel-preview').innerText = `✅ 총 ${count}명의 기초 명단이 서버에 안전하게 등록되었습니다!`;
+                alert("명단 업로드 완료!");
+            }).catch(e => {
+                alert("업로드 실패: " + e.message);
+            });
+        };
+        reader.readAsArrayBuffer(fileInput.files[0]);
+    }
 </script>
 </body>
 </html>
