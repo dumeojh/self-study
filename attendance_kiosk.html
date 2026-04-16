@@ -169,9 +169,15 @@
 
         const nowTime = new Date();
         const timeStr = nowTime.toLocaleTimeString('ko-KR', { hour12: false });
+
+
+
         
-        // 5-2. 파이어베이스 저장 (덮어쓰기 방식으로 최신 상태 유지)
+// 5-2. 파이어베이스 저장 (덮어쓰기 방식으로 최신 상태 유지 + ★ 기록 누적)
         const logId = `${todayStr}_${id}`;
+        
+        // 현재 시간 (예: 18:30) 추출
+        const timeLogStr = nowTime.toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit' });
         
         try {
             await db.collection("attendance_logs").doc(logId).set({
@@ -179,8 +185,10 @@
                 stuId: id,
                 stuName: studentName,
                 status: currentStatus, // "입실", "외출", "복귀", "귀가"
-                lastUpdateTime: nowTime
-            }, { merge: true }); // 기존 기록(입실 시간 등)은 유지하고 상태만 업데이트
+                lastUpdateTime: nowTime,
+                // ★ 핵심: 기존 배열에 새로운 시간 기록을 차곡차곡 밀어넣음
+                history: firebase.firestore.FieldValue.arrayUnion(`${currentStatus} (${timeLogStr})`)
+            }, { merge: true }); // 기존 기록은 유지하고 업데이트
 
             // 5-3. 상태별 영수증 화면 설정
             let color, statusText, msgText;
