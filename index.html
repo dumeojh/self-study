@@ -1,1 +1,105 @@
-dd
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>야간 자율학습 좌석 신청</title>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* 좌석들을 바둑판 모양으로 배치합니다 */
+        #seat-map {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* 1줄에 5칸씩 */
+            gap: 10px; /* 좌석 사이의 간격 */
+            max-width: 400px;
+            margin: 20px auto; /* 화면 가운데 정렬 */
+        }
+
+        /* 개별 좌석의 디자인입니다 */
+        .seat {
+            padding: 20px 0;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: #f9f9f9;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        /* 학생이 좌석을 터치했을 때 변하는 색상입니다 */
+        .seat.selected {
+            background-color: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+
+        /* 선택 완료 버튼 디자인 */
+        #submit-btn {
+            padding: 15px 30px;
+            font-size: 18px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>오늘의 야자 좌석 선택</h2>
+    <p>앉고 싶은 자리를 터치하세요.</p>
+
+    <div id="seat-map"></div>
+
+    <button id="submit-btn">선택 완료</button>
+
+    <script>
+        const seatMap = document.getElementById('seat-map');
+        const submitBtn = document.getElementById('submit-btn');
+        let selectedSeatNumber = null; // 현재 선택된 좌석 번호를 저장할 변수
+
+        // 1번부터 30번까지의 좌석을 자바스크립트로 자동으로 생성합니다.
+        for (let i = 1; i <= 30; i++) {
+            const seat = document.createElement('div');
+            seat.classList.add('seat');
+            seat.innerText = i; // 화면에 보이는 숫자
+            seat.dataset.seatId = i; // 컴퓨터가 기억하는 데이터
+
+            // 좌석을 클릭(터치)했을 때 일어날 일
+            seat.addEventListener('click', function() {
+                // 1. 이미 초록색으로 칠해진(선택된) 다른 좌석이 있다면 원래 색으로 되돌립니다.
+                const previouslySelected = document.querySelector('.seat.selected');
+                if (previouslySelected) {
+                    previouslySelected.classList.remove('selected');
+                }
+
+                // 2. 방금 내가 터치한 좌석을 초록색으로 칠합니다.
+                seat.classList.add('selected');
+                selectedSeatNumber = seat.dataset.seatId; // 선택한 번호를 기억합니다.
+            });
+
+            // 만들어진 좌석을 화면(seat-map)에 집어넣습니다.
+            seatMap.appendChild(seat);
+        }
+
+        // 선택 완료 버튼을 눌렀을 때 확인하기
+        submitBtn.addEventListener('click', function() {
+            if (selectedSeatNumber === null) {
+                alert("먼저 좌석을 선택해주세요!");
+            } else {
+                alert(selectedSeatNumber + "번 좌석을 선택하셨습니다. (나중에 이 정보가 구글 시트로 갑니다!)");
+            }
+        });
+    </script>
+
+</body>
+</html>
