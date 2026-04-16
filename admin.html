@@ -427,14 +427,21 @@
     }
 
     // [8. 엑셀 명단 업로드 (안전장치 강화 버전)]
+   // [8. 엑셀 명단 업로드 (초강력 스마트 버전)]
     function handleExcelUpload() {
+        // 라이브러리 로딩 확인
+        if (typeof XLSX === 'undefined') {
+            return alert("🚨 엑셀 처리 기능이 로딩되지 않았습니다.\n인터넷 연결을 확인하거나 페이지를 새로고침(F5) 해주세요.");
+        }
+
         const fileInput = document.getElementById('excel-input');
         if (!fileInput.files || fileInput.files.length === 0) return alert("🚨 엑셀 파일을 먼저 선택해 주세요.");
         
         const btn = document.querySelector('.btn-excel'); 
-        btn.innerText = "데이터 읽는 중..."; btn.disabled = true;
+        btn.innerText = "엑셀 분석 중..."; btn.disabled = true;
         
         const reader = new FileReader();
+        
         reader.onload = function(e) {
             try {
                 const data = new Uint8Array(e.target.result); 
@@ -443,33 +450,48 @@
                 const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
                 
                 let newRoster = {}; let count = 0;
-                rows.forEach((row, idx) => {
-                    if (idx > 0) {
-                        const id = row[0] ? String(row[0]).trim() : ""; 
-                        const name = row[1] ? String(row[1]).trim() : "";
-                        if (id !== "" && name !== "" && id !== "undefined") { 
-                            newRoster[id] = name; count++; 
-                        }
+                
+                if (rows.length === 0) throw new Error("엑셀 시트가 비어있습니다.");
+
+                rows.forEach((row) => {
+                    const id = row[0] ? String(row[0]).trim() : ""; 
+                    const name = row[1] ? String(row[1]).trim() : "";
+                    
+                    // 핵심: A열이 '숫자'로만 이루어져 있고, B열에 '이름'이 있는 경우만 무조건 수집
+                    // (이렇게 하면 첫 줄에 '학번'이라는 한글 제목이 있어도 알아서 무시하고 실제 데이터만 가져옵니다.)
+                    if (id.match(/^[0-9]+$/) && name !== "") { 
+                        newRoster[id] = name; 
+                        count++; 
                     }
                 });
                 
                 if (count === 0) { 
-                    alert("🚨 명단 데이터를 찾을 수 없습니다."); 
+                    alert("🚨 유효한 명단을 찾지 못했습니다.\n\n[체크리스트]\n1. A열에 학번(숫자), B열에 이름이 있나요?\n2. 복사할 때 '값만 붙여넣기' 하셨나요?"); 
                     btn.innerText = "서버에 등록"; btn.disabled = false; return; 
                 }
                 
                 db.collection("settings").doc("roster").set({ list: JSON.stringify(newRoster), lastUpdated: new Date() }).then(() => {
                     currentRoster = newRoster; 
-                    alert(`✅ 총 ${count}명 등록 성공!`); 
+                    alert(`✅ 총 ${count}명의 학생이 등록되었습니다!`); 
                     displayRoster(); 
                     btn.innerText = "서버에 등록"; btn.disabled = false; 
                     fileInput.value = "";
+                }).catch(err => {
+                    alert("🚨 서버 저장 실패: " + err.message);
+                    btn.innerText = "서버에 등록"; btn.disabled = false; 
                 });
+                
             } catch (error) { 
-                alert("🚨 오류 발생: " + error.message); 
+                alert("🚨 엑셀 파일을 읽는 중 오류가 발생했습니다.\n원인: " + error.message); 
                 btn.innerText = "서버에 등록"; btn.disabled = false; 
             }
         };
+
+        reader.onerror = function() {
+            alert("🚨 내 컴퓨터에서 파일을 읽어오지 못했습니다. 엑셀 창이 열려있다면 끄고 다시 시도해 주세요.");
+            btn.innerText = "서버에 등록"; btn.disabled = false; 
+        }
+
         reader.readAsArrayBuffer(fileInput.files[0]);
     }
 </script>
