@@ -266,6 +266,10 @@
             });
     }
 
+
+
+    
+// 지도를 실제로 화면에 그리는 함수
     function renderDailySupervisorMap() {
         if(seatMapData.length === 0) return; // 도면이 없으면 그리지 않음
         
@@ -290,8 +294,14 @@
                 const div = document.createElement('div');
                 div.className = `seat-cell seat-${d.type}`;
                 div.innerText = d.label || ""; 
+                
                 if (d.type === 1 || d.type === 2) {
-                    const seatId = d.label || `${r+1}-${c+1}`;
+                    // ★ 버그 수정: 학생용 페이지와 동일한 규칙으로 '기본 좌석 이름' 생성
+                    let seatId = d.label;
+                    if (!seatId) {
+                        if (d.type === 1) seatId = `${String.fromCharCode(65 + r)}${c + 1}`; // 고정석 (A1, B2)
+                        else if (d.type === 2) seatId = `자율-${r+1}-${c+1}`; // 자율석 (자율-1-1)
+                    }
                     cellElements[seatId] = div;
                 }
                 container.appendChild(div);
@@ -317,7 +327,7 @@
             }
         }
 
-        // 3. 자율석 예약 학생 앉히기
+        // 3. 자율석 예약 학생 앉히기 (초록색, 실시간 반응)
         for (const docId in dailyReservationsData) {
             const resData = dailyReservationsData[docId];
             if (resData.times && resData.times.split(',').includes(timeStr)) {
@@ -330,6 +340,8 @@
         }
     }
 
+
+    
     document.getElementById('daily-date').addEventListener('change', loadDailyDataAndRender);
     document.getElementById('daily-time').addEventListener('change', renderDailySupervisorMap);
 
