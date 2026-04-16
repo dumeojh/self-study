@@ -222,13 +222,15 @@
     const db = firebase.firestore();
 
     let applicationData = {}; 
-    let dailyReservationsData = {}; // ★ 실시간 자율석 예약 데이터 보관함
+    let dailyReservationsData = {}; 
     let currentRoster = {};
     let seatMapData = []; let rows = 10, cols = 15;
-    let dailyListenerUnsubscribe = null; // 자율석 실시간 감지기 해제용
+    let dailyListenerUnsubscribe = null; 
     
-    // 오늘 날짜 세팅
-    document.getElementById('daily-date').valueAsDate = new Date();
+    // ★ 버그 수정 1: 한국 시간 기준으로 오늘 날짜 정확히 세팅 (시차 오류 방지)
+    const todayObj = new Date();
+    const todayStr = todayObj.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
+    document.getElementById('daily-date').value = todayStr;
 
     function switchTab(tabId, btn) {
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -246,16 +248,13 @@
         if(document.getElementById('tab-daily').classList.contains('active')) renderDailySupervisorMap();
     });
 
-    // --- ★ 강력해진 감독용 일일 뷰어 ---
-    // 날짜를 바꿀 때마다 그 날짜의 자율석 예약 데이터를 실시간으로 감시 시작
+    // --- 감독용 일일 뷰어 ---
     function loadDailyDataAndRender() {
         const dateStr = document.getElementById('daily-date').value;
         if(!dateStr) return;
 
-        // 기존에 켜져 있던 감지기가 있으면 끄기
         if (dailyListenerUnsubscribe) dailyListenerUnsubscribe();
 
-        // 선택한 날짜의 자율석 데이터만 콕 집어서 실시간 감시 시작
         dailyListenerUnsubscribe = db.collection("daily_reservations")
             .where("date", "==", dateStr)
             .onSnapshot((snapshot) => {
@@ -263,18 +262,13 @@
                 snapshot.forEach(doc => {
                     dailyReservationsData[doc.id] = doc.data();
                 });
-                renderDailySupervisorMap(); // 데이터가 바뀌면 지도를 다시 그림
+                renderDailySupervisorMap(); 
             });
     }
 
-
-
-
-    
-    // 지도를 실제로 화면에 그리는 함수
-// 지도를 실제로 화면에 그리는 함수
     function renderDailySupervisorMap() {
-        if(seatMapData.length === 0) return;
+        if(seatMapData.length === 0) return; // 도면이 없으면 그리지 않음
+        
         const dateStr = document.getElementById('daily-date').value;
         const timeStr = document.getElementById('daily-time').value;
         if(!dateStr) return;
@@ -283,7 +277,6 @@
         const daysEng = ['sun','mon','tue','wed','thu','fri','sat'];
         const targetDayKey = daysEng[dateObj.getDay()]; 
         
-        // ★ 버그 수정 1: 선택한 날짜가 몇 월인지 계산합니다 (예: "4월")
         const targetMonthStr = (dateObj.getMonth() + 1) + "월";
 
         const container = document.getElementById('supervisor-grid');
@@ -305,14 +298,13 @@
             }
         }
 
-        // 2. 고정석 학생 앉히기 (파란색)
+        // 2. 고정석 학생 앉히기
         for (const docId in applicationData) {
             const data = applicationData[docId];
             
-            // ★ 버그 수정 2: 과거 데이터가 겹치지 않도록, '현재 조회하는 월'의 신청서만 거릅니다.
             if ((data.targetMonth || "미지정") !== targetMonthStr) continue;
-            
             if (data.type !== '고정석') continue;
+            
             const stuTimes = data[targetDayKey]; 
             if (!stuTimes) continue; 
             
@@ -320,26 +312,24 @@
                 if (data.seatNum && cellElements[data.seatNum]) {
                     const targetDiv = cellElements[data.seatNum];
                     targetDiv.innerHTML = `${data.seatNum}<br><span style="font-size:14px;">${data.stuName}</span>`;
-                    targetDiv.classList.add('occupied-fixed'); // 파란 테두리
+                    targetDiv.classList.add('occupied-fixed'); 
                 }
             }
         }
 
-        // 3. 자율석 예약 학생 앉히기 (초록색, 실시간 반응)
+        // 3. 자율석 예약 학생 앉히기
         for (const docId in dailyReservationsData) {
             const resData = dailyReservationsData[docId];
             if (resData.times && resData.times.split(',').includes(timeStr)) {
                 if (resData.seatNum && cellElements[resData.seatNum]) {
                     const targetDiv = cellElements[resData.seatNum];
                     targetDiv.innerHTML = `${resData.seatNum}<br><span style="font-size:14px;">${resData.stuName}</span>`;
-                    targetDiv.classList.add('occupied-flex'); // 초록 테두리
+                    targetDiv.classList.add('occupied-flex'); 
                 }
             }
         }
     }
 
-    
-    // 날짜나 타임을 변경하면 바로바로 지도를 다시 그림
     document.getElementById('daily-date').addEventListener('change', loadDailyDataAndRender);
     document.getElementById('daily-time').addEventListener('change', renderDailySupervisorMap);
 
@@ -353,7 +343,12 @@
             if (doc.exists) {
                 const data = doc.data(); rows = data.rows; cols = data.cols;
                 seatMapData = JSON.parse(data.grid).map(row => row.map(c => typeof c === 'number' ? {type: c, label: ""} : c));
-                if(mode === 'edit') { document.getElementById('grid-rows').value = rows; document.getElementById('grid-cols').value = cols; drawEditGrid(); }
+                if(mode === 'edit') { 
+                    document.getElementById('grid-rows').value = rows; document.getElementById('grid-cols').value = cols; drawEditGrid(); 
+                } else if(mode === 'view') {
+                    // ★ 버그 수정 2: 도면을 다 불러온 직후에 지도를 렌더링하도록 지시
+                    renderDailySupervisorMap();
+                }
             } else if(mode === 'edit') initializeGrid();
         } catch(e) { console.error(e); }
     }
@@ -479,8 +474,11 @@
         reader.readAsArrayBuffer(fileInput.files[0]);
     }
     
-    // 페이지 로딩 시 첫 데이터 불러오기 (감독용 탭을 위한 초기화)
-    loadDailyDataAndRender();
+    // ★ 페이지가 열리자마자 '도면'부터 확실히 불러온 뒤 -> 학생 명단을 지도 위에 얹도록 순서 변경!
+    loadSeatLayout('view').then(() => {
+        loadDailyDataAndRender();
+    });
+</script>
 </script>
 </body>
 </html>
