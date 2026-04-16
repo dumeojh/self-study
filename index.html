@@ -9,54 +9,65 @@
             font-family: 'Malgun Gothic', sans-serif;
             text-align: center;
             padding: 20px;
+            background-color: #f4f4f9;
         }
 
-        /* 좌석들을 바둑판 모양으로 배치합니다 */
         #seat-map {
             display: grid;
-            grid-template-columns: repeat(5, 1fr); /* 1줄에 5칸씩 */
-            gap: 10px; /* 좌석 사이의 간격 */
-            max-width: 400px;
-            margin: 20px auto; /* 화면 가운데 정렬 */
+            gap: 8px; /* 좌석 사이의 간격 */
+            max-width: 100%;
+            margin: 20px auto;
+            /* 가로줄 개수는 자바스크립트에서 자동으로 설정해 줍니다 */
+            padding: 15px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
 
-        /* 개별 좌석의 디자인입니다 */
+        /* 실제 책상 디자인 */
         .seat {
-            padding: 20px 0;
-            border: 2px solid #ccc;
+            padding: 15px 0;
+            border: 2px solid #ddd;
             border-radius: 8px;
             cursor: pointer;
-            background-color: #f9f9f9;
+            background-color: #fff;
             font-weight: bold;
             font-size: 16px;
+            color: #333;
         }
 
-        /* 학생이 좌석을 터치했을 때 변하는 색상입니다 */
+        /* 통로나 빈 공간 (투명하게 처리) */
+        .empty-space {
+            /* 눈에 보이지 않게 처리합니다 */
+            visibility: hidden; 
+        }
+
+        /* 선택된 좌석의 디자인 */
         .seat.selected {
             background-color: #4CAF50;
             color: white;
             border-color: #4CAF50;
+            box-shadow: 0 2px 5px rgba(76, 175, 80, 0.4);
         }
 
-        /* 선택 완료 버튼 디자인 */
         #submit-btn {
             padding: 15px 30px;
             font-size: 18px;
             background-color: #007BFF;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
-            margin-top: 10px;
             width: 100%;
             max-width: 400px;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
 
-    <h2>오늘의 야자 좌석 선택</h2>
-    <p>앉고 싶은 자리를 터치하세요.</p>
+    <h2>학습실 좌석 선택</h2>
+    <p>본인의 자리를 터치하세요.</p>
 
     <div id="seat-map"></div>
 
@@ -65,38 +76,61 @@
     <script>
         const seatMap = document.getElementById('seat-map');
         const submitBtn = document.getElementById('submit-btn');
-        let selectedSeatNumber = null; // 현재 선택된 좌석 번호를 저장할 변수
+        let selectedSeatNumber = null;
 
-        // 1번부터 30번까지의 좌석을 자바스크립트로 자동으로 생성합니다.
-        for (let i = 1; i <= 30; i++) {
-            const seat = document.createElement('div');
-            seat.classList.add('seat');
-            seat.innerText = i; // 화면에 보이는 숫자
-            seat.dataset.seatId = i; // 컴퓨터가 기억하는 데이터
+        // 🌟 핵심 포인트: 0과 1로 학습실 지도를 그립니다. 🌟
+        // 1 = 책상, 0 = 통로/빈공간
+        const roomLayout = [
+            [1, 1, 0, 1, 1, 0, 1, 1], // 첫 번째 줄 (2자리, 통로, 2자리, 통로, 2자리)
+            [1, 1, 0, 1, 1, 0, 1, 1], // 두 번째 줄
+            [1, 1, 0, 1, 1, 0, 1, 1], // 세 번째 줄
+            [0, 0, 0, 0, 0, 0, 0, 0], // 가로 통로 (전부 0)
+            [1, 1, 0, 1, 1, 0, 1, 1], // 네 번째 줄
+            [1, 1, 0, 1, 1, 0, 1, 1]  // 다섯 번째 줄
+        ];
 
-            // 좌석을 클릭(터치)했을 때 일어날 일
-            seat.addEventListener('click', function() {
-                // 1. 이미 초록색으로 칠해진(선택된) 다른 좌석이 있다면 원래 색으로 되돌립니다.
-                const previouslySelected = document.querySelector('.seat.selected');
-                if (previouslySelected) {
-                    previouslySelected.classList.remove('selected');
+        // 지도의 가로 칸 수를 계산해서 CSS 그리드에 적용합니다.
+        const cols = roomLayout[0].length;
+        seatMap.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+        let seatCounter = 1; // 좌석 번호를 1번부터 매기기 위한 변수
+
+        // 지도를 한 줄씩 읽어오면서 화면에 그립니다.
+        roomLayout.forEach(row => {
+            row.forEach(cell => {
+                const div = document.createElement('div');
+
+                if (cell === 1) {
+                    // 책상(1)인 경우
+                    div.classList.add('seat');
+                    div.innerText = seatCounter; // 번호 부여
+                    div.dataset.seatId = seatCounter;
+
+                    // 클릭 이벤트 추가
+                    div.addEventListener('click', function() {
+                        const previouslySelected = document.querySelector('.seat.selected');
+                        if (previouslySelected) {
+                            previouslySelected.classList.remove('selected');
+                        }
+                        div.classList.add('selected');
+                        selectedSeatNumber = div.dataset.seatId;
+                    });
+
+                    seatCounter++; // 다음 책상 번호를 위해 1 증가
+                } else {
+                    // 빈 공간(0)인 경우
+                    div.classList.add('empty-space');
                 }
 
-                // 2. 방금 내가 터치한 좌석을 초록색으로 칠합니다.
-                seat.classList.add('selected');
-                selectedSeatNumber = seat.dataset.seatId; // 선택한 번호를 기억합니다.
+                seatMap.appendChild(div);
             });
+        });
 
-            // 만들어진 좌석을 화면(seat-map)에 집어넣습니다.
-            seatMap.appendChild(seat);
-        }
-
-        // 선택 완료 버튼을 눌렀을 때 확인하기
         submitBtn.addEventListener('click', function() {
             if (selectedSeatNumber === null) {
                 alert("먼저 좌석을 선택해주세요!");
             } else {
-                alert(selectedSeatNumber + "번 좌석을 선택하셨습니다. (나중에 이 정보가 구글 시트로 갑니다!)");
+                alert(selectedSeatNumber + "번 좌석을 선택하셨습니다.");
             }
         });
     </script>
