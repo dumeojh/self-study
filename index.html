@@ -3,177 +3,241 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>학습실 좌석 신청</title>
+    <title>안성여고 야간 자율학습 신청</title>
     <style>
+        :root {
+            --primary: #007bff;
+            --fixed-bg: #e3f2fd;
+            --fixed-text: #1565c0;
+            --flex-bg: #f8f9fa;
+        }
+
         body {
             font-family: 'Malgun Gothic', sans-serif;
-            text-align: center;
-            padding: 10px;
-            background-color: #f4f4f9;
-        }
-
-        /* 학생들에게 모드를 알려주는 상단 안내 문구 */
-        .status-board {
-            display: flex;
-            justify-content: space-around;
-            background: white;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        #seat-map {
-            display: grid;
-            gap: 8px;
-            max-width: 100%;
-            margin: 0 auto 20px auto;
+            background-color: #f0f2f5;
+            margin: 0;
             padding: 15px;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        /* 공통 좌석 스타일 */
-        .seat {
-            padding: 15px 0;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 14px;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        /* 고정석 (F) 디자인 - 파란색 계열 */
-        .fixed-seat {
-            background-color: #E3F2FD;
-            border: 2px solid #90CAF9;
-            color: #1565C0;
-        }
-
-        /* 자율석 (A) 디자인 - 회색 계열 (기본 상태) */
-        .flexible-seat {
-            background-color: #ffffff;
-            border: 2px solid #ccc;
             color: #333;
         }
 
-        /* 빈 공간 (0) */
-        .empty-space {
-            visibility: hidden;
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
-        /* 자율석을 터치해서 선택했을 때 (초록색) */
-        .flexible-seat.selected {
-            background-color: #4CAF50;
-            border-color: #4CAF50;
+        h2 { text-align: center; color: #1a1a1a; margin-bottom: 25px; }
+
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        .type-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .type-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .type-btn.active[data-type="1"] { background: var(--fixed-bg); border-color: var(--fixed-text); color: var(--fixed-text); }
+        .type-btn.active[data-type="0"] { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .schedule-table th { background: #f8f9fa; padding: 10px; font-size: 13px; border: 1px solid #eee; }
+        .schedule-table td { padding: 5px; border: 1px solid #eee; text-align: center; }
+
+        .time-chk {
+            display: none;
+        }
+        .time-label {
+            display: block;
+            padding: 8px 0;
+            border-radius: 5px;
+            background: #eee;
+            font-size: 12px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .time-chk:checked + .time-label {
+            background: var(--primary);
             color: white;
-            box-shadow: 0 2px 5px rgba(76, 175, 80, 0.4);
         }
 
         #submit-btn {
-            padding: 15px 30px;
-            font-size: 18px;
-            background-color: #007BFF;
+            width: 100%;
+            padding: 15px;
+            background: var(--primary);
             color: white;
             border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 100%;
-            max-width: 400px;
+            border-radius: 10px;
+            font-size: 18px;
             font-weight: bold;
+            cursor: pointer;
+        }
+        #submit-btn:disabled { background: #ccc; }
+
+        .info-msg {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.5;
         }
     </style>
 </head>
 <body>
 
-    <h2>오늘의 학습실 좌석</h2>
+<div class="container">
+    <h2>야간 자율학습 신청</h2>
     
-    <div class="status-board">
-        <span style="color:#1565C0; font-weight:bold;">🟦 고정석 (월~금)</span>
-        <span style="color:#4CAF50; font-weight:bold;">🟩 자율석 (당일)</span>
+    <div class="input-group">
+        <label>학번</label>
+        <input type="number" id="stu-id" placeholder="예: 20101">
+    </div>
+    <div class="input-group">
+        <label>이름</label>
+        <input type="text" id="stu-name" placeholder="실명을 입력하세요">
     </div>
 
-    <div id="seat-map"></div>
+    <label>신청 종류</label>
+    <div class="type-selector">
+        <button class="type-btn" data-type="1" onclick="selectType(1)">고정석(1)</button>
+        <button class="type-btn" data-type="0" onclick="selectType(0)">자율석(0)</button>
+    </div>
 
-    <button id="submit-btn">자율석 신청 완료</button>
+    <div class="info-msg" id="info-text">
+        ※ 고정석은 최소 3일 이상(타임 무관) 선택해야 합니다.
+    </div>
 
-    <script>
-        const seatMap = document.getElementById('seat-map');
-        const submitBtn = document.getElementById('submit-btn');
-        let selectedFlexibleSeat = null;
+    <table class="schedule-table">
+        <thead>
+            <tr>
+                <th>요일</th>
+                <th>1타임</th>
+                <th>2타임</th>
+                <th>3타임</th>
+            </tr>
+        </thead>
+        <tbody id="schedule-body">
+            </tbody>
+    </table>
 
-        // 🌟 지도를 F(고정), A(자율), 0(통로)으로 설계합니다.
-        // 선생님의 실제 학습실 구조에 맞게 F와 A의 개수를 조절하세요.
-        const roomLayout = [
-            ['F', 'F', 0, 'A', 'A', 'A', 'A'], // 고정석 구역과 자율석 구역
-            ['F', 'F', 0, 'A', 'A', 'A', 'A'],
-            ['F', 'F', 0, 'A', 'A', 'A', 'A'],
-            [ 0,   0,  0,  0,   0,   0,   0 ], // 가로 복도
-            ['F', 'F', 0, 'A', 'A', 'A', 'A'],
-            ['F', 'F', 0, 'A', 'A', 'A', 'A']
-        ];
+    <button id="submit-btn" onclick="submitForm()">신청하기</button>
+</div>
 
-        const cols = roomLayout[0].length;
-        seatMap.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+<script>
+    const days = ['월', '화', '수', '목', '금', '토', '일'];
+    const daysEng = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+    let selectedType = null;
 
-        let fixedCounter = 1;
-        let flexCounter = 1;
+    // 요일별 체크박스 생성
+    const tbody = document.getElementById('schedule-body');
+    days.forEach((day, idx) => {
+        let row = `<tr>
+            <td><strong>${day}</strong></td>
+            ${[1, 2, 3].map(t => `
+                <td>
+                    <input type="checkbox" class="time-chk day-${idx}" id="${daysEng[idx]}-${t}" value="${t}" onchange="validateForm()">
+                    <label class="time-label" for="${daysEng[idx]}-${t}">${t}T</label>
+                </td>
+            `).join('')}
+        </tr>`;
+        tbody.innerHTML += row;
+    });
 
-        roomLayout.forEach(row => {
-            row.forEach(cell => {
-                const div = document.createElement('div');
+    function selectType(type) {
+        selectedType = type;
+        document.querySelectorAll('.type-btn').forEach(btn => {
+            btn.classList.toggle('active', parseInt(btn.dataset.type) === type);
+        });
+        validateForm();
+    }
 
-                if (cell === 'F') {
-                    // --- 고정석 생성 ---
-                    div.classList.add('seat', 'fixed-seat');
-                    div.innerHTML = `고정<br>${fixedCounter}`; 
-                    div.dataset.seatId = "고정-" + fixedCounter;
-                    fixedCounter++;
+    function validateForm() {
+        const id = document.getElementById('stu-id').value;
+        const name = document.getElementById('stu-name').value;
+        const btn = document.getElementById('submit-btn');
+        
+        // 선택된 요일 수 계산
+        let selectedDays = 0;
+        daysEng.forEach(day => {
+            if(document.querySelectorAll(`[id^="${day}-"]:checked`).length > 0) selectedDays++;
+        });
 
-                    // 고정석 클릭 시 반응 (키보드 안 뜨게 alert창만 띄움)
-                    div.addEventListener('click', function() {
-                        alert(`이 자리는 [${div.dataset.seatId}] 입니다.\n고정석 배정자는 본인 자리가 맞는지 확인만 해주세요.`);
-                    });
+        const isIdOk = id.length >= 5;
+        const isNameOk = name.length >= 2;
+        const isTypeOk = selectedType !== null;
+        let isConditionOk = true;
 
-                } else if (cell === 'A') {
-                    // --- 자율석 생성 ---
-                    div.classList.add('seat', 'flexible-seat');
-                    div.innerHTML = `자율<br>${flexCounter}`;
-                    div.dataset.seatId = "자율-" + flexCounter;
-                    flexCounter++;
+        if (selectedType === 1 && selectedDays < 3) isConditionOk = false;
 
-                    // 자율석 클릭 시 반응
-                    div.addEventListener('click', function() {
-                        const previouslySelected = document.querySelector('.flexible-seat.selected');
-                        if (previouslySelected) {
-                            previouslySelected.classList.remove('selected');
-                        }
-                        div.classList.add('selected');
-                        selectedFlexibleSeat = div.dataset.seatId;
-                    });
+        btn.disabled = !(isIdOk && isNameOk && isTypeOk && isConditionOk);
+    }
 
-                } else {
-                    // --- 빈 공간 ---
-                    div.classList.add('empty-space');
-                }
+    async function submitForm() {
+        // 🌟 여기에 선생님의 구글 앱스 스크립트 '웹앱 URL'을 넣어주세요!
+        const scriptUrl = "YOUR_GOOGLE_SCRIPT_URL_HERE";
 
-                seatMap.appendChild(div);
+        if(scriptUrl === "YOUR_GOOGLE_SCRIPT_URL_HERE") {
+            alert("구글 앱스 스크립트 URL이 설정되지 않았습니다.");
+            return;
+        }
+
+        const payload = {
+            id: document.getElementById('stu-id').value,
+            name: document.getElementById('stu-name').value,
+            type: selectedType,
+            dayCount: 0
+        };
+
+        let totalDays = 0;
+        daysEng.forEach(day => {
+            const checked = Array.from(document.querySelectorAll(`[id^="${day}-"]:checked`)).map(el => el.value);
+            payload[day] = checked.join(',');
+            if(checked.length > 0) totalDays++;
+        });
+        payload.dayCount = totalDays;
+
+        document.getElementById('submit-btn').innerText = "전송 중...";
+        document.getElementById('submit-btn').disabled = true;
+
+        try {
+            const response = await fetch(scriptUrl, {
+                method: "POST",
+                body: JSON.stringify(payload)
             });
-        });
-
-        // 자율석 신청 버튼 클릭 시
-        submitBtn.addEventListener('click', function() {
-            if (selectedFlexibleSeat === null) {
-                alert("당일 사용할 자율석을 먼저 터치해주세요!");
-            } else {
-                alert(`${selectedFlexibleSeat}석을 선택하셨습니다.\n(다음 단계: 구글 시트로 이 정보를 전송합니다!)`);
-            }
-        });
-    </script>
+            const res = await response.json();
+            alert(res.message);
+            if(res.result === "success") location.reload();
+        } catch (e) {
+            alert("전송 중 오류가 발생했습니다. 네트워크를 확인해주세요.");
+        } finally {
+            document.getElementById('submit-btn').innerText = "신청하기";
+            document.getElementById('submit-btn').disabled = false;
+        }
+    }
+</script>
 
 </body>
 </html>
