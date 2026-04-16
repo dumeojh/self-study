@@ -146,19 +146,37 @@
     <button id="submit-btn" onclick="submitForm()">신청하기</button>
 </div>
 
-<script>
+<script type="module">
+    // 1. 파이어베이스의 기능들을 웹에서 직접 불러옵니다.
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // 🌟 2. 방금 파이어베이스 콘솔에서 복사한 선생님의 firebaseConfig를 여기에 붙여넣으세요!
+    const firebaseConfig = {
+        apiKey: "여기에_붙여넣으세요",
+        authDomain: "여기에_붙여넣으세요",
+        projectId: "여기에_붙여넣으세요",
+        storageBucket: "여기에_붙여넣으세요",
+        messagingSenderId: "여기에_붙여넣으세요",
+        appId: "여기에_붙여넣으세요"
+    };
+
+    // 3. 파이어베이스 시동 걸기
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // 기존 요일 변수와 체크박스 생성 로직 (그대로 유지)
     const days = ['월', '화', '수', '목', '금', '토', '일'];
     const daysEng = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
     let selectedType = null;
 
-    // 요일별 체크박스 생성
     const tbody = document.getElementById('schedule-body');
     days.forEach((day, idx) => {
         let row = `<tr>
             <td><strong>${day}</strong></td>
             ${[1, 2, 3].map(t => `
                 <td>
-                    <input type="checkbox" class="time-chk day-${idx}" id="${daysEng[idx]}-${t}" value="${t}" onchange="validateForm()">
+                    <input type="checkbox" class="time-chk day-${idx}" id="${daysEng[idx]}-${t}" value="${t}" onchange="window.validateForm()">
                     <label class="time-label" for="${daysEng[idx]}-${t}">${t}T</label>
                 </td>
             `).join('')}
@@ -166,20 +184,19 @@
         tbody.innerHTML += row;
     });
 
-    function selectType(type) {
+    // 화면 버튼 조작 함수들 (html에서 부를 수 있게 window에 등록)
+    window.selectType = function(type) {
         selectedType = type;
         document.querySelectorAll('.type-btn').forEach(btn => {
             btn.classList.toggle('active', parseInt(btn.dataset.type) === type);
         });
-        validateForm();
-    }
+        window.validateForm();
+    };
 
-    function validateForm() {
+    window.validateForm = function() {
         const id = document.getElementById('stu-id').value;
         const name = document.getElementById('stu-name').value;
         const btn = document.getElementById('submit-btn');
-        
-        // 선택된 요일 수 계산
         let selectedDays = 0;
         daysEng.forEach(day => {
             if(document.querySelectorAll(`[id^="${day}-"]:checked`).length > 0) selectedDays++;
@@ -191,21 +208,20 @@
         let isConditionOk = true;
 
         if (selectedType === 1 && selectedDays < 3) isConditionOk = false;
-
         btn.disabled = !(isIdOk && isNameOk && isTypeOk && isConditionOk);
-    }
+    };
 
-    // 🌟 핵심 전송 함수
-   // 🌟 CORS 에러(Failed to fetch)를 우회하는 궁극의 전송 함수!
-    function submitForm() {
-        const scriptUrl = "https://script.google.com/macros/s/AKfycbzt_N3NfSuH1nx93JaS3HljE-CVbegD87T3DFfQvN5DF0zCatk7CaSrbH0zOy5mxtbOyQ/exec";
+    // 🌟 4. 완전히 새로워진 파이어베이스 전송 함수!
+    window.submitForm = async function() {
+        const idValue = document.getElementById('stu-id').value;
         
-        // 1. 전송할 데이터 수집
+        // 보낼 데이터 정리
         const payload = {
-            id: document.getElementById('stu-id').value,
+            id: idValue,
             name: document.getElementById('stu-name').value,
             type: selectedType,
-            dayCount: 0
+            dayCount: 0,
+            timestamp: new Date().toISOString() // 언제 신청했는지 시간도 저장!
         };
 
         let totalDays = 0;
@@ -216,45 +232,23 @@
         });
         payload.dayCount = totalDays;
 
-        document.getElementById('submit-btn').innerText = "전송 중...";
+        document.getElementById('submit-btn').innerText = "저장 중...";
         document.getElementById('submit-btn').disabled = true;
 
-        // 2. 투명 망토(보이지 않는 iframe) 만들기
-        // 화면이 깜빡이거나 딴 데로 날아가는 걸 막아줍니다.
-        let iframe = document.getElementById("hidden-iframe");
-        if (!iframe) {
-            iframe = document.createElement("iframe");
-            iframe.id = "hidden-iframe";
-            iframe.name = "hidden-iframe";
-            iframe.style.display = "none";
-            document.body.appendChild(iframe);
+        try {
+            // 🔥 파이어베이스 마법의 한 줄: 'reservations' 폴더에 학번 이름으로 문서를 만들어 덮어씁니다.
+            await setDoc(doc(db, "reservations", idValue), payload);
             
-            // 데이터 전송이 끝나고 구글이 대답을 보내면 작동하는 부분
-            iframe.addEventListener('load', function() {
-                // iframe이 로딩되었다는 건 전송이 끝났다는 뜻!
-                alert("신청이 완료되었습니다! (구글 시트를 확인해 보세요)");
-                location.reload(); // 화면 새로고침
-            });
+            alert("신청이 완벽하게 저장되었습니다!");
+            location.reload();
+            
+        } catch (e) {
+            console.error(e);
+            alert("저장 실패: " + e.message);
+            document.getElementById('submit-btn').innerText = "신청하기";
+            document.getElementById('submit-btn').disabled = false;
         }
-
-        // 3. 데이터를 담아 보낼 보이지 않는 <form> 만들기
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = scriptUrl;
-        form.target = "hidden-iframe"; // iframe 몰래 보내기!
-        form.style.display = "none";
-
-        // 데이터를 폼 안에 차곡차곡 넣기 (구글 스크립트가 JSON을 기대하므로 통째로 넣습니다)
-        // ※ 주의: 구글 스크립트 쪽도 이 폼 전송 방식에 맞춰 한 줄 수정이 필요합니다! (아래 설명 참조)
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = "formData";
-        input.value = JSON.stringify(payload);
-        form.appendChild(input);
-
-        document.body.appendChild(form);
-        form.submit(); // 발사!
-    }
+    };
 </script>
 
 </body>
