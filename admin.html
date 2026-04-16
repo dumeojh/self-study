@@ -50,7 +50,7 @@
         .edit-mode .seat-cell:hover { transform: scale(1.05); border: 2px solid #000; z-index: 10; }
         
         /* 감독 모드 전용 */
-        .view-mode .seat-cell { width: 55px; height: 55px; font-size: 13px; } /* 이름이 들어가야 하므로 더 크게 */
+        .view-mode .seat-cell { width: 55px; height: 55px; font-size: 13px; }
         .occupied { border: 3px solid #d63384 !important; background: #fff0f6 !important; color: #d63384 !important; font-weight: 900 !important; box-shadow: 0 4px 8px rgba(214,51,132,0.3); }
 
         /* 팔레트 */
@@ -83,26 +83,20 @@
         <div class="form-card" style="text-align: center; background: #e3f2fd; border-color: #b6d4fe;">
             <h3>👁️‍🗨️ 실시간 착석 확인 (감독 교사용)</h3>
             <p style="color: #052c65; font-size: 14px; margin-bottom: 20px;">
-                조회할 날짜와 타임을 선택하면, <strong>해당 시간에 자리에 앉아있어야 할 학생의 이름</strong>이 지도에 빨간색으로 표시됩니다.
+                조회할 날짜와 타임을 선택하면, 해당 시간에 자리에 앉아있어야 할 학생이 표시됩니다.
             </p>
-            
             <div style="display: inline-flex; gap: 15px; align-items: center; background: white; padding: 15px 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
                 <input type="date" id="daily-date" style="padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold; font-size: 16px;">
                 <select id="daily-time" style="padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold; font-size: 16px;">
-                    <option value="1">1타임</option>
-                    <option value="2">2타임</option>
-                    <option value="3">3타임</option>
+                    <option value="1">1타임</option><option value="2">2타임</option><option value="3">3타임</option>
                 </select>
                 <button class="btn btn-primary" style="width: auto; padding: 10px 20px; font-size: 16px;" onclick="renderDailySupervisorMap()">조회하기</button>
             </div>
-            
             <div style="margin-top: 15px; font-size: 14px; color: #666;">
-                <span style="display:inline-block; width:15px; height:15px; background:#fff0f6; border:2px solid #d63384; vertical-align:middle;"></span> 이 자리에 학생이 있습니다 (고정석/자율석 포함)
+                <span style="display:inline-block; width:15px; height:15px; background:#fff0f6; border:2px solid #d63384; vertical-align:middle;"></span> 이 자리에 학생이 있습니다 (고정석/자율석)
             </div>
-
             <div class="seat-grid-container" style="display: block; margin-top: 20px; background: white;">
-                <div id="supervisor-grid" class="seat-grid view-mode">
-                    </div>
+                <div id="supervisor-grid" class="seat-grid view-mode"></div>
             </div>
         </div>
     </div>
@@ -168,15 +162,23 @@
 
     <div id="tab-roster" class="tab-content">
         <div class="form-card">
-            <h3>엑셀 기초 명단 등록</h3><input type="file" id="excel-input" accept=".xlsx"><button class="btn btn-excel" onclick="handleExcelUpload()">등록</button>
-            <div style="max-height: 300px; overflow-y: auto; margin-top:20px;">
-                <table><thead><tr><th>학번</th><th>이름</th><th>삭제</th></tr></thead><tbody id="roster-body"></tbody></table>
+            <h3>엑셀 기초 명단 등록</h3>
+            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">※ 반드시 학번(A열), 이름(B열)에 '값만 붙여넣기' 된 엑셀 파일을 올려주세요.</p>
+            <input type="file" id="excel-input" accept=".xlsx, .xls, .csv">
+            <button id="upload-btn" class="btn btn-excel" onclick="handleExcelUpload()">명단 서버에 등록</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+                <h3 style="margin:0;">현재 등록된 명단 (<span id="roster-count">0</span>명)</h3>
+                <input type="text" id="roster-search" class="search-box" style="margin:0;" placeholder="이름 검색" oninput="displayRoster()">
+            </div>
+            <div style="max-height: 300px; overflow-y: auto; margin-top:15px;">
+                <table><thead><tr><th>학번</th><th>이름</th><th>관리</th></tr></thead><tbody id="roster-body"></tbody></table>
             </div>
         </div>
     </div>
 </div>
 
 <script>
+    // --- 파이어베이스 연결 ---
     const firebaseConfig = {
         apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
         authDomain: "self-study-project-82bdf.firebaseapp.com",
@@ -189,9 +191,9 @@
     const db = firebase.firestore();
 
     let applicationData = {}; 
+    let currentRoster = {};
     let seatMapData = []; let rows = 10, cols = 15;
     
-    // 오늘 날짜 기본 세팅
     document.getElementById('daily-date').valueAsDate = new Date();
 
     function switchTab(tabId, btn) {
@@ -200,90 +202,88 @@
         document.getElementById(tabId).classList.add('active'); btn.classList.add('active');
         if (tabId === 'tab-roster') fetchRoster();
         if (tabId === 'tab-seats') loadSeatLayout('edit'); 
-        if (tabId === 'tab-daily') { loadSeatLayout('view'); renderDailySupervisorMap(); } // 감독탭 진입 시
+        if (tabId === 'tab-daily') { loadSeatLayout('view'); renderDailySupervisorMap(); }
     }
 
-    // --- 데이터 불러오기 공통 ---
+    // --- 데이터 실시간 불러오기 ---
     db.collection("applications").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
         applicationData = {}; snapshot.forEach(doc => { applicationData[doc.id] = doc.data(); });
         renderStatusTable(); 
         if(document.getElementById('tab-daily').classList.contains('active')) renderDailySupervisorMap();
     });
 
-    // --- ★ 핵심: 감독용 일일 좌석 매핑 로직 ---
-    function renderDailySupervisorMap() {
-        if(seatMapData.length === 0) return; // 도면 로딩 전이면 대기
-
-        const dateStr = document.getElementById('daily-date').value; // YYYY-MM-DD
-        const timeStr = document.getElementById('daily-time').value; // "1", "2", "3"
+    // --- 감독용 일일 뷰어 ---
+    async function renderDailySupervisorMap() {
+        if(seatMapData.length === 0) return;
+        const dateStr = document.getElementById('daily-date').value;
+        const timeStr = document.getElementById('daily-time').value;
         if(!dateStr) return;
 
-        // 요일 계산 (0:일, 1:월 ... 6:토)
         const dateObj = new Date(dateStr);
         const daysEng = ['sun','mon','tue','wed','thu','fri','sat'];
         const targetDayKey = daysEng[dateObj.getDay()]; 
 
-        // 1. 도면 초기화 (이름 지우기)
         const container = document.getElementById('supervisor-grid');
         container.innerHTML = ''; container.style.gridTemplateColumns = `repeat(${cols}, 55px)`;
-        
-        // 화면용 셀 객체들 보관
         const cellElements = {}; 
 
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
-                const cellData = seatMapData[r][c];
+                const d = seatMapData[r][c];
                 const div = document.createElement('div');
-                div.className = `seat-cell seat-${cellData.type}`;
-                div.innerText = cellData.label || ""; 
-                
-                // 좌석(1:고정, 2:자율)이면 나중에 찾기 쉽게 ID 부여 (라벨이 있으면 라벨, 없으면 행-열)
-                if (cellData.type === 1 || cellData.type === 2) {
-                    const seatId = cellData.label || `${r+1}-${c+1}`;
+                div.className = `seat-cell seat-${d.type}`;
+                div.innerText = d.label || ""; 
+                if (d.type === 1 || d.type === 2) {
+                    const seatId = d.label || `${r+1}-${c+1}`;
                     cellElements[seatId] = div;
                 }
                 container.appendChild(div);
             }
         }
 
-        // 2. 학생 데이터 뒤져서 자리에 앉히기
+        // 고정석 표시
         for (const docId in applicationData) {
             const data = applicationData[docId];
+            if (data.type !== '고정석') continue;
+            const stuTimes = data[targetDayKey]; 
+            if (!stuTimes) continue; 
             
-            // 이 학생이 선택한 '요일'에 '현재 조회 타임'이 포함되어 있는지 확인
-            const studentTimesForToday = data[targetDayKey]; // 예: "1,2" 또는 "3"
-            if (!studentTimesForToday) continue; // 오늘 안 옴
-            
-            if (studentTimesForToday.split(',').includes(timeStr)) {
-                // 이 시간에 와야 하는 학생! 자리가 어디지?
-                const seatNum = data.seatNum;
-                if (seatNum && cellElements[seatNum]) {
-                    // 지도에 이름 쾅 찍기
-                    const targetDiv = cellElements[seatNum];
-                    targetDiv.innerHTML = `${seatNum}<br><span style="color:#d63384; font-size:15px;">${data.stuName}</span>`;
+            if (stuTimes.split(',').includes(timeStr)) {
+                if (data.seatNum && cellElements[data.seatNum]) {
+                    const targetDiv = cellElements[data.seatNum];
+                    targetDiv.innerHTML = `${data.seatNum}<br><span style="color:#d63384; font-size:15px;">${data.stuName}</span>`;
                     targetDiv.classList.add('occupied');
                 }
             }
         }
 
-        // 💡 주의: 아직 '일일 자율석 예약' 데이터(daily_reservations)를 불러오는 코드는 없습니다.
-        // 현재는 '월간 신청(applications)' 데이터만 도면에 표시합니다.
+        // 자율석 표시 (일일 예약 데이터 읽어오기)
+        try {
+            const resQuery = await db.collection("daily_reservations").where("date", "==", dateStr).get();
+            resQuery.forEach(doc => {
+                const resData = doc.data();
+                if (resData.times && resData.times.split(',').includes(timeStr)) {
+                    if (resData.seatNum && cellElements[resData.seatNum]) {
+                        const targetDiv = cellElements[resData.seatNum];
+                        targetDiv.innerHTML = `${resData.seatNum}<br><span style="color:#d63384; font-size:15px;">${resData.stuName}</span>`;
+                        targetDiv.classList.add('occupied');
+                    }
+                }
+            });
+        } catch(e) { console.error("자율석 로드 에러:", e); }
     }
 
-    // --- 도면 편집 관련 로직 ---
+    // --- 도면 편집 ---
     let currentTool = 0;
     function selectTool(typeCode, btn) { currentTool = typeCode; document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); }
-
+    
     async function loadSeatLayout(mode) {
         try {
             const doc = await db.collection("settings").doc("seatLayout").get();
             if (doc.exists) {
                 const data = doc.data(); rows = data.rows; cols = data.cols;
                 seatMapData = JSON.parse(data.grid).map(row => row.map(c => typeof c === 'number' ? {type: c, label: ""} : c));
-                if(mode === 'edit') {
-                    document.getElementById('grid-rows').value = rows; document.getElementById('grid-cols').value = cols;
-                    drawEditGrid();
-                }
+                if(mode === 'edit') { document.getElementById('grid-rows').value = rows; document.getElementById('grid-cols').value = cols; drawEditGrid(); }
             } else if(mode === 'edit') initializeGrid();
         } catch(e) { console.error(e); }
     }
@@ -314,14 +314,10 @@
     }
     async function saveSeatLayout() { await db.collection("settings").doc("seatLayout").set({ rows, cols, grid: JSON.stringify(seatMapData) }); alert("배포 완료!"); }
 
-// --- 기타 현황, 수동, 엑셀 로직 (생략되었던 진짜 코드들) ---
-
-    // [1. 현황표 그리기]
+    // --- 현황 탭 ---
     function renderStatusTable() {
-        const tbody = document.getElementById('status-body');
-        const filterMonth = document.getElementById('filter-month').value;
+        const tbody = document.getElementById('status-body'); const filterMonth = document.getElementById('filter-month').value;
         tbody.innerHTML = ""; let count = 0;
-
         for (const docId in applicationData) {
             const data = applicationData[docId];
             if (filterMonth !== "all" && (data.targetMonth || "미지정") !== filterMonth) continue;
@@ -335,113 +331,57 @@
                 <td>${data.thu || ''}</td><td>${data.fri || ''}</td><td>${data.sat || ''}</td><td>${data.sun || ''}</td>
             </tr>`;
         }
-        document.getElementById('status-summary').innerText = `조회: ${count}명`;
+    }
+    function downloadCSV() {
+        const table = document.getElementById("status-table"); let csv = "\uFEFF";
+        for (let i=0; i<table.rows.length; i++) { let r=[]; for (let j=0; j<table.rows[i].cells.length; j++) r.push('"'+table.rows[i].cells[j].innerText+'"'); csv += r.join(",")+"\r\n"; }
+        const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8;'})); link.download = "야간자율학습현황.csv"; link.click();
     }
 
-    // [2. 개별 수정 폼 채우기]
+    // --- 수동 탭 ---
     function fillEditForm(docId) {
-        const d = applicationData[docId];
-        document.getElementById('edit-doc-id').value = docId;
-        document.getElementById('m-targetMonth').value = d.targetMonth || "4월";
-        document.getElementById('m-id').value = d.stuId; document.getElementById('m-name').value = d.stuName;
+        const d = applicationData[docId]; document.getElementById('edit-doc-id').value = docId;
+        document.getElementById('m-targetMonth').value = d.targetMonth || "4월"; document.getElementById('m-id').value = d.stuId; document.getElementById('m-name').value = d.stuName;
         document.getElementById('m-type').value = d.type; document.getElementById('m-seatNum').value = d.seatNum || '';
         ['mon','tue','wed','thu','fri','sat','sun'].forEach(day => document.getElementById(`m-${day}`).value = d[day]||'');
-        
-        // 탭 이동 (수동 관리 탭은 3번째 버튼(인덱스 2)에 해당)
         switchTab('tab-manual', document.querySelectorAll('.tab-btn')[2]);
     }
-
-    // [3. 개별 수정 저장하기]
     async function saveManualEntry() {
         const docId = document.getElementById('edit-doc-id').value;
-        const p = { 
-            targetMonth: document.getElementById('m-targetMonth').value, 
-            stuId: document.getElementById('m-id').value, 
-            stuName: document.getElementById('m-name').value, 
-            type: document.getElementById('m-type').value, 
-            seatNum: document.getElementById('m-seatNum').value, 
-            timestamp: new Date() 
-        };
+        const p = { targetMonth: document.getElementById('m-targetMonth').value, stuId: document.getElementById('m-id').value, stuName: document.getElementById('m-name').value, type: document.getElementById('m-type').value, seatNum: document.getElementById('m-seatNum').value, timestamp: new Date() };
         ['mon','tue','wed','thu','fri','sat','sun'].forEach(day => p[day] = document.getElementById(`m-${day}`).value);
-        
         try {
-            if (docId) await db.collection("applications").doc(docId).update(p); 
-            else await db.collection("applications").add(p);
-            alert("저장 성공!"); 
-            resetManualForm(); 
-            // 탭 이동 (현황 탭은 2번째 버튼(인덱스 1)에 해당)
+            if (docId) await db.collection("applications").doc(docId).update(p); else await db.collection("applications").add(p);
+            alert("저장 성공!"); document.getElementById('edit-doc-id').value = ""; document.querySelectorAll('#tab-manual input[type="text"], #tab-manual input[type="number"]').forEach(i => i.value = "");
             switchTab('tab-status', document.querySelectorAll('.tab-btn')[1]);
         } catch(e) { alert("저장 실패: " + e.message); }
     }
 
-    // [4. 입력창 비우기]
-    function resetManualForm() { 
-        document.getElementById('edit-doc-id').value = ""; 
-        document.querySelectorAll('#tab-manual input[type="text"], #tab-manual input[type="number"]').forEach(i => i.value = ""); 
-    }
-
-    // [5. 엑셀 다운로드]
-    function downloadCSV() {
-        const table = document.getElementById("status-table"); let csv = "\uFEFF";
-        for (let i=0; i<table.rows.length; i++) { 
-            let r=[]; 
-            for (let j=0; j<table.rows[i].cells.length; j++) r.push('"'+table.rows[i].cells[j].innerText+'"'); 
-            csv += r.join(",")+"\r\n"; 
-        }
-        const link = document.createElement("a"); 
-        link.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8;'})); 
-        link.download = "야간자율학습현황.csv"; 
-        link.click();
-    }
-
-    // [6. 기초 명단 불러오기]
-    async function fetchRoster() { 
-        const doc = await db.collection("settings").doc("roster").get(); 
-        if (doc.exists) { 
-            currentRoster = JSON.parse(doc.data().list || "{}"); 
-            displayRoster(); 
-        } 
-    }
-
-    // [7. 기초 명단 화면에 표시 및 삭제]
+    // --- ★ 강력한 엑셀 업로드 ---
+    async function fetchRoster() { const doc = await db.collection("settings").doc("roster").get(); if (doc.exists) { currentRoster = JSON.parse(doc.data().list || "{}"); displayRoster(); } }
+    
     function displayRoster() {
-        const tbody = document.getElementById('roster-body'); 
-        const s = document.getElementById('roster-search').value; 
-        tbody.innerHTML = ""; let count = 0;
-        
+        const tbody = document.getElementById('roster-body'); const s = document.getElementById('roster-search').value; tbody.innerHTML = ""; let count = 0;
         Object.keys(currentRoster).sort().forEach(id => { 
             const name = currentRoster[id]; 
-            if (s && !id.includes(s) && !name.includes(s)) return; 
-            count++; 
+            if (s && !id.includes(s) && !name.includes(s)) return; count++; 
             tbody.innerHTML += `<tr><td>${id}</td><td>${name}</td><td><button class="btn btn-delete" onclick="deleteRosterItem('${id}')">삭제</button></td></tr>`; 
         });
         document.getElementById('roster-count').innerText = count;
     }
     
-    function deleteRosterItem(id) { 
-        if(confirm("이 학생을 명단에서 삭제하시겠습니까?")){ 
-            delete currentRoster[id]; 
-            db.collection("settings").doc("roster").set({ list: JSON.stringify(currentRoster) }); 
-            displayRoster(); 
-        } 
-    }
+    function deleteRosterItem(id) { if(confirm("삭제?")){ delete currentRoster[id]; db.collection("settings").doc("roster").set({ list: JSON.stringify(currentRoster) }); displayRoster(); } }
 
-    // [8. 엑셀 명단 업로드 (안전장치 강화 버전)]
-   // [8. 엑셀 명단 업로드 (초강력 스마트 버전)]
     function handleExcelUpload() {
-        // 라이브러리 로딩 확인
-        if (typeof XLSX === 'undefined') {
-            return alert("🚨 엑셀 처리 기능이 로딩되지 않았습니다.\n인터넷 연결을 확인하거나 페이지를 새로고침(F5) 해주세요.");
-        }
-
+        if (typeof XLSX === 'undefined') return alert("🚨 엑셀 처리 기능이 로딩되지 않았습니다. 새로고침(F5) 해주세요.");
+        
         const fileInput = document.getElementById('excel-input');
         if (!fileInput.files || fileInput.files.length === 0) return alert("🚨 엑셀 파일을 먼저 선택해 주세요.");
         
-        const btn = document.querySelector('.btn-excel'); 
+        const btn = document.getElementById('upload-btn'); 
         btn.innerText = "엑셀 분석 중..."; btn.disabled = true;
         
         const reader = new FileReader();
-        
         reader.onload = function(e) {
             try {
                 const data = new Uint8Array(e.target.result); 
@@ -450,48 +390,32 @@
                 const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
                 
                 let newRoster = {}; let count = 0;
-                
                 if (rows.length === 0) throw new Error("엑셀 시트가 비어있습니다.");
 
                 rows.forEach((row) => {
                     const id = row[0] ? String(row[0]).trim() : ""; 
                     const name = row[1] ? String(row[1]).trim() : "";
-                    
-                    // 핵심: A열이 '숫자'로만 이루어져 있고, B열에 '이름'이 있는 경우만 무조건 수집
-                    // (이렇게 하면 첫 줄에 '학번'이라는 한글 제목이 있어도 알아서 무시하고 실제 데이터만 가져옵니다.)
-                    if (id.match(/^[0-9]+$/) && name !== "") { 
-                        newRoster[id] = name; 
-                        count++; 
-                    }
+                    if (id.match(/^[0-9]+$/) && name !== "") { newRoster[id] = name; count++; }
                 });
                 
                 if (count === 0) { 
-                    alert("🚨 유효한 명단을 찾지 못했습니다.\n\n[체크리스트]\n1. A열에 학번(숫자), B열에 이름이 있나요?\n2. 복사할 때 '값만 붙여넣기' 하셨나요?"); 
-                    btn.innerText = "서버에 등록"; btn.disabled = false; return; 
+                    alert("🚨 명단을 찾지 못했습니다.\nA열에 학번(숫자), B열에 이름이 있는지, '값만 붙여넣기'를 했는지 확인하세요."); 
+                    btn.innerText = "명단 서버에 등록"; btn.disabled = false; return; 
                 }
                 
                 db.collection("settings").doc("roster").set({ list: JSON.stringify(newRoster), lastUpdated: new Date() }).then(() => {
                     currentRoster = newRoster; 
                     alert(`✅ 총 ${count}명의 학생이 등록되었습니다!`); 
                     displayRoster(); 
-                    btn.innerText = "서버에 등록"; btn.disabled = false; 
-                    fileInput.value = "";
-                }).catch(err => {
-                    alert("🚨 서버 저장 실패: " + err.message);
-                    btn.innerText = "서버에 등록"; btn.disabled = false; 
-                });
+                    btn.innerText = "명단 서버에 등록"; btn.disabled = false; fileInput.value = "";
+                }).catch(err => { alert("🚨 서버 저장 실패: " + err.message); btn.innerText = "명단 서버에 등록"; btn.disabled = false; });
                 
             } catch (error) { 
-                alert("🚨 엑셀 파일을 읽는 중 오류가 발생했습니다.\n원인: " + error.message); 
-                btn.innerText = "서버에 등록"; btn.disabled = false; 
+                alert("🚨 엑셀을 읽는 중 오류가 발생했습니다.\n원인: " + error.message); 
+                btn.innerText = "명단 서버에 등록"; btn.disabled = false; 
             }
         };
-
-        reader.onerror = function() {
-            alert("🚨 내 컴퓨터에서 파일을 읽어오지 못했습니다. 엑셀 창이 열려있다면 끄고 다시 시도해 주세요.");
-            btn.innerText = "서버에 등록"; btn.disabled = false; 
-        }
-
+        reader.onerror = function() { alert("🚨 파일을 읽어오지 못했습니다."); btn.innerText = "명단 서버에 등록"; btn.disabled = false; }
         reader.readAsArrayBuffer(fileInput.files[0]);
     }
 </script>
