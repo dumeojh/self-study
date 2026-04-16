@@ -267,7 +267,12 @@
             });
     }
 
+
+
+
+    
     // 지도를 실제로 화면에 그리는 함수
+// 지도를 실제로 화면에 그리는 함수
     function renderDailySupervisorMap() {
         if(seatMapData.length === 0) return;
         const dateStr = document.getElementById('daily-date').value;
@@ -277,6 +282,9 @@
         const dateObj = new Date(dateStr);
         const daysEng = ['sun','mon','tue','wed','thu','fri','sat'];
         const targetDayKey = daysEng[dateObj.getDay()]; 
+        
+        // ★ 버그 수정 1: 선택한 날짜가 몇 월인지 계산합니다 (예: "4월")
+        const targetMonthStr = (dateObj.getMonth() + 1) + "월";
 
         const container = document.getElementById('supervisor-grid');
         container.innerHTML = ''; container.style.gridTemplateColumns = `repeat(${cols}, 55px)`;
@@ -300,6 +308,10 @@
         // 2. 고정석 학생 앉히기 (파란색)
         for (const docId in applicationData) {
             const data = applicationData[docId];
+            
+            // ★ 버그 수정 2: 과거 데이터가 겹치지 않도록, '현재 조회하는 월'의 신청서만 거릅니다.
+            if ((data.targetMonth || "미지정") !== targetMonthStr) continue;
+            
             if (data.type !== '고정석') continue;
             const stuTimes = data[targetDayKey]; 
             if (!stuTimes) continue; 
@@ -326,6 +338,7 @@
         }
     }
 
+    
     // 날짜나 타임을 변경하면 바로바로 지도를 다시 그림
     document.getElementById('daily-date').addEventListener('change', loadDailyDataAndRender);
     document.getElementById('daily-time').addEventListener('change', renderDailySupervisorMap);
