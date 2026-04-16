@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -10,24 +9,26 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <style>
-        /* 기존 스타일 유지 및 일부 추가 */
         :root { --primary: #007bff; --fixed-bg: #e3f2fd; --fixed-text: #1565c0; --flex-bg: #f8f9fa; }
         body { font-family: 'Malgun Gothic', sans-serif; background-color: #f0f2f5; margin: 0; padding: 15px; color: #333; }
         .container { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #1a1a1a; margin-bottom: 25px; }
-        .input-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
-        input[type="text"], input[type="number"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        input[readonly] { background-color: #e9ecef; color: #666; outline: none; }
+        h2 { text-align: center; color: #1a1a1a; margin-bottom: 20px; }
         
-        /* 버튼 공통 스타일 */
+        /* 알림창 스타일 */
+        .notice { background: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; font-size: 13px; margin-bottom: 20px; line-height: 1.5; border-left: 4px solid #ffeeba; }
+
+        .input-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        input[readonly] { background-color: #f8f9fa; color: #666; }
+
         .btn-main { width: 100%; padding: 15px; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .btn-search { background: #343a40; }
         .btn-submit { background: var(--primary); }
-        .btn-update { background: #28a745; } /* 수정하기 버튼은 초록색으로 구분 */
+        .btn-update { background: #28a745; }
         button:disabled { background: #ccc; cursor: not-allowed; }
 
-        /* 신청 폼 영역 (초기엔 숨김) */
+        /* 신청 양식 (초기엔 숨김) */
         #apply-section { display: none; margin-top: 25px; border-top: 2px dashed #ddd; padding-top: 20px; }
 
         .type-selector { display: flex; gap: 10px; margin-bottom: 20px; }
@@ -41,8 +42,6 @@
         .time-chk { display: none; }
         .time-label { display: block; padding: 8px 0; border-radius: 5px; background: #eee; font-size: 12px; cursor: pointer; user-select: none; }
         .time-chk:checked + .time-label { background: var(--primary); color: white; }
-        
-        .info-msg { font-size: 13px; color: #666; margin-bottom: 15px; line-height: 1.5; }
     </style>
 </head>
 <body>
@@ -50,7 +49,21 @@
 <div class="container">
     <h2>야간 자율학습 신청</h2>
     
+    <div class="notice">
+        ※ <strong>학번, 이름, 신청월</strong>을 정확히 선택한 후 [조회하기]를 눌러주세요. 이미 신청한 경우 내용을 수정할 수 있습니다.
+    </div>
+
     <div id="search-section">
+        <div class="input-group">
+            <label>신청 대상 월</label>
+            <select id="target-month">
+                <option value="3월">3월 신청</option><option value="4월" selected>4월 신청</option>
+                <option value="5월">5월 신청</option><option value="6월">6월 신청</option>
+                <option value="7월">7월 신청</option><option value="8월">8월 신청</option>
+                <option value="9월">9월 신청</option><option value="10월">10월 신청</option>
+                <option value="11월">11월 신청</option><option value="12월">12월 신청</option>
+            </select>
+        </div>
         <div class="input-group">
             <label>학번</label>
             <input type="number" id="stu-id" placeholder="예: 20101">
@@ -59,7 +72,7 @@
             <label>이름</label>
             <input type="text" id="stu-name" placeholder="실명을 입력하세요">
         </div>
-        <button id="search-btn" class="btn-main btn-search" onclick="searchStudent()">학생 조회하기</button>
+        <button id="search-btn" class="btn-main btn-search" onclick="verifyStudent()">조회하기</button>
     </div>
 
     <div id="apply-section">
@@ -69,151 +82,118 @@
             <button class="type-btn" data-type="0" onclick="selectType(0)">자율석(0)</button>
         </div>
 
-        <div class="info-msg" id="info-text">
-            ※ 고정석은 최소 3일 이상(타임 무관) 선택해야 합니다.
-        </div>
-
         <table class="schedule-table">
             <thead>
-                <tr>
-                    <th>요일</th>
-                    <th>1타임</th>
-                    <th>2타임</th>
-                    <th>3타임</th>
-                </tr>
+                <tr><th>요일</th><th>1T</th><th>2T</th><th>3T</th></tr>
             </thead>
             <tbody id="schedule-body"></tbody>
         </table>
 
         <button id="submit-btn" class="btn-main btn-submit" onclick="submitForm()" disabled>신청하기</button>
+        <p style="font-size: 11px; color: #888; text-align: center; margin-top: 10px;">
+            고정석은 최소 주 3일 이상 선택해야 합니다.
+        </p>
     </div>
 </div>
 
 <script>
-    // -----------------------------------------------------------------
-    // [설정 1] 파이어베이스 연결 (★선생님의 Config를 꼭 넣으세요!)
-    // -----------------------------------------------------------------
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
-  authDomain: "self-study-project-82bdf.firebaseapp.com",
-  projectId: "self-study-project-82bdf",
-  storageBucket: "self-study-project-82bdf.firebasestorage.app",
-  messagingSenderId: "482006075036",
-  appId: "1:482006075036:web:473445e0f86d48cd22cf59"
-};
-
+    // --- 파이어베이스 설정 ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
+        authDomain: "self-study-project-82bdf.firebaseapp.com",
+        projectId: "self-study-project-82bdf",
+        storageBucket: "self-study-project-82bdf.firebasestorage.app",
+        messagingSenderId: "482006075036",
+        appId: "1:482006075036:web:473445e0f86d48cd22cf59"
+    };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // -----------------------------------------------------------------
-    // [설정 2] 학생 기초자료 (학번: 이름)
-    // -----------------------------------------------------------------
-    // 여기에 실제 우리 학교 학생들의 학번과 이름을 입력해 주세요.
-    const validStudents = {
-        "20101": "김안성",
-        "20102": "이여고",
-        "20103": "박학생",
-        "20104": "최테스트"
-        // 엑셀에서 복사해서 계속 추가하실 수 있습니다.
-    };
-
-    // -----------------------------------------------------------------
-    // 폼 초기화 로직
-    // -----------------------------------------------------------------
-    const days = ['월', '화', '수', '목', '금', '토', '일'];
-    const daysEng = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+    // 전역 변수
+    let serverRoster = {}; 
     let selectedType = null;
-    let currentDocId = null; // 수정 모드일 때 사용할 기존 문서 ID
+    let currentDocId = null; 
+    const daysEng = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
+    // 1. 페이지 로드 시 요일 테이블 생성
     const tbody = document.getElementById('schedule-body');
-    days.forEach((day, idx) => {
-        let row = `<tr>
-            <td><strong>${day}</strong></td>
-            ${[1, 2, 3].map(t => `
-                <td>
-                    <input type="checkbox" class="time-chk" id="${daysEng[idx]}-${t}" value="${t}" onchange="validateForm()">
-                    <label class="time-label" for="${daysEng[idx]}-${t}">${t}T</label>
-                </td>
-            `).join('')}
-        </tr>`;
+    ['월','화','수','목','금','토','일'].forEach((day, idx) => {
+        let row = `<tr><td><strong>${day}</strong></td>${[1,2,3].map(t => `
+            <td>
+                <input type="checkbox" class="time-chk" id="${daysEng[idx]}-${t}" value="${t}" onchange="validateForm()">
+                <label class="time-label" for="${daysEng[idx]}-${t}">${t}T</label>
+            </td>`).join('')}</tr>`;
         tbody.innerHTML += row;
     });
 
-    // -----------------------------------------------------------------
-    // 핵심 1: 학생 조회 및 분기 처리
-    // -----------------------------------------------------------------
-    async function searchStudent() {
+    // 2. 핵심: 서버에서 관리자가 올린 기초 명단 가져오기
+    async function fetchServerRoster() {
+        try {
+            const doc = await db.collection("settings").doc("roster").get();
+            if (doc.exists) {
+                serverRoster = JSON.parse(doc.data().list || "{}");
+            } else {
+                alert("🚨 관리자 페이지에서 기초 명단을 먼저 등록해야 합니다.");
+            }
+        } catch(e) { console.error("명단 로드 실패:", e); }
+    }
+    fetchServerRoster(); // 페이지 열리자마자 실행
+
+    // 3. 학생 신원 확인 및 신청 내역 조회
+    async function verifyStudent() {
         const id = document.getElementById('stu-id').value.trim();
         const name = document.getElementById('stu-name').value.trim();
+        const month = document.getElementById('target-month').value;
 
-        if (!id || !name) {
-            return alert("학번과 이름을 모두 입력해주세요.");
+        if (!id || !name) return alert("학번과 이름을 입력해주세요.");
+
+        // 명단 대조
+        if (serverRoster[id] !== name) {
+            return alert("명단에 없는 학생이거나 학번/이름이 일치하지 않습니다.");
         }
 
-        // 1. 기초자료(명단) 검사
-        if (validStudents[id] !== name) {
-            return alert("없는 학생입니다.\n학번과 이름을 다시 한번 확인해 주세요.");
-        }
-
-        const searchBtn = document.getElementById('search-btn');
-        searchBtn.innerText = "데이터 확인 중...";
-        searchBtn.disabled = true;
-
+        document.getElementById('search-btn').innerText = "조회 중...";
+        
         try {
-            // 2. 파이어베이스에서 기존 신청 내역 검색
-            const snapshot = await db.collection("applications").where("stuId", "==", id).get();
-            
-            // 공통 처리: 폼 보여주기 및 입력칸 잠금
+            // 해당 학생이 '해당 월'에 신청한 내역이 있는지 검색
+            const q = await db.collection("applications")
+                              .where("stuId", "==", id)
+                              .where("targetMonth", "==", month)
+                              .get();
+
             document.getElementById('apply-section').style.display = 'block';
             document.getElementById('stu-id').readOnly = true;
             document.getElementById('stu-name').readOnly = true;
-            searchBtn.style.display = 'none'; // 조회 버튼 숨김
+            document.getElementById('target-month').disabled = true;
+            document.getElementById('search-btn').style.display = 'none';
 
-            const submitBtn = document.getElementById('submit-btn');
-
-            if (snapshot.empty) {
-                // [분기 A] 신청 내역이 없는 경우 -> 신규 입력
-                currentDocId = null;
-                alert(`${name} 학생 확인되었습니다.\n아래 양식에서 신규 신청을 진행해 주세요.`);
-                submitBtn.innerText = "신청하기";
-                submitBtn.className = "btn-main btn-submit";
-            } else {
-                // [분기 B] 신청 내역이 있는 경우 -> 데이터 불러오기 및 수정 모드
-                const doc = snapshot.docs[0];
-                currentDocId = doc.id; // 파이어베이스 고유 문서 ID 저장 (수정할 때 필요)
+            if (!q.empty) {
+                // 기존 내역 있음 -> 데이터 채우기
+                const doc = q.docs[0];
+                currentDocId = doc.id;
                 const data = doc.data();
-
-                // 기존 데이터로 폼 채우기
-                selectType(data.type === "고정석" ? 1 : 0);
                 
+                selectType(data.type === "고정석" ? 1 : 0);
                 daysEng.forEach(day => {
                     if (data[day]) {
-                        const times = data[day].split(',');
-                        times.forEach(t => {
-                            const chkBox = document.getElementById(`${day}-${t}`);
-                            if(chkBox) chkBox.checked = true;
+                        data[day].split(',').forEach(t => {
+                            const chk = document.getElementById(`${day}-${t}`);
+                            if(chk) chk.checked = true;
                         });
                     }
                 });
-
-                validateForm();
-
-                if (confirm(`이미 제출된 신청 내역이 있습니다.\n입력된 자료를 확인하고 수정하시겠습니까?`)) {
-                    submitBtn.innerText = "수정하기";
-                    submitBtn.className = "btn-main btn-update";
-                } else {
-                    location.reload(); // 취소를 누르면 처음 화면으로 돌아감
-                }
+                document.getElementById('submit-btn').innerText = "신정 정보 수정하기";
+                document.getElementById('submit-btn').className = "btn-main btn-update";
+                alert(`[${month}] 기존 신청 내역을 불러왔습니다. 수정 후 저장하세요.`);
+            } else {
+                currentDocId = null;
+                alert(`${name} 학생 확인되었습니다.\n[${month}] 자율학습 신청을 진행하세요.`);
             }
-        } catch (error) {
-            console.error("조회 에러:", error);
-            alert("서버와 통신 중 문제가 발생했습니다.");
-            searchBtn.innerText = "학생 조회하기";
-            searchBtn.disabled = false;
-        }
+            validateForm();
+        } catch(e) { alert("조회 중 오류 발생: " + e.message); }
     }
 
+    // 4. 입력 검증
     function selectType(type) {
         selectedType = type;
         document.querySelectorAll('.type-btn').forEach(btn => {
@@ -223,59 +203,49 @@ const firebaseConfig = {
     }
 
     function validateForm() {
-        const btn = document.getElementById('submit-btn');
-        let selectedDays = 0;
-        
+        let selectedDayCount = 0;
         daysEng.forEach(day => {
-            if(document.querySelectorAll(`[id^="${day}-"]:checked`).length > 0) selectedDays++;
+            if(document.querySelectorAll(`[id^="${day}-"]:checked`).length > 0) selectedDayCount++;
         });
 
         const isTypeOk = selectedType !== null;
         let isConditionOk = true;
+        if (selectedType === 1 && selectedDayCount < 3) isConditionOk = false;
 
-        if (selectedType === 1 && selectedDays < 3) isConditionOk = false;
-
-        btn.disabled = !(isTypeOk && isConditionOk);
+        document.getElementById('submit-btn').disabled = !(isTypeOk && isConditionOk);
     }
 
-    // -----------------------------------------------------------------
-    // 핵심 2: 데이터 전송 (신규 저장 or 기존 데이터 덮어쓰기)
-    // -----------------------------------------------------------------
+    // 5. 전송 (신규 또는 수정)
     async function submitForm() {
         const btn = document.getElementById('submit-btn');
-        btn.innerText = "처리 중...";
+        btn.innerText = "저장 중...";
         btn.disabled = true;
 
         const payload = {
+            targetMonth: document.getElementById('target-month').value,
             stuId: document.getElementById('stu-id').value,
             stuName: document.getElementById('stu-name').value,
             type: selectedType === 1 ? "고정석" : "자율석",
-            timestamp: new Date() // 신청/수정 시간 업데이트
+            timestamp: new Date()
         };
 
-        let totalDays = 0;
         daysEng.forEach(day => {
             const checked = Array.from(document.querySelectorAll(`[id^="${day}-"]:checked`)).map(el => el.value);
             payload[day] = checked.join(',');
-            if(checked.length > 0) totalDays++;
         });
-        payload.dayCount = totalDays;
 
         try {
             if (currentDocId) {
-                // 문서 ID가 있으면 기존 데이터를 '수정(update)' 합니다.
                 await db.collection("applications").doc(currentDocId).update(payload);
-                alert("수정이 성공적으로 완료되었습니다!");
+                alert("수정되었습니다.");
             } else {
-                // 문서 ID가 없으면 '신규(add)' 저장합니다.
                 await db.collection("applications").add(payload);
-                alert("신청이 성공적으로 완료되었습니다!");
+                alert("신청이 완료되었습니다.");
             }
-            location.reload(); 
-        } catch (e) {
-            console.error("전송 에러:", e);
-            alert("오류 발생: " + e.message);
-            btn.innerText = currentDocId ? "수정하기" : "신청하기";
+            location.reload();
+        } catch(e) {
+            alert("저장 실패: " + e.message);
+            btn.innerText = "신청하기";
             btn.disabled = false;
         }
     }
