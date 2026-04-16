@@ -1,151 +1,3 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>안성여고 야간 자율학습 신청</title>
-    <style>
-        :root {
-            --primary: #007bff;
-            --fixed-bg: #e3f2fd;
-            --fixed-text: #1565c0;
-            --flex-bg: #f8f9fa;
-        }
-
-        body {
-            font-family: 'Malgun Gothic', sans-serif;
-            background-color: #f0f2f5;
-            margin: 0;
-            padding: 15px;
-            color: #333;
-        }
-
-        .container {
-            max-width: 500px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-
-        h2 { text-align: center; color: #1a1a1a; margin-bottom: 25px; }
-
-        .input-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
-        input[type="text"], input[type="number"] {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-sizing: border-box;
-            font-size: 16px;
-        }
-
-        .type-selector {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .type-btn {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            background: white;
-            cursor: pointer;
-            font-weight: bold;
-            transition: 0.3s;
-        }
-        .type-btn.active[data-type="1"] { background: var(--fixed-bg); border-color: var(--fixed-text); color: var(--fixed-text); }
-        .type-btn.active[data-type="0"] { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
-
-        .schedule-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
-        .schedule-table th { background: #f8f9fa; padding: 10px; font-size: 13px; border: 1px solid #eee; }
-        .schedule-table td { padding: 5px; border: 1px solid #eee; text-align: center; }
-
-        .time-chk {
-            display: none;
-        }
-        .time-label {
-            display: block;
-            padding: 8px 0;
-            border-radius: 5px;
-            background: #eee;
-            font-size: 12px;
-            cursor: pointer;
-            user-select: none;
-        }
-        .time-chk:checked + .time-label {
-            background: var(--primary);
-            color: white;
-        }
-
-        #submit-btn {
-            width: 100%;
-            padding: 15px;
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        #submit-btn:disabled { background: #ccc; }
-
-        .info-msg {
-            font-size: 13px;
-            color: #666;
-            margin-bottom: 15px;
-            line-height: 1.5;
-        }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <h2>야간 자율학습 신청</h2>
-    
-    <div class="input-group">
-        <label>학번</label>
-        <input type="number" id="stu-id" placeholder="예: 20101">
-    </div>
-    <div class="input-group">
-        <label>이름</label>
-        <input type="text" id="stu-name" placeholder="실명을 입력하세요">
-    </div>
-
-    <label>신청 종류</label>
-    <div class="type-selector">
-        <button class="type-btn" data-type="1" onclick="selectType(1)">고정석(1)</button>
-        <button class="type-btn" data-type="0" onclick="selectType(0)">자율석(0)</button>
-    </div>
-
-    <div class="info-msg" id="info-text">
-        ※ 고정석은 최소 3일 이상(타임 무관) 선택해야 합니다.
-    </div>
-
-    <table class="schedule-table">
-        <thead>
-            <tr>
-                <th>요일</th>
-                <th>1타임</th>
-                <th>2타임</th>
-                <th>3타임</th>
-            </tr>
-        </thead>
-        <tbody id="schedule-body">
-            </tbody>
-    </table>
-
-    <button id="submit-btn" onclick="submitForm()">신청하기</button>
-</div>
-
 <script>
     const days = ['월', '화', '수', '목', '금', '토', '일'];
     const daysEng = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
@@ -195,10 +47,8 @@
         btn.disabled = !(isIdOk && isNameOk && isTypeOk && isConditionOk);
     }
 
-
-
-
-    //async function submitForm() {
+    // 🚨 슬래시(//)를 제거하여 함수가 정상적으로 시작되도록 고쳤습니다!
+    async function submitForm() {
         const scriptUrl = "https://script.google.com/macros/s/AKfycbxbv1yu_IbgLdDCbVhIXPzrKD4jHzZXtpTfJMG_POxarTNum2sjNQGiyOZaMbB-8lqJ9A/exec";
 
         const payload = {
@@ -248,9 +98,4 @@
             document.getElementById('submit-btn').disabled = false;
         }
     }
-
-    
 </script>
-
-</body>
-</html>
