@@ -2,51 +2,75 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>야간 자율학습 좌석 신청</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>학습실 좌석 신청</title>
     <style>
         body {
             font-family: 'Malgun Gothic', sans-serif;
             text-align: center;
-            padding: 20px;
+            padding: 10px;
             background-color: #f4f4f9;
+        }
+
+        /* 학생들에게 모드를 알려주는 상단 안내 문구 */
+        .status-board {
+            display: flex;
+            justify-content: space-around;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         #seat-map {
             display: grid;
-            gap: 8px; /* 좌석 사이의 간격 */
+            gap: 8px;
             max-width: 100%;
-            margin: 20px auto;
-            /* 가로줄 개수는 자바스크립트에서 자동으로 설정해 줍니다 */
+            margin: 0 auto 20px auto;
             padding: 15px;
             background-color: white;
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
 
-        /* 실제 책상 디자인 */
+        /* 공통 좌석 스타일 */
         .seat {
             padding: 15px 0;
-            border: 2px solid #ddd;
             border-radius: 8px;
-            cursor: pointer;
-            background-color: #fff;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 고정석 (F) 디자인 - 파란색 계열 */
+        .fixed-seat {
+            background-color: #E3F2FD;
+            border: 2px solid #90CAF9;
+            color: #1565C0;
+        }
+
+        /* 자율석 (A) 디자인 - 회색 계열 (기본 상태) */
+        .flexible-seat {
+            background-color: #ffffff;
+            border: 2px solid #ccc;
             color: #333;
         }
 
-        /* 통로나 빈 공간 (투명하게 처리) */
+        /* 빈 공간 (0) */
         .empty-space {
-            /* 눈에 보이지 않게 처리합니다 */
-            visibility: hidden; 
+            visibility: hidden;
         }
 
-        /* 선택된 좌석의 디자인 */
-        .seat.selected {
+        /* 자율석을 터치해서 선택했을 때 (초록색) */
+        .flexible-seat.selected {
             background-color: #4CAF50;
-            color: white;
             border-color: #4CAF50;
+            color: white;
             box-shadow: 0 2px 5px rgba(76, 175, 80, 0.4);
         }
 
@@ -66,59 +90,74 @@
 </head>
 <body>
 
-    <h2>학습실 좌석 선택</h2>
-    <p>본인의 자리를 터치하세요.</p>
+    <h2>오늘의 학습실 좌석</h2>
+    
+    <div class="status-board">
+        <span style="color:#1565C0; font-weight:bold;">🟦 고정석 (월~금)</span>
+        <span style="color:#4CAF50; font-weight:bold;">🟩 자율석 (당일)</span>
+    </div>
 
     <div id="seat-map"></div>
 
-    <button id="submit-btn">선택 완료</button>
+    <button id="submit-btn">자율석 신청 완료</button>
 
     <script>
         const seatMap = document.getElementById('seat-map');
         const submitBtn = document.getElementById('submit-btn');
-        let selectedSeatNumber = null;
+        let selectedFlexibleSeat = null;
 
-        // 🌟 핵심 포인트: 0과 1로 학습실 지도를 그립니다. 🌟
-        // 1 = 책상, 0 = 통로/빈공간
+        // 🌟 지도를 F(고정), A(자율), 0(통로)으로 설계합니다.
+        // 선생님의 실제 학습실 구조에 맞게 F와 A의 개수를 조절하세요.
         const roomLayout = [
-            [1, 1, 0, 1, 1, 0, 1, 1], // 첫 번째 줄 (2자리, 통로, 2자리, 통로, 2자리)
-            [1, 1, 0, 1, 1, 0, 1, 1], // 두 번째 줄
-            [1, 1, 0, 1, 1, 0, 1, 1], // 세 번째 줄
-            [0, 0, 0, 0, 0, 0, 0, 0], // 가로 통로 (전부 0)
-            [1, 1, 0, 1, 1, 0, 1, 1], // 네 번째 줄
-            [1, 1, 0, 1, 1, 0, 1, 1]  // 다섯 번째 줄
+            ['F', 'F', 0, 'A', 'A', 'A', 'A'], // 고정석 구역과 자율석 구역
+            ['F', 'F', 0, 'A', 'A', 'A', 'A'],
+            ['F', 'F', 0, 'A', 'A', 'A', 'A'],
+            [ 0,   0,  0,  0,   0,   0,   0 ], // 가로 복도
+            ['F', 'F', 0, 'A', 'A', 'A', 'A'],
+            ['F', 'F', 0, 'A', 'A', 'A', 'A']
         ];
 
-        // 지도의 가로 칸 수를 계산해서 CSS 그리드에 적용합니다.
         const cols = roomLayout[0].length;
         seatMap.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
-        let seatCounter = 1; // 좌석 번호를 1번부터 매기기 위한 변수
+        let fixedCounter = 1;
+        let flexCounter = 1;
 
-        // 지도를 한 줄씩 읽어오면서 화면에 그립니다.
         roomLayout.forEach(row => {
             row.forEach(cell => {
                 const div = document.createElement('div');
 
-                if (cell === 1) {
-                    // 책상(1)인 경우
-                    div.classList.add('seat');
-                    div.innerText = seatCounter; // 번호 부여
-                    div.dataset.seatId = seatCounter;
+                if (cell === 'F') {
+                    // --- 고정석 생성 ---
+                    div.classList.add('seat', 'fixed-seat');
+                    div.innerHTML = `고정<br>${fixedCounter}`; 
+                    div.dataset.seatId = "고정-" + fixedCounter;
+                    fixedCounter++;
 
-                    // 클릭 이벤트 추가
+                    // 고정석 클릭 시 반응 (키보드 안 뜨게 alert창만 띄움)
                     div.addEventListener('click', function() {
-                        const previouslySelected = document.querySelector('.seat.selected');
+                        alert(`이 자리는 [${div.dataset.seatId}] 입니다.\n고정석 배정자는 본인 자리가 맞는지 확인만 해주세요.`);
+                    });
+
+                } else if (cell === 'A') {
+                    // --- 자율석 생성 ---
+                    div.classList.add('seat', 'flexible-seat');
+                    div.innerHTML = `자율<br>${flexCounter}`;
+                    div.dataset.seatId = "자율-" + flexCounter;
+                    flexCounter++;
+
+                    // 자율석 클릭 시 반응
+                    div.addEventListener('click', function() {
+                        const previouslySelected = document.querySelector('.flexible-seat.selected');
                         if (previouslySelected) {
                             previouslySelected.classList.remove('selected');
                         }
                         div.classList.add('selected');
-                        selectedSeatNumber = div.dataset.seatId;
+                        selectedFlexibleSeat = div.dataset.seatId;
                     });
 
-                    seatCounter++; // 다음 책상 번호를 위해 1 증가
                 } else {
-                    // 빈 공간(0)인 경우
+                    // --- 빈 공간 ---
                     div.classList.add('empty-space');
                 }
 
@@ -126,11 +165,12 @@
             });
         });
 
+        // 자율석 신청 버튼 클릭 시
         submitBtn.addEventListener('click', function() {
-            if (selectedSeatNumber === null) {
-                alert("먼저 좌석을 선택해주세요!");
+            if (selectedFlexibleSeat === null) {
+                alert("당일 사용할 자율석을 먼저 터치해주세요!");
             } else {
-                alert(selectedSeatNumber + "번 좌석을 선택하셨습니다.");
+                alert(`${selectedFlexibleSeat}석을 선택하셨습니다.\n(다음 단계: 구글 시트로 이 정보를 전송합니다!)`);
             }
         });
     </script>
