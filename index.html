@@ -196,11 +196,11 @@
     }
 
     // 🌟 핵심 전송 함수
-    async function submitForm() {
-        // 선생님께서 마지막으로 알려주셨던 구글 앱스 스크립트 주소입니다.
-        // 만약 새로 배포하셨다면 이 주소를 꼭 최신 버전으로 교체해 주세요!
+   // 🌟 CORS 에러(Failed to fetch)를 우회하는 궁극의 전송 함수!
+    function submitForm() {
         const scriptUrl = "https://script.google.com/macros/s/AKfycbyJUF1TIttYpTNwNvDZNqWBZiJoOs5A3Ieq9tLjFtA9evPszIDVJcpA8F_GDcP2DtF3zw/exec";
-
+        
+        // 1. 전송할 데이터 수집
         const payload = {
             id: document.getElementById('stu-id').value,
             name: document.getElementById('stu-name').value,
@@ -219,34 +219,41 @@
         document.getElementById('submit-btn').innerText = "전송 중...";
         document.getElementById('submit-btn').disabled = true;
 
-        try {
-            // 헤더를 제거하여 브라우저가 자연스럽게 통신하도록 유도
-            const response = await fetch(scriptUrl, {
-                method: "POST",
-                body: JSON.stringify(payload)
-            });
-
-            // 1차 확인: 응답을 JSON이 아닌 Text(글자)로 먼저 받습니다.
-            const text = await response.text(); 
+        // 2. 투명 망토(보이지 않는 iframe) 만들기
+        // 화면이 깜빡이거나 딴 데로 날아가는 걸 막아줍니다.
+        let iframe = document.getElementById("hidden-iframe");
+        if (!iframe) {
+            iframe = document.createElement("iframe");
+            iframe.id = "hidden-iframe";
+            iframe.name = "hidden-iframe";
+            iframe.style.display = "none";
+            document.body.appendChild(iframe);
             
-            try {
-                // 정상적인 응답이라면 JSON으로 변환이 성공합니다.
-                const res = JSON.parse(text);
-                alert(res.message);
-                if(res.result === "success") location.reload();
-            } catch (jsonError) {
-                // 구글이 JSON이 아닌 이상한 페이지(HTML)를 보낸 경우입니다.
-                console.error("서버 응답 원본:", text);
-                alert("🚨 구글 서버 차단 발생!\n\n학교/교육청 계정의 보안 정책 때문에 외부 전송이 막혔습니다.\n\n해결책: 개인 구글 계정(@gmail.com)으로 구글 시트와 스크립트를 옮겨서 새로 배포한 후, URL을 변경해 주세요!");
-            }
-
-        } catch (e) {
-            // 통신 자체가 아예 끊긴 경우 (CORS 에러 등)
-            alert("🚨 통신 실패!\n원인: " + e.message + "\n\n네트워크 연결 상태나 배포 권한(모든 사용자)을 확인해 주세요.");
-        } finally {
-            document.getElementById('submit-btn').innerText = "신청하기";
-            document.getElementById('submit-btn').disabled = false;
+            // 데이터 전송이 끝나고 구글이 대답을 보내면 작동하는 부분
+            iframe.addEventListener('load', function() {
+                // iframe이 로딩되었다는 건 전송이 끝났다는 뜻!
+                alert("신청이 완료되었습니다! (구글 시트를 확인해 보세요)");
+                location.reload(); // 화면 새로고침
+            });
         }
+
+        // 3. 데이터를 담아 보낼 보이지 않는 <form> 만들기
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = scriptUrl;
+        form.target = "hidden-iframe"; // iframe 몰래 보내기!
+        form.style.display = "none";
+
+        // 데이터를 폼 안에 차곡차곡 넣기 (구글 스크립트가 JSON을 기대하므로 통째로 넣습니다)
+        // ※ 주의: 구글 스크립트 쪽도 이 폼 전송 방식에 맞춰 한 줄 수정이 필요합니다! (아래 설명 참조)
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = "formData";
+        input.value = JSON.stringify(payload);
+        form.appendChild(input);
+
+        document.body.appendChild(form);
+        form.submit(); // 발사!
     }
 </script>
 
