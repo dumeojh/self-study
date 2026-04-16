@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>안성여고 자율학습 출석 시스템</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <style>
+        :root { --primary: #0d6efd; --success: #198754; --danger: #dc3545; --bg: #f8f9fa; }
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: var(--bg); margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        
+        .kiosk-box { background: white; width: 90%; max-width: 600px; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
+        
+        .school-title { font-size: 24px; color: #666; margin-bottom: 10px; }
+        .clock { font-size: 50px; font-weight: 900; color: #222; margin-bottom: 5px; letter-spacing: 2px; }
+        .date { font-size: 20px; color: #888; margin-bottom: 30px; }
+
+        .input-area { background: #e9ecef; padding: 30px; border-radius: 15px; margin-bottom: 20px; }
+        
+        /* 스캐너가 찍히는 마법의 입력칸 */
+        #scanner-input { width: 100%; max-width: 300px; padding: 15px; font-size: 24px; font-weight: bold; text-align: center; border: 3px solid #ccc; border-radius: 10px; margin-bottom: 15px; transition: 0.3s; }
+        #scanner-input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 15px rgba(13,110,253,0.3); }
+        
+        .btn-checkin { background: var(--primary); color: white; border: none; padding: 15px 40px; font-size: 20px; font-weight: bold; border-radius: 10px; cursor: pointer; transition: 0.2s; }
+        .btn-checkin:active { transform: scale(0.95); }
+
+        /* 결과 메시지 창 */
+        #result-box { display: none; padding: 25px; border-radius: 15px; margin-top: 20px; font-weight: bold; font-size: 22px; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        
+        .status-success { background: #d1e7dd; color: #0f5132; border: 2px solid #badbcc; }
+        .status-error { background: #f8d7da; color: #842029; border: 2px solid #f5c2c7; }
+
+        .guide-text { font-size: 15px; color: #777; line-height: 1.5; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="kiosk-box">
+    <div class="school-title">🏫 안성여고 야간 자율학습</div>
+    <div class="clock" id="live-clock">00:00:00</div>
+    <div class="date" id="live-date">2026년 00월 00일</div>
+
+    <div class="input-area" id="input-area">
+        <p style="margin-top: 0; font-weight: bold; font-size: 18px; color: #444;">학생증 바코드를 스캔하거나 학번을 입력하세요.</p>
+        <input type="number" id="scanner-input" placeholder="학번 입력" autofocus autocomplete="off">
+        <br>
+        <button class="btn-checkin" onclick="processCheckIn()">입실 확인 (Enter)</button>
+    </div>
+
+    <div id="result-box"></div>
+
+    <div class="guide-text">
+        학생증이 없는 경우 직접 학번을 입력하고 버튼을 누르세요.<br>
+        인식이 안 될 경우 감독 선생님께 말씀해 주세요.
+    </div>
+</div>
+
+<script>
+    // --- 파이어베이스 연결 ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
+        authDomain: "self-study-project-82bdf.firebaseapp.com",
+        projectId: "self-study-project-82bdf",
+        storageBucket: "self-study-project-82bdf.firebasestorage.app",
+        messagingSenderId: "482006075036",
+        appId: "1:482006075036:web:473445e0f86d48cd22cf59"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let serverRoster = {}; 
+    let todayFixedList = []; // 오늘 와야 할 고정석 학생들
+    let todayFlexList = [];  // 오늘 일일 발권한 자율석 학생들
+
+    // --- 시계 및 날짜 업데이트 ---
+    function updateClock() {
+        const now = new Date();
+        document.getElementById('live-clock').innerText = now.toLocaleTimeString('ko-KR', { hour12: false });
+        document.getElementById('live-date').innerText = now.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // --- 오늘 날짜 기준 데이터 불러오기 ---
+    const todayObj = new Date();
+    const todayStr = todayObj.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }); // YYYY-MM-DD
+    const targetMonthStr = (todayObj.getMonth() + 1) + "월";
+    const daysEng = ['sun','mon','tue','wed','thu','fri','sat'];
+    const targetDayKey = daysEng[todayObj.getDay()]; 
+
+    async function fetchTodayData() {
+        try {
+            // 1. 전체 명단
+            const rosterDoc = await db.collection("settings").doc("roster").get();
+            if (rosterDoc.exists) serverRoster = JSON.parse(rosterDoc.data().list || "{}");
+
+            // 2. 오늘 해당 요일에 와야 하는 '고정석' 학생 목록 수집
+            const appsSnapshot = await db.collection("applications").where("targetMonth", "==", targetMonthStr).where("type", "==", "고정석").get();
+            appsSnapshot.forEach(doc => {
+                const data = doc.data();
+                if (data[targetDayKey] && data[targetDayKey].length > 0) {
+                    todayFixedList.push(data.stuId); // 학번 저장
+                }
+            });
+
+            // 3. 오늘 발권한 '자율석' 학생 목록 수집
+            const resSnapshot = await db.collection("daily_reservations").where("date", "==", todayStr).get();
+            resSnapshot.forEach(doc => {
+                todayFlexList.push(doc.data().stuId); // 학번 저장
+            });
+
+        } catch (error) {
+            console.error("데이터 로딩 실패:", error);
+        }
+    }
+    fetchTodayData();
+
+    // --- 스캐너 자동 인식 로직 (엔터키 감지) ---
+    const scannerInput = document.getElementById('scanner-input');
+    
+    // 항상 입력칸에 커서가 가 있도록 유지 (키오스크용)
+    document.addEventListener('click', () => { scannerInput.focus(); });
+    setInterval(() => { if(document.activeElement !== scannerInput) scannerInput.focus(); }, 3000);
+
+    scannerInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            processCheckIn();
+        }
+    });
+
+    // --- 출석 처리 핵심 함수 ---
+    async function processCheckIn() {
+        const id = scannerInput.value.trim();
+        if (!id) return;
+
+        // 화면 잠금
+        scannerInput.value = "";
+        scannerInput.disabled = true;
+
+        const resultBox = document.getElementById('result-box');
+        resultBox.style.display = 'block';
+        resultBox.className = ''; 
+        resultBox.innerText = "확인 중...";
+
+        // 1. 명단에 있는 학생인지 확인
+        const studentName = serverRoster[id];
+        if (!studentName) {
+            showResult('error', `❌ [${id}] 등록되지 않은 학번입니다.`);
+            return;
+        }
+
+        // 2. 오늘 자율학습 대상자인지 확인 (고정석이거나 자율석 발권을 했거나)
+        const isFixed = todayFixedList.includes(id);
+        const isFlex = todayFlexList.includes(id);
+
+        if (!isFixed && !isFlex) {
+            showResult('error', `❌ ${studentName} 학생은 오늘 자율학습 신청자가 아니거나, 일일 발권을 하지 않았습니다.`);
+            return;
+        }
+
+        // 3. 출석 기록 파이어베이스에 저장 (attendance_logs 컬렉션)
+        try {
+            // 중복 출석 방지를 위해 '날짜_학번'을 문서 ID로 사용
+            const logId = `${todayStr}_${id}`;
+            await db.collection("attendance_logs").doc(logId).set({
+                date: todayStr,
+                stuId: id,
+                stuName: studentName,
+                status: "출석",
+                checkInTime: new Date()
+            });
+
+            // 성공 메시지
+            let seatTypeStr = isFixed ? "고정석" : "자율석";
+            showResult('success', `✅ ${studentName} 학생 (${seatTypeStr})\n입실이 완료되었습니다. 열공하세요!`);
+
+        } catch (error) {
+            showResult('error', `❌ 통신 오류: 다시 스캔해 주세요.`);
+        }
+    }
+
+    // 결과 보여주고 3초 뒤에 리셋하는 함수
+    function showResult(type, message) {
+        const resultBox = document.getElementById('result-box');
+        const inputArea = document.getElementById('input-area');
+        
+        inputArea.style.display = 'none'; // 입력창 숨김
+        resultBox.className = type === 'success' ? 'status-success' : 'status-error';
+        resultBox.innerText = message;
+
+        // 3초 뒤에 초기화
+        setTimeout(() => {
+            resultBox.style.display = 'none';
+            inputArea.style.display = 'block';
+            scannerInput.disabled = false;
+            scannerInput.focus();
+        }, 3000);
+    }
+</script>
+
+</body>
+</html>
