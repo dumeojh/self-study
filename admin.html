@@ -2,124 +2,156 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>관리자 - 야간 자율학습 종합 관리</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>안성여고 - 자율학습 관리자 시스템</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; background: #f4f7f9; margin: 0; }
-        .dashboard { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        :root { --primary: #007bff; --success: #28a745; --warning: #ffc107; --danger: #dc3545; --gray: #6c757d; }
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1100px; margin: 0 auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
         
-        /* 탭 메뉴 스타일 */
-        .tab-menu { display: flex; gap: 10px; border-bottom: 2px solid #007bff; padding-bottom: 15px; margin-bottom: 20px; }
-        .tab-btn { padding: 10px 20px; border: none; border-radius: 5px; background: #e9ecef; cursor: pointer; font-weight: bold; font-size: 15px; transition: 0.2s; }
-        .tab-btn.active { background: #007bff; color: white; }
-        
-        /* 탭 콘텐츠 숨김/표시 */
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        h2 { text-align: center; color: #1a1a1a; margin-bottom: 30px; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
 
-        /* 테이블 스타일 */
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
-        th { background: #f8f9fa; font-weight: bold; }
-        tbody tr { cursor: pointer; transition: 0.2s; }
-        tbody tr:hover { background: #fff3cd !important; } /* 클릭 유도 하이라이트 */
-        tr:nth-child(even) { background: #fdfdfd; }
-        .type-tag { padding: 3px 8px; border-radius: 5px; font-size: 12px; font-weight: bold; }
-        .fixed { background: #e3f2fd; color: #1565c0; }
-        .flex { background: #e8f5e9; color: #2e7d32; }
+        /* 탭 메뉴 스타일 */
+        .tab-menu { display: flex; gap: 5px; margin-bottom: 25px; background: #eee; padding: 5px; border-radius: 10px; }
+        .tab-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; background: transparent; cursor: pointer; font-weight: bold; font-size: 15px; transition: 0.3s; }
+        .tab-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 테이블 공통 스타일 */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; background: white; }
+        th, td { border: 1px solid #dee2e6; padding: 12px 8px; text-align: center; }
+        th { background: #f8f9fa; color: #495057; }
+        tbody tr:hover { background-color: #f1f8ff; cursor: pointer; }
+        
+        .type-tag { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .fixed { background: #e3f2fd; color: #0d6efd; }
+        .flex { background: #e8f5e9; color: #198754; }
 
         /* 입력 폼 스타일 */
+        .form-card { background: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #e9ecef; }
         .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        .btn-save { padding: 12px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
         
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; color: white; }
+        .btn-primary { background: var(--primary); width: 100%; font-size: 16px; padding: 15px; }
+        .btn-excel { background: var(--success); }
+        .btn-edit { background: var(--warning); color: #212529; font-size: 12px; padding: 5px 10px; }
+        .btn-delete { background: var(--danger); font-size: 12px; padding: 5px 10px; }
+
         /* 엑셀 업로드 박스 */
-        .excel-box { border: 2px dashed #007bff; padding: 30px; text-align: center; border-radius: 10px; background: #f8f9fa; }
+        .excel-upload-area { border: 2px dashed #ccc; padding: 30px; text-align: center; border-radius: 10px; background: #fff; margin-bottom: 20px; }
+        .search-box { padding: 10px; width: 250px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-<div class="dashboard">
-    <h2>🏫 야간 자율학습 종합 관리 시스템</h2>
+<div class="container">
+    <h2>안성여고 야간 자율학습 통합 관리자</h2>
     
     <div class="tab-menu">
-        <button class="tab-btn active" onclick="switchTab('tab-status', this)">📊 실시간 현황</button>
-        <button class="tab-btn" onclick="switchTab('tab-manual', this)">📝 개별 입력/수정</button>
-        <button class="tab-btn" onclick="switchTab('tab-excel', this)">⚙️ 기초자료(엑셀) 등록</button>
+        <button class="tab-btn active" onclick="switchTab('tab-status', this)">📊 실시간 신청 현황</button>
+        <button class="tab-btn" onclick="switchTab('tab-manual', this)">📝 개별 수정/추가</button>
+        <button class="tab-btn" onclick="switchTab('tab-roster', this)">⚙️ 기초 명단 관리</button>
     </div>
 
     <div id="tab-status" class="tab-content active">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div id="stats" style="font-weight: bold; color: #007bff;">데이터 로딩 중...</div>
-            <span style="font-size: 13px; color: #666;">※ 명단을 클릭하면 개별 수정 화면으로 이동합니다.</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div id="status-summary" style="font-weight: bold; font-size: 16px;">데이터 로딩 중...</div>
+            <button class="btn btn-excel" onclick="downloadCSV()">CSV 엑셀 다운로드</button>
         </div>
-        <table id="data-table">
-            <thead>
-                <tr>
-                    <th>학번</th><th>이름</th><th>종류</th>
-                    <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th><th>일</th>
-                </tr>
-            </thead>
-            <tbody id="table-body"></tbody>
-        </table>
+        <div style="overflow-x: auto;">
+            <table id="status-table">
+                <thead>
+                    <tr>
+                        <th>학번</th><th>이름</th><th>종류</th>
+                        <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th><th>일</th>
+                        <th>신청시간</th>
+                    </tr>
+                </thead>
+                <tbody id="status-body"></tbody>
+            </table>
+        </div>
     </div>
 
     <div id="tab-manual" class="tab-content">
-        <h3>학생 개별 신청정보 관리</h3>
-        <p style="color: #666; font-size: 13px;">현황표에서 학생을 클릭하여 넘어왔거나, 직접 입력하여 자료를 강제로 추가/수정할 수 있습니다.</p>
-        
-        <input type="hidden" id="edit-doc-id"> <div class="form-group">
-            <label>학번</label>
-            <input type="number" id="m-stuId" placeholder="예: 20101">
-        </div>
-        <div class="form-group">
-            <label>이름</label>
-            <input type="text" id="m-stuName" placeholder="이름 입력">
-        </div>
-        <div class="form-group">
-            <label>신청 종류</label>
-            <select id="m-type">
-                <option value="고정석">고정석</option>
-                <option value="자율석">자율석</option>
-            </select>
-        </div>
-        
-        <div class="form-group">
-            <label>요일별 타임 입력 (예: 1,2,3 또는 빈칸)</label>
-            <div style="display: flex; gap: 5px;">
-                <input type="text" id="m-mon" placeholder="월">
-                <input type="text" id="m-tue" placeholder="화">
-                <input type="text" id="m-wed" placeholder="수">
-                <input type="text" id="m-thu" placeholder="목">
-                <input type="text" id="m-fri" placeholder="금">
+        <div class="form-card">
+            <h3>학생 신청 정보 직접 관리</h3>
+            <p style="color: #666; font-size: 13px;">※ 현황표에서 이름을 클릭하면 자동으로 정보가 입력됩니다.</p>
+            <input type="hidden" id="edit-doc-id">
+            
+            <div class="form-group">
+                <label>학번</label>
+                <input type="number" id="m-id" placeholder="예: 20101">
             </div>
+            <div class="form-group">
+                <label>이름</label>
+                <input type="text" id="m-name" placeholder="이름">
+            </div>
+            <div class="form-group">
+                <label>신청 종류</label>
+                <select id="m-type">
+                    <option value="고정석">고정석</option>
+                    <option value="자율석">자율석</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>요일별 타임 (예: 1,2)</label>
+                <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;">
+                    <input type="text" id="m-mon" placeholder="월">
+                    <input type="text" id="m-tue" placeholder="화">
+                    <input type="text" id="m-wed" placeholder="수">
+                    <input type="text" id="m-thu" placeholder="목">
+                    <input type="text" id="m-fri" placeholder="금">
+                    <input type="text" id="m-sat" placeholder="토">
+                    <input type="text" id="m-sun" placeholder="일">
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="saveManualEntry()">저장 / 수정하기</button>
+            <button class="btn" style="background:var(--gray); width:100%; margin-top:10px;" onclick="resetManualForm()">입력창 비우기</button>
         </div>
-
-        <button class="btn-save" onclick="saveManualData()">저장하기</button>
     </div>
 
-    <div id="tab-excel" class="tab-content">
-        <h3>학생 기초자료 업로드</h3>
-        <p>학생용 신청 페이지에서 본인 확인용으로 사용할 명단을 업로드합니다.<br>
-        <strong>엑셀 파일 형식:</strong> 첫 번째 열은 '학번', 두 번째 열은 '이름'으로 구성해 주세요.</p>
+    <div id="tab-roster" class="tab-content">
+        <div class="excel-upload-area">
+            <h3>엑셀로 전체 명단 올리기</h3>
+            <p style="font-size: 13px; color: #666;">A열: 학번 / B열: 이름을 적은 엑셀 파일을 선택하세요.</p>
+            <input type="file" id="excel-input" accept=".xlsx, .xls, .csv">
+            <button class="btn btn-excel" onclick="handleExcelUpload()">서버에 명단 등록</button>
+        </div>
+
+        <hr>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+            <h3>현재 등록된 기초 명단 (<span id="roster-count">0</span>명)</h3>
+            <input type="text" id="roster-search" class="search-box" placeholder="학번 또는 이름 검색..." oninput="displayRoster()">
+        </div>
         
-        <div class="excel-box">
-            <input type="file" id="excel-file" accept=".xlsx, .xls, .csv" style="margin-bottom: 15px;">
-            <br>
-            <button class="btn-save" style="width: auto;" onclick="uploadExcel()">데이터베이스에 저장</button>
+        <div style="max-height: 500px; overflow-y: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 30%;">학번</th>
+                        <th style="width: 40%;">이름</th>
+                        <th style="width: 30%;">관리</th>
+                    </tr>
+                </thead>
+                <tbody id="roster-body"></tbody>
+            </table>
         </div>
-        <div id="excel-preview" style="margin-top: 20px; font-size: 14px; color: green;"></div>
     </div>
-
 </div>
 
 <script>
-    // --- 파이어베이스 기본 설정 ---
+    // --- 파이어베이스 설정 ---
     const firebaseConfig = {
         apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
         authDomain: "self-study-project-82bdf.firebaseapp.com",
@@ -131,137 +163,189 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // --- 1. 탭 전환 기능 ---
+    // 전역 변수
+    let currentRoster = {}; 
+    let applicationData = {};
+
+    // --- [탭 공통] 탭 전환 ---
     function switchTab(tabId, btn) {
-        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
         btn.classList.add('active');
+
+        if (tabId === 'tab-roster') fetchRoster();
     }
 
-    // --- 2. 실시간 현황 불러오기 ---
-    let currentData = {}; // 데이터를 임시 저장할 객체
-
+    // --- [현황] 실시간 데이터 감시 ---
     db.collection("applications").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
-        const tbody = document.getElementById('table-body');
+        const tbody = document.getElementById('status-body');
         tbody.innerHTML = "";
-        let total = 0;
+        let count = 0;
         
         snapshot.forEach((doc) => {
             const data = doc.data();
-            currentData[doc.id] = data; // 클릭 시 폼에 넣기 위해 데이터 저장
-            total++;
+            applicationData[doc.id] = data;
+            count++;
             
-            // tr태그에 onclick 이벤트를 걸어 클릭 시 개별 관리 탭으로 이동하게 함
-            const row = `<tr onclick="openEditForm('${doc.id}')">
+            const date = data.timestamp ? data.timestamp.toDate().toLocaleString('ko-KR', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '-';
+            const row = `<tr onclick="fillEditForm('${doc.id}')">
                 <td>${data.stuId}</td>
                 <td>${data.stuName}</td>
                 <td><span class="type-tag ${data.type === '고정석' ? 'fixed' : 'flex'}">${data.type}</span></td>
-                <td>${data.mon || ''}</td>
-                <td>${data.tue || ''}</td>
-                <td>${data.wed || ''}</td>
-                <td>${data.thu || ''}</td>
-                <td>${data.fri || ''}</td>
-                <td>${data.sat || ''}</td>
-                <td>${data.sun || ''}</td>
+                <td>${data.mon || ''}</td><td>${data.tue || ''}</td><td>${data.wed || ''}</td>
+                <td>${data.thu || ''}</td><td>${data.fri || ''}</td><td>${data.sat || ''}</td><td>${data.sun || ''}</td>
+                <td style="font-size:11px; color:#999;">${date}</td>
             </tr>`;
             tbody.innerHTML += row;
         });
-        document.getElementById('stats').innerText = `총 신청: ${total}명`;
+        document.getElementById('status-summary').innerText = `총 신청 인원: ${count}명`;
     });
 
-    // --- 3. 표 클릭 시 개별 폼으로 데이터 넘기고 이동 ---
-    function openEditForm(docId) {
-        const data = currentData[docId];
-        
-        // 폼에 값 채워넣기
+    // --- [수정] 현황 클릭 시 폼 채우기 ---
+    function fillEditForm(docId) {
+        const data = applicationData[docId];
         document.getElementById('edit-doc-id').value = docId;
-        document.getElementById('m-stuId').value = data.stuId;
-        document.getElementById('m-stuName').value = data.stuName;
+        document.getElementById('m-id').value = data.stuId;
+        document.getElementById('m-name').value = data.stuName;
         document.getElementById('m-type').value = data.type;
-        document.getElementById('m-mon').value = data.mon || '';
-        document.getElementById('m-tue').value = data.tue || '';
-        document.getElementById('m-wed').value = data.wed || '';
-        document.getElementById('m-thu').value = data.thu || '';
-        document.getElementById('m-fri').value = data.fri || '';
-        
-        // 두 번째 탭(개별 입력)으로 화면 강제 전환
+        ['mon','tue','wed','thu','fri','sat','sun'].forEach(day => {
+            document.getElementById(`m-${day}`).value = data[day] || '';
+        });
         switchTab('tab-manual', document.querySelectorAll('.tab-btn')[1]);
     }
 
-    // --- 4. 수동 데이터 저장/수정 로직 ---
-    async function saveManualData() {
+    async function saveManualEntry() {
         const docId = document.getElementById('edit-doc-id').value;
         const payload = {
-            stuId: document.getElementById('m-stuId').value,
-            stuName: document.getElementById('m-stuName').value,
+            stuId: document.getElementById('m-id').value,
+            stuName: document.getElementById('m-name').value,
             type: document.getElementById('m-type').value,
-            mon: document.getElementById('m-mon').value,
-            tue: document.getElementById('m-tue').value,
-            wed: document.getElementById('m-wed').value,
-            thu: document.getElementById('m-thu').value,
-            fri: document.getElementById('m-fri').value,
             timestamp: new Date()
         };
+        ['mon','tue','wed','thu','fri','sat','sun'].forEach(day => {
+            payload[day] = document.getElementById(`m-${day}`).value;
+        });
 
         try {
             if (docId) {
-                // 기존 데이터 수정
                 await db.collection("applications").doc(docId).update(payload);
                 alert("성공적으로 수정되었습니다.");
             } else {
-                // 완전 신규 강제 추가 (ID가 비어있을 때)
                 await db.collection("applications").add(payload);
-                alert("새로운 학생 자료가 추가되었습니다.");
+                alert("새로운 신청 내역이 추가되었습니다.");
             }
-            // 저장 후 폼 비우고 현황 탭으로 복귀
-            document.getElementById('edit-doc-id').value = '';
-            document.querySelectorAll('#tab-manual input').forEach(el => el.value = '');
+            resetManualForm();
             switchTab('tab-status', document.querySelectorAll('.tab-btn')[0]);
-        } catch(e) {
-            alert("저장 오류: " + e.message);
+        } catch(e) { alert("저장 실패: " + e.message); }
+    }
+
+    function resetManualForm() {
+        document.getElementById('edit-doc-id').value = "";
+        document.querySelectorAll('#tab-manual input').forEach(i => i.value = "");
+    }
+
+    // --- [기초 명단] 관리 ---
+    async function fetchRoster() {
+        const doc = await db.collection("settings").doc("roster").get();
+        if (doc.exists) {
+            currentRoster = JSON.parse(doc.data().list || "{}");
+            displayRoster();
         }
     }
 
-    // --- 5. 엑셀 파일 읽기 및 업로드 (명단 데이터베이스화) ---
-    function uploadExcel() {
-        const fileInput = document.getElementById('excel-file');
-        if (fileInput.files.length === 0) return alert("엑셀 파일을 먼저 선택해 주세요.");
+    function displayRoster() {
+        const tbody = document.getElementById('roster-body');
+        const search = document.getElementById('roster-search').value;
+        tbody.innerHTML = "";
+        let count = 0;
+
+        Object.keys(currentRoster).sort().forEach(id => {
+            const name = currentRoster[id];
+            if (search && !id.includes(search) && !name.includes(search)) return;
+            
+            count++;
+            const row = `<tr>
+                <td>${id}</td>
+                <td>${name}</td>
+                <td>
+                    <button class="btn btn-edit" onclick="editRosterItem('${id}', '${name}')">수정</button>
+                    <button class="btn btn-delete" onclick="deleteRosterItem('${id}')">삭제</button>
+                </td>
+            </tr>`;
+            tbody.innerHTML += row;
+        });
+        document.getElementById('roster-count').innerText = count;
+    }
+
+    function editRosterItem(id, oldName) {
+        const newName = prompt(`[${id}] 학생의 이름을 수정합니다.`, oldName);
+        if (newName && newName !== oldName) {
+            currentRoster[id] = newName.trim();
+            saveRosterToServer("이름을 수정했습니다.");
+        }
+    }
+
+    function deleteRosterItem(id) {
+        if (confirm(`학번 ${id} 학생을 명단에서 삭제하시겠습니까?`)) {
+            delete currentRoster[id];
+            saveRosterToServer("학생을 삭제했습니다.");
+        }
+    }
+
+    async function saveRosterToServer(msg) {
+        await db.collection("settings").doc("roster").set({
+            list: JSON.stringify(currentRoster),
+            lastUpdated: new Date()
+        });
+        alert(msg);
+        displayRoster();
+    }
+
+    // 엑셀 업로드
+    function handleExcelUpload() {
+        const file = document.getElementById('excel-input').files[0];
+        if (!file) return alert("파일을 선택하세요.");
 
         const reader = new FileReader();
         reader.onload = function(e) {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, {type: 'array'});
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            // 엑셀 시트를 자바스크립트 배열로 변환 (헤더 제외)
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1}); 
-            
-            let rosterObj = {};
-            let count = 0;
-            
-            // 첫 줄(제목행) 제외하고 데이터 가공
-            for (let i = 1; i < jsonData.length; i++) {
-                let id = String(jsonData[i][0]).trim(); // 학번
-                let name = String(jsonData[i][1]).trim(); // 이름
-                if (id && name && id !== "undefined") {
-                    rosterObj[id] = name;
-                    count++;
-                }
-            }
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
 
-            // 파이어베이스 'settings' 컬렉션에 'roster'라는 문서로 명단을 통째로 저장
-            db.collection("settings").doc("roster").set({ 
-                list: JSON.stringify(rosterObj),
-                lastUpdated: new Date()
-            }).then(() => {
-                document.getElementById('excel-preview').innerText = `✅ 총 ${count}명의 기초 명단이 서버에 안전하게 등록되었습니다!`;
-                alert("명단 업로드 완료!");
-            }).catch(e => {
-                alert("업로드 실패: " + e.message);
+            let newRoster = {};
+            rows.forEach((row, idx) => {
+                if (idx === 0) return; // 제목행 제외
+                const id = String(row[0]).trim();
+                const name = String(row[1]).trim();
+                if (id && name && id !== "undefined") newRoster[id] = name;
             });
+
+            currentRoster = newRoster;
+            saveRosterToServer("엑셀 명단이 업로드되었습니다.");
         };
-        reader.readAsArrayBuffer(fileInput.files[0]);
+        reader.readAsArrayBuffer(file);
+    }
+
+    // CSV 다운로드
+    function downloadCSV() {
+        const table = document.getElementById("status-table");
+        let csv = "\uFEFF"; 
+        for (let i = 0; i < table.rows.length; i++) {
+            let row = [];
+            for (let j = 0; j < table.rows[i].cells.length; j++) {
+                row.push('"' + table.rows[i].cells[j].innerText + '"');
+            }
+            csv += row.join(",") + "\r\n";
+        }
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "야간자율학습_신청현황.csv";
+        link.click();
     }
 </script>
+
 </body>
 </html>
