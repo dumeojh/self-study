@@ -195,14 +195,11 @@
         btn.disabled = !(isIdOk && isNameOk && isTypeOk && isConditionOk);
     }
 
-    async function submitForm() {
-        // 🌟 여기에 선생님의 구글 앱스 스크립트 '웹앱 URL'을 넣어주세요!
-        const scriptUrl = "https://script.google.com/macros/s/AKfycbxbv1yu_IbgLdDCbVhIXPzrKD4jHzZXtpTfJMG_POxarTNum2sjNQGiyOZaMbB-8lqJ9A/exec";
 
-        if(scriptUrl === "YOUR_GOOGLE_SCRIPT_URL_HERE") {
-            alert("구글 앱스 스크립트 URL이 설정되지 않았습니다.");
-            return;
-        }
+
+
+    //async function submitForm() {
+        const scriptUrl = "https://script.google.com/macros/s/AKfycbxbv1yu_IbgLdDCbVhIXPzrKD4jHzZXtpTfJMG_POxarTNum2sjNQGiyOZaMbB-8lqJ9A/exec";
 
         const payload = {
             id: document.getElementById('stu-id').value,
@@ -223,23 +220,36 @@
         document.getElementById('submit-btn').disabled = true;
 
         try {
-const response = await fetch(scriptUrl, {
-    method: "POST",
-    headers: {
-        "Content-Type": "text/plain;charset=utf-8" // 브라우저 CORS 차단 우회용
-    },
-    body: JSON.stringify(payload)
-});
-            const res = await response.json();
-            alert(res.message);
-            if(res.result === "success") location.reload();
+            // 헤더를 제거하여 브라우저가 자연스럽게 통신하도록 유도
+            const response = await fetch(scriptUrl, {
+                method: "POST",
+                body: JSON.stringify(payload)
+            });
+
+            // 1차 확인: 응답을 JSON이 아닌 Text(글자)로 먼저 받아서 까봅니다.
+            const text = await response.text(); 
+            
+            try {
+                // 정상적인 응답이라면 JSON으로 변환이 성공해야 합니다.
+                const res = JSON.parse(text);
+                alert(res.message);
+                if(res.result === "success") location.reload();
+            } catch (jsonError) {
+                // 에러 발생! 구글이 JSON이 아닌 이상한 페이지(HTML)를 보낸 경우입니다.
+                console.error("서버 응답 원본:", text);
+                alert("🚨 구글 서버 차단 발생!\n\n학교/교육청 계정의 보안 정책 때문에 외부 전송이 막혔을 확률이 99%입니다.\n\n개인 구글 계정(@gmail.com)으로 구글 시트와 코드를 옮겨서 새로 배포해 주세요!");
+            }
+
         } catch (e) {
-            alert("전송 중 오류가 발생했습니다. 네트워크를 확인해주세요.");
+            // 통신 자체가 아예 끊긴 경우 (CORS 에러 등)
+            alert("🚨 통신 실패!\n원인: " + e.message + "\n\n브라우저 보안 문제이거나 주소가 잘못되었습니다.");
         } finally {
             document.getElementById('submit-btn').innerText = "신청하기";
             document.getElementById('submit-btn').disabled = false;
         }
     }
+
+    
 </script>
 
 </body>
