@@ -74,17 +74,38 @@
         .type-tag { padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; }
         .month-tag { background: #fff3cd; padding: 2px 5px; border-radius: 4px; font-size: 11px; }
 
-        /* --- 한 화면 맞춤 모드 --- */
-        .fit-screen-active .seat-grid {
-            grid-template-columns: repeat(var(--cols), 1fr) !important; /* 고정픽셀 대신 비율로 쪼개기 */
-            width: 100%;
-            gap: 2px;
+/* --- 다양한 화면 맞춤 모드 --- */
+        .seat-grid.view-mode {
+            /* 기본 좌석 크기 */
+            --cell-size: 55px; 
+            grid-template-columns: repeat(var(--cols), var(--cell-size)) !important;
         }
-        .fit-screen-active .seat-cell {
-            width: 100% !important;
-            height: auto !important;
-            aspect-ratio: 1 / 1; /* 정사각형 비율 유지 */
-            font-size: clamp(9px, 2vw, 13px) !important; /* 화면 크기에 맞춰 글씨 자동 축소 */
+
+        /* 1. 가로화면 맞추기: 가로 길이(100vw)에서 양옆 여백(약 120px)을 빼고 가로 칸 수로 나눔 */
+        .fit-width .seat-grid.view-mode {
+            --cell-size: calc((100vw - 120px) / var(--cols));
+            justify-content: center;
+        }
+
+        /* 2. 세로화면 맞추기: 세로 길이(100vh)에서 위쪽 메뉴/여백(약 350px)을 빼고 세로 줄 수로 나눔 */
+        .fit-height .seat-grid.view-mode {
+            --cell-size: calc((100vh - 350px) / var(--rows));
+            justify-content: center;
+        }
+
+        /* 3. 한 화면에 맞추기: 가로/세로 계산값 중 더 작은(min) 값을 선택하여 화면 밖으로 나가지 않게 함 */
+        .fit-both .seat-grid.view-mode {
+            --cell-size: min(calc((100vw - 120px) / var(--cols)), calc((100vh - 350px) / var(--rows)));
+            justify-content: center;
+        }
+
+        /* 변수(--cell-size)에 맞춰 좌석 크기와 폰트 크기 동시 적용 */
+        .seat-grid-container.fit-width .seat-cell,
+        .seat-grid-container.fit-height .seat-cell,
+        .seat-grid-container.fit-both .seat-cell {
+            width: var(--cell-size) !important;
+            height: var(--cell-size) !important;
+            font-size: calc(var(--cell-size) * 0.25) !important; /* 좌석 크기의 1/4 크기로 글씨 지정 */
         }
     </style>
 </head>
@@ -287,6 +308,7 @@
 
     // --- [1. 감독관 탭 로직] ---
     let currentDailyView = 'map';
+    
     function toggleDailyView(mode) {
         currentDailyView = mode;
         document.getElementById('daily-map-area').style.display = (mode === 'map') ? 'block' : 'none';
@@ -355,6 +377,7 @@
         const container = document.getElementById('supervisor-grid');
         container.innerHTML = ''; container.style.gridTemplateColumns = `repeat(${cols}, 55px)`;
         container.style.setProperty('--cols', cols); // ⭐ 이 줄을 새로 추가해 주세요! (CSS와 연결고리)
+        container.style.setProperty('--rows', rows); // ⭐ 세로화면 계산을 위해 이 줄을 반드시 추가해 주세요!
         const cellElements = {};
 
         // 도면 그리기
