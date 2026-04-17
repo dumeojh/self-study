@@ -111,9 +111,21 @@
                 <button class="btn btn-primary" style="width: auto;" onclick="loadDailyDataAndRender()">데이터 동기화</button>
             </div>
 <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+
+    
+<div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <div>
                     <button id="btn-view-map" class="view-toggle-btn toggle-active" onclick="toggleDailyView('map')">🗺️ 지도 모드</button><button id="btn-view-list" class="view-toggle-btn toggle-inactive" onclick="toggleDailyView('list')">📋 명단 모드</button>
                 </div>
+                <div id="fit-toggle-container" style="background: white; padding: 8px 15px; border-radius: 8px; border: 1px solid #ccc;">
+                    <label style="cursor: pointer; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 8px; margin: 0;">
+                        <input type="checkbox" id="fit-screen-checkbox" onchange="toggleFitScreen()" style="width: 18px; height: 18px;">
+                        🖥️ 한 화면에 맞추기
+                    </label>
+                </div>
+            </div>
+
+    
                 <div id="fit-toggle-container" style="background: white; padding: 8px 15px; border-radius: 8px; border: 1px solid #ccc;">
                     <label style="cursor: pointer; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 8px; margin: 0;">
                         <input type="checkbox" id="fit-screen-checkbox" onchange="toggleFitScreen()" style="width: 18px; height: 18px;">
@@ -299,6 +311,34 @@
             attendanceLogsData = {}; snap.forEach(doc => attendanceLogsData[doc.data().stuId] = doc.data());
             renderDailySupervisorMap();
         });
+    }
+
+    // --- [화면 맞춤 모드 로직 (로컬 스토리지 활용)] ---
+    function toggleFitScreen() {
+        const isChecked = document.getElementById('fit-screen-checkbox').checked;
+        const container = document.getElementById('supervisor-grid').parentElement; // 감싸고 있는 .seat-grid-container
+
+        if (isChecked) {
+            container.classList.add('fit-screen-active');
+            localStorage.setItem('anseong_fit_mode', 'true'); // 내 브라우저에 '켜짐' 저장
+        } else {
+            container.classList.remove('fit-screen-active');
+            localStorage.setItem('anseong_fit_mode', 'false'); // 내 브라우저에 '꺼짐' 저장
+        }
+    }
+
+    function loadFitScreenPreference() {
+        const savedMode = localStorage.getItem('anseong_fit_mode');
+        const checkbox = document.getElementById('fit-screen-checkbox');
+        const container = document.getElementById('supervisor-grid').parentElement;
+
+        if (savedMode === 'true') {
+            checkbox.checked = true;
+            container.classList.add('fit-screen-active');
+        } else {
+            checkbox.checked = false;
+            container.classList.remove('fit-screen-active');
+        }
     }
 
     function renderDailySupervisorMap() {
