@@ -113,6 +113,9 @@
     let serverRoster = {}; let selectedType = null; let currentDocId = null; 
     let seatMapData = []; let layoutRows = 0; let layoutCols = 0;
     let selectedSeatId = ""; let previousSavedSeat = "";
+// 🌟 [추가] 이미 예약된 좌석들을 담아둘 바구니(배열)
+    let takenSeats = [];
+    
     const daysEng = ['mon','tue','wed','thu','fri','sat','sun'];
 
     const tbody = document.getElementById('schedule-body');
@@ -138,6 +141,7 @@
     }
     fetchInitialData();
 
+// [수정] 좌석 도면 그리기 (예약된 좌석 표시 로직 추가)
     function buildSeatGrid() {
         const container = document.getElementById('student-seat-grid');
         container.style.gridTemplateColumns = `repeat(${layoutCols}, 35px)`;
@@ -152,12 +156,20 @@
                 if (cellData.type === 0) {
                     div.classList.add('seat-empty');
                 } else if (cellData.type === 1) {
-                    div.classList.add('seat-available');
-                    // 글자가 없으면 관리자가 놓친 것이므로 강제로 R-C 부여
                     const finalLabel = cellData.label || `${r+1}-${c+1}`;
                     div.innerText = finalLabel;
-                    div.onclick = () => pickSeat(finalLabel, div);
-                    if(previousSavedSeat === finalLabel) pickSeat(finalLabel, div);
+                    
+                    // 🌟 [추가 핵심 로직] 이 자리가 누군가 예약한 자리(takenSeats)에 포함되어 있는지 확인
+                    if (takenSeats.includes(finalLabel)) {
+                        div.classList.add('seat-taken'); // 회색 처리 + 취소선
+                        // onclick 이벤트를 달지 않음 -> 클릭해도 아무 반응이 없게 됨
+                    } else {
+                        // 아직 아무도 예약하지 않은 빈자리
+                        div.classList.add('seat-available');
+                        div.onclick = () => pickSeat(finalLabel, div);
+                        
+                        if(previousSavedSeat === finalLabel) pickSeat(finalLabel, div);
+                    }
                 } else {
                     // 2, 3, 4, 5 (자율구역, 벽, 문, 특수)
                     div.classList.add(`seat-${cellData.type}`, 'seat-static');
@@ -167,7 +179,6 @@
             }
         }
     }
-
     function pickSeat(label, cellElement) {
         document.querySelectorAll('.seat-cell').forEach(el => el.classList.remove('seat-selected'));
         cellElement.classList.add('seat-selected');
@@ -176,28 +187,61 @@
         validateForm();
     }
 
+ // [수정] 학생 정보 조회 및 이미 예약된 자리 데이터 가져오기
     async function verifyStudent() {
-        const id = document.getElementById('stu-id').value.trim(); const name = document.getElementById('stu-name').value.trim(); const month = document.getElementById('target-month').value;
+        const id = document.getElementById('stu-id').value.trim(); 
+        const name = document.getElementById('stu-name').value.trim(); 
+        const month = document.getElementById('target-month').value;
         if (!id || !name) return alert("입력해주세요.");
-        if (serverRoster[id] !== name) return alert("명단 불일치");
+        if (serverRoster[id] !== name) return alert("학번과 이름이 일치하지 않습니다."); // 오타/도용 방지
 
         document.getElementById('search-btn').innerText = "조회 중...";
         try {
+            // 1. 현재 학생의 신청 내역 조회
             const q = await db.collection("applications").where("stuId", "==", id).where("targetMonth", "==", month).get();
-            document.getElementById('apply-section').style.display = 'block'; document.getElementById('search-section').style.display = 'none';
+            
+            // 🌟 2. 해당 월의 다른 학생들이 예약한 '고정석' 전체 내역 가져오기
+            const takenQuery = await db.collection("applications")
+                .where("targetMonth", "==", month)
+                .where("type", "==", "고정석")
+                .get();
+            
+            takenSeats = []; // 이전 조회 기록 초기화
+            
+            document.getElementById('apply-section').style.display = 'block'; 
+            document.getElementById('search-section').style.display = 'none';
 
             if (!q.empty) {
                 const doc = q.docs[0]; currentDocId = doc.id; const data = doc.data();
                 previousSavedSeat = data.seatNum || "";
+                
+                // 기존 학생: 본인 자리를 뺀 나머지 예약된 자리만 수집 (수정할 때 본인 자리는 비워둬야 하므로)
+                takenQuery.forEach(tDoc => {
+                    if (tDoc.id !== currentDocId && tDoc.data().seatNum) {
+                        takenSeats.push(tDoc.data().seatNum);
+                    }
+                });
+
                 selectType(data.type === "고정석" ? 1 : 0);
                 daysEng.forEach(day => { if (data[day]) { data[day].split(',').forEach(t => { const chk = document.getElementById(`${day}-${t}`); if(chk) chk.checked = true; }); } });
                 document.getElementById('submit-btn').innerText = "정보 수정하기"; document.getElementById('submit-btn').className = "btn-main btn-update";
                 alert(`기존 내역을 불러왔습니다.`);
-            } else { currentDocId = null; previousSavedSeat = ""; alert(`신청을 진행하세요.`); }
-            validateForm();
-        } catch(e) { alert(e.message); }
-    }
+            } else { 
+                currentDocId = null; previousSavedSeat = ""; 
+                
+                // 신규 학생: 남들이 예약한 모든 고정석 수집
+                takenQuery.forEach(tDoc => {
+                    if (tDoc.data().seatNum) takenSeats.push(tDoc.data().seatNum);
+                });
 
+                alert(`신청을 진행하세요.`); 
+            }
+            validateForm();
+        } catch(e) { 
+            alert(e.message); 
+            document.getElementById('search-btn').innerText = "조회하기"; // 에러 시 버튼 복구
+        }
+    }
     function selectType(type) {
         selectedType = type;
         document.querySelectorAll('.type-btn').forEach(btn => btn.classList.toggle('active', parseInt(btn.dataset.type) === type));
