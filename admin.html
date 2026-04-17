@@ -295,24 +295,31 @@
     </div>
 
 <div id="settings-modal" class="modal-overlay">
-    <div class="modal-content" style="max-width: 400px;">
+    <div class="modal-content" style="max-width: 450px;">
         <div class="modal-header">
             <h3>⚙️ 야자시간 환경설정</h3>
             <button class="close-btn" onclick="closeSettingsModal()">&times;</button>
         </div>
         <div style="margin-bottom: 15px;">
-            <p style="font-size: 13px; color: gray;">이곳에서 시간을 변경하면 모든 감독 선생님의 컴퓨터에 동일하게 적용되며, 자동 정산 및 타임라인 기준 시간이 변경됩니다.</p>
-            <div class="form-group">
-                <label>1타임 시작 시간</label>
-                <input type="time" id="set-1t-start" value="16:30">
+            <p style="font-size: 13px; color: gray;">각 타임의 시작과 종료 시간을 정확히 설정해주세요. (저녁시간: 18:10 ~ 18:50)</p>
+            
+            <div class="form-group" style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                <label style="width: 50px; margin: 0;">1타임</label>
+                <input type="time" id="set-1t-start" value="16:30" style="flex: 1;"> 
+                <span style="font-weight: bold; color: #666;">~</span> 
+                <input type="time" id="set-1t-end" value="18:10" style="flex: 1;">
             </div>
-            <div class="form-group">
-                <label>2타임 시작 시간</label>
-                <input type="time" id="set-2t-start" value="18:50">
+            <div class="form-group" style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                <label style="width: 50px; margin: 0;">2타임</label>
+                <input type="time" id="set-2t-start" value="18:50" style="flex: 1;"> 
+                <span style="font-weight: bold; color: #666;">~</span> 
+                <input type="time" id="set-2t-end" value="20:10" style="flex: 1;">
             </div>
-            <div class="form-group">
-                <label>3타임 시작 시간</label>
-                <input type="time" id="set-3t-start" value="20:10">
+            <div class="form-group" style="display: flex; gap: 10px; align-items: center;">
+                <label style="width: 50px; margin: 0;">3타임</label>
+                <input type="time" id="set-3t-start" value="20:20" style="flex: 1;"> 
+                <span style="font-weight: bold; color: #666;">~</span> 
+                <input type="time" id="set-3t-end" value="21:30" style="flex: 1;">
             </div>
         </div>
         <button class="btn btn-primary" onclick="saveTimeSettings()">설정 저장 및 배포</button>
