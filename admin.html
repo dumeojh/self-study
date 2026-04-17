@@ -147,12 +147,20 @@
             </div>
 
     
-                <div id="fit-toggle-container" style="background: white; padding: 8px 15px; border-radius: 8px; border: 1px solid #ccc;">
-                    <label style="cursor: pointer; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 8px; margin: 0;">
-                        <input type="checkbox" id="fit-screen-checkbox" onchange="toggleFitScreen()" style="width: 18px; height: 18px;">
-                        🖥️ 한 화면에 맞추기
-                    </label>
+<div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <button id="btn-view-map" class="view-toggle-btn toggle-active" onclick="toggleDailyView('map')">🗺️ 지도 모드</button><button id="btn-view-list" class="view-toggle-btn toggle-inactive" onclick="toggleDailyView('list')">📋 명단 모드</button>
                 </div>
+                <div style="background: white; padding: 5px 15px; border-radius: 8px; border: 1px solid #ccc; display: flex; align-items: center; gap: 10px;">
+                    <b style="font-size: 14px; color: #333;">🖥️ 뷰포트 설정:</b>
+                    <select id="fit-mode-select" onchange="changeFitMode()" style="padding: 6px; border-radius: 5px; border: 1px solid var(--primary); font-weight: bold; cursor: pointer;">
+                        <option value="none">기본 크기 (스크롤 허용)</option>
+                        <option value="width">↔️ 가로화면에 꽉 차게</option>
+                        <option value="height">↕️ 세로화면에 꽉 차게</option>
+                        <option value="both">🔳 한 화면에 모두 넣기</option>
+                    </select>
+                </div>
+            </div>
             </div>
             <div id="daily-map-area">
                 <div class="seat-grid-container" style="background: white;"><div id="supervisor-grid" class="seat-grid view-mode"></div></div>
