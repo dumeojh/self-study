@@ -304,6 +304,36 @@
     };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+// --- [야자 시간 기본값 및 설정 관리] ---
+let studyTimes = {
+    t1: "16:30", t2: "18:50", t3: "20:10" // 파이어베이스에서 불러오기 전 기본값
+};
+
+// 파이어베이스에서 시간 설정 불러오기
+async function loadTimeSettings() {
+    const doc = await db.collection("settings").doc("schedule").get();
+    if (doc.exists) {
+        studyTimes = doc.data();
+        document.getElementById('set-1t-start').value = studyTimes.t1;
+        document.getElementById('set-2t-start').value = studyTimes.t2;
+        document.getElementById('set-3t-start').value = studyTimes.t3;
+    }
+}
+
+// 선생님이 설정창 열고 닫고 저장하는 기능
+function openSettingsModal() { document.getElementById('settings-modal').style.display = 'flex'; }
+function closeSettingsModal() { document.getElementById('settings-modal').style.display = 'none'; }
+async function saveTimeSettings() {
+    studyTimes.t1 = document.getElementById('set-1t-start').value;
+    studyTimes.t2 = document.getElementById('set-2t-start').value;
+    studyTimes.t3 = document.getElementById('set-3t-start').value;
+    await db.collection("settings").doc("schedule").set(studyTimes);
+    alert("시간 설정이 변경되었습니다.");
+    closeSettingsModal();
+}
+
+
+    
 
     let applicationData = {}; let dailyReservationsData = {}; let attendanceLogsData = {}; let currentRoster = {};
     let seatMapData = []; let rows = 20, cols = 30;
@@ -708,6 +738,8 @@ async function saveManualEntry() {
         }; reader.readAsArrayBuffer(file);
     }
 
+
+    
 // --- [학생 상세 정보 모달 제어 함수] ---
 function openStudentModal(stuId, stuName, timesArr, log) {
     // 1. 화면에 선택된 학생 정보 채워넣기
@@ -715,19 +747,51 @@ function openStudentModal(stuId, stuName, timesArr, log) {
     document.getElementById('modal-name').innerText = stuName;
     document.getElementById('modal-times').innerText = timesArr.map(t => t + "타임").join(", ");
     
-    // 2. 키오스크 및 출석 기록 확인
+    // 2. 키오스크 및 출석 기록 확인 (여기가 4단 타임라인으로 변경된 부분입니다!)
     const kioskEl = document.getElementById('modal-kiosk');
-    const timelineEl = document.getElementById('modal-timeline');
     
+    // --- [4단 타임라인 분배 로직 시작] ---
+    // 각 열 초기화
+    document.getElementById('tl-0').innerHTML = "";
+    document.getElementById('tl-1').innerHTML = "";
+    document.getElementById('tl-2').innerHTML = "";
+    document.getElementById('tl-3').innerHTML = "";
+
+    // 설정된 시간을 비교하기 쉽게 숫자로 변환 (예: "16:30" -> 1630)
+    let t1_val = parseInt(studyTimes.t1.replace(":", ""));
+    let t2_val = parseInt(studyTimes.t2.replace(":", ""));
+    let t3_val = parseInt(studyTimes.t3.replace(":", ""));
+
     if (log && log.history && log.history.length > 0) {
         kioskEl.innerText = "출석 기록 있음";
-        // 타임라인 내역을 줄바꿈하여 보여줌
-        timelineEl.innerHTML = log.history.map(h => `<div style="border-bottom: 1px dashed #ccc; padding: 4px 0;">${h}</div>`).join('');
+        
+        log.history.forEach(h => {
+            // 기록 텍스트에서 시간(HH:MM) 모양을 찾아냅니다.
+            let timeMatch = h.match(/\((\d{2}):(\d{2})\)/) || h.match(/(\d{2}):(\d{2})/);
+            let targetCol = 'tl-0'; // 기본은 0타임
+            
+            if (timeMatch) {
+                let timeVal = parseInt(timeMatch[1] + timeMatch[2]);
+                // 찾은 시간이 설정된 기준 시간보다 크면 해당 타임으로 분류
+                if (timeVal >= t3_val) targetCol = 'tl-3';
+                else if (timeVal >= t2_val) targetCol = 'tl-2';
+                else if (timeVal >= t1_val) targetCol = 'tl-1';
+            } else {
+                // 혹시 시간이 안 적혀있고 글자만 있다면 글자로 유추
+                if (h.includes("3타임")) targetCol = 'tl-3';
+                else if (h.includes("2타임")) targetCol = 'tl-2';
+                else if (h.includes("1타임")) targetCol = 'tl-1';
+            }
+            
+            // 알맞은 칸에 기록 추가
+            document.getElementById(targetCol).innerHTML += `<div class="time-item">${h}</div>`;
+        });
     } else {
         kioskEl.innerText = "미출석 (기록 없음)";
         kioskEl.style.color = "var(--danger)";
-        timelineEl.innerHTML = "<div style='color: #666;'>입출입 기록이 없습니다.</div>";
+        document.getElementById('tl-0').innerHTML = "<div style='color: #666;'>기록 없음</div>";
     }
+    // --- [4단 타임라인 분배 로직 끝] ---
 
     // 연락처는 기초 명단에 전화번호 데이터가 추가되어야 정상 작동하므로 현재는 임시값 처리
     document.getElementById('modal-phone').innerText = "010-0000-0000 (데이터 연동 필요)";
@@ -736,6 +800,8 @@ function openStudentModal(stuId, stuName, timesArr, log) {
     document.getElementById('student-info-modal').style.display = 'flex';
 }
 
+
+    
 function closeStudentModal() {
     document.getElementById('student-info-modal').style.display = 'none';
 }
@@ -802,10 +868,10 @@ async function runManualAttendanceCheck() {
     // 현재 시간을 4자리 숫자로 변환 (예: 오후 6시 55분 -> 1855)
     const currentTime = now.getHours() * 100 + now.getMinutes();
 
-    // 기준 시간 설정
-    const time1T = 1630; // 16:30
-    const time2T = 1850; // 18:50
-    const time3T = 2010; // 20:10
+// 환경 설정에서 불러온 시간을 숫자로 변환하여 사용
+    const time1T = parseInt(studyTimes.t1.replace(":", "")); 
+    const time2T = parseInt(studyTimes.t2.replace(":", "")); 
+    const time3T = parseInt(studyTimes.t3.replace(":", ""));
 
     // 파이어베이스에서 오늘 날짜의 출석 기록을 모두 불러옵니다.
     const logsSnap = await db.collection("attendance_logs").where("date", "==", dateStr).get();
