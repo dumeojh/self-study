@@ -160,9 +160,10 @@
         <div class="form-card">
             <h3>자율학습실 구조 설계기</h3>
             <div style="margin-bottom: 15px;">
-                가로(열): <input type="number" id="grid-cols" value="30" style="width: 60px; padding: 5px;"> X 
-                세로(행): <input type="number" id="grid-rows" value="20" style="width: 60px; padding: 5px;">
-                <button class="btn btn-edit" style="background: var(--warning); color: #000;" onclick="initializeGrid()">격자 새로 생성</button>
+가로(열): <input type="number" id="grid-cols" value="30" style="width: 60px; padding: 5px;"> X 
+세로(행): <input type="number" id="grid-rows" value="20" style="width: 60px; padding: 5px;">
+<button class="btn" style="background: var(--success); color: white;" onclick="resizeGrid()">✅ 크기 변경 (기존 좌석 유지)</button>
+<button class="btn" style="background: var(--danger); color: white;" onclick="initializeGrid()">🗑️ 전체 초기화</button>
             </div>
             <div class="tool-bar">
                 <button class="tool-btn seat-0 selected" onclick="selectTool(0, this)">⬜ 통로</button>
