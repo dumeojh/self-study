@@ -339,34 +339,47 @@
     };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+
+    
 // --- [야자 시간 기본값 및 설정 관리] ---
 let studyTimes = {
-    t1: "16:30", t2: "18:50", t3: "20:10" // 파이어베이스에서 불러오기 전 기본값
+    t1: "16:30", t1_end: "18:10", 
+    t2: "18:50", t2_end: "20:10", 
+    t3: "20:20", t3_end: "21:30" // 3타임 종료 기본값은 학교 상황에 맞게 수정하세요.
 };
 
 // 파이어베이스에서 시간 설정 불러오기
 async function loadTimeSettings() {
     const doc = await db.collection("settings").doc("schedule").get();
     if (doc.exists) {
-        studyTimes = doc.data();
+        // 기존 데이터와 병합 (이전에 저장된 종료 시간이 없어도 에러가 나지 않도록)
+        studyTimes = Object.assign(studyTimes, doc.data()); 
+        
         document.getElementById('set-1t-start').value = studyTimes.t1;
+        document.getElementById('set-1t-end').value = studyTimes.t1_end || "18:10";
         document.getElementById('set-2t-start').value = studyTimes.t2;
+        document.getElementById('set-2t-end').value = studyTimes.t2_end || "20:10";
         document.getElementById('set-3t-start').value = studyTimes.t3;
+        document.getElementById('set-3t-end').value = studyTimes.t3_end || "21:30";
     }
 }
 
 // 선생님이 설정창 열고 닫고 저장하는 기능
 function openSettingsModal() { document.getElementById('settings-modal').style.display = 'flex'; }
 function closeSettingsModal() { document.getElementById('settings-modal').style.display = 'none'; }
+
 async function saveTimeSettings() {
     studyTimes.t1 = document.getElementById('set-1t-start').value;
+    studyTimes.t1_end = document.getElementById('set-1t-end').value;
     studyTimes.t2 = document.getElementById('set-2t-start').value;
+    studyTimes.t2_end = document.getElementById('set-2t-end').value;
     studyTimes.t3 = document.getElementById('set-3t-start').value;
+    studyTimes.t3_end = document.getElementById('set-3t-end').value;
+    
     await db.collection("settings").doc("schedule").set(studyTimes);
-    alert("시간 설정이 변경되었습니다.");
+    alert("시간 설정이 변경되었습니다. (종료 시간 포함)");
     closeSettingsModal();
 }
-
 
     
 
