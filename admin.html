@@ -770,6 +770,77 @@ async function checkAutomaticAttendance() {
         }
     });
 }
+
+
+// --- [수동 일괄 출석 정산 기능] ---
+async function runManualAttendanceCheck() {
+    // 1. 실수로 누르는 것을 방지하기 위한 확인창
+    if(!confirm("현재 시간을 기준으로 누락된 자동 출석(1~3타임)을 일괄 계산하시겠습니까? \n(퇴실하지 않고 자리에 있는 학생들만 처리됩니다.)")) return;
+
+    const dateStr = document.getElementById('daily-date').value;
+    const now = new Date();
+    // 현재 시간을 4자리 숫자로 변환 (예: 오후 6시 55분 -> 1855)
+    const currentTime = now.getHours() * 100 + now.getMinutes();
+
+    // 기준 시간 설정
+    const time1T = 1630; // 16:30
+    const time2T = 1850; // 18:50
+    const time3T = 2010; // 20:10
+
+    // 파이어베이스에서 오늘 날짜의 출석 기록을 모두 불러옵니다.
+    const logsSnap = await db.collection("attendance_logs").where("date", "==", dateStr).get();
+    
+    let updateCount = 0;
+    const batch = db.batch(); // 여러 데이터를 한 번에 빠르게 수정하기 위해 batch 사용
+
+    logsSnap.forEach((doc) => {
+        let data = doc.data();
+        let status = data.status || "";
+        let history = data.history || [];
+        let updateNeeded = false;
+        let messagesToAdd = []; // 한 학생에게 추가할 타임 기록들
+
+        // 2. 현재 자리에 있는 학생(귀가, 외출 상태가 아닌 학생)만 대상
+        if (status.includes("출석") || status.includes("입실") || status.includes("복귀")) {
+            
+            // 3. 현재 시간이 16:30이 넘었고, 기존 기록에 '1타임' 관련 단어가 없다면 채워넣음
+            if (currentTime >= time1T && !history.some(h => h.includes("1타임"))) {
+                messagesToAdd.push("1타임 자동 연장 (수동정산)");
+                updateNeeded = true;
+            }
+            // 현재 시간이 18:50이 넘었고, 기존 기록에 '2타임'이 없다면
+            if (currentTime >= time2T && !history.some(h => h.includes("2타임"))) {
+                messagesToAdd.push("2타임 자동 연장 (수동정산)");
+                updateNeeded = true;
+            }
+            // 현재 시간이 20:10이 넘었고, 기존 기록에 '3타임'이 없다면
+            if (currentTime >= time3T && !history.some(h => h.includes("3타임"))) {
+                messagesToAdd.push("3타임 자동 연장 (수동정산)");
+                updateNeeded = true;
+            }
+        }
+
+        // 4. 업데이트가 필요한 학생은 파이어베이스 전송 대기열(batch)에 올림
+        if (updateNeeded) {
+            const docRef = db.collection("attendance_logs").doc(doc.id);
+            batch.update(docRef, {
+                lastUpdateTime: new Date(),
+                // 기존 배열에 여러 개의 새 메시지를 한 번에 추가
+                history: firebase.firestore.FieldValue.arrayUnion(...messagesToAdd) 
+            });
+            updateCount++;
+        }
+    });
+
+    // 5. 대기열에 모인 수정 사항을 한 번에 서버로 발송
+    if (updateCount > 0) {
+        await batch.commit();
+        alert(`총 ${updateCount}명의 누락된 타임 출석이 성공적으로 정산되었습니다.`);
+    } else {
+        alert("정산할 누락 기록이 없습니다. (모두 정상적으로 기록되어 있거나, 퇴실한 상태입니다.)");
+    }
+}
+    
     
     // --- [엑셀 다운로드] ---
     function downloadCSV() { 
