@@ -391,13 +391,83 @@
         switchTab('tab-manual', document.querySelectorAll('.tab-btn')[2]);
     }
 
-    async function saveManualEntry() {
-        const id = document.getElementById('edit-doc-id').value;
-        const p = { targetMonth: document.getElementById('m-targetMonth').value, stuId: document.getElementById('m-id').value, stuName: document.getElementById('m-name').value, type: document.getElementById('m-type').value, seatNum: document.getElementById('m-seatNum').value, timestamp: new Date() };
-        ['mon','tue','wed','thu','fri','sat','sun'].forEach(day => p[day] = document.getElementById(`m-${day}`).value);
-        if (id) await db.collection("applications").doc(id).update(p); else await db.collection("applications").add(p);
-        alert("저장 성공!"); resetManualForm(); switchTab('tab-status', document.querySelectorAll('.tab-btn')[1]);
+
+
+    
+// [수정된 함수] 학생 정보 수동 저장 및 중복 방지 로직
+async function saveManualEntry() {
+    // 1. 입력 화면에 있는 값들을 모두 가져옵니다.
+    const id = document.getElementById('edit-doc-id').value; // 수정 시에만 존재하는 문서 고유 ID
+    const targetMonth = document.getElementById('m-targetMonth').value;
+    const stuId = document.getElementById('m-id').value;
+    const stuName = document.getElementById('m-name').value;
+    const type = document.getElementById('m-type').value;
+    const seatNum = document.getElementById('m-seatNum').value;
+
+    // 🌟 [핵심 추가 로직] 고정석 중복 검사
+    // 종류가 '고정석'이고, 좌석 번호가 빈칸이 아닐 때만 검사를 실행합니다.
+    if (type === "고정석" && seatNum.trim() !== "") {
+        
+        // 파이어베이스에서 '같은 월', '고정석', '같은 좌석 번호'를 가진 문서가 있는지 찾습니다.
+        const snapshot = await db.collection("applications")
+            .where("targetMonth", "==", targetMonth)
+            .where("type", "==", "고정석")
+            .where("seatNum", "==", seatNum)
+            .get();
+
+        let isDuplicate = false; // 중복 여부를 기억할 변수 (초기값: 거짓)
+
+        // 검색된 문서들을 하나씩 확인합니다.
+        snapshot.forEach(doc => {
+            // 중요: 기존 학생의 정보를 '수정'할 때, 자기 자신의 데이터가 검색된 것은 중복이 아닙니다.
+            // 검색된 문서의 고유 ID(doc.id)가 현재 수정 중인 ID(id)와 다르다면, 
+            // 이는 '다른 학생'이 이미 그 자리를 차지하고 있다는 뜻입니다.
+            if (doc.id !== id) {
+                isDuplicate = true; // 중복 발생!
+            }
+        });
+
+        // 만약 중복된 자리가 있다면 알림창을 띄우고 함수를 즉시 종료합니다.
+        if (isDuplicate) {
+            alert(`⚠️ [배정 실패] ${targetMonth}에 이미 '${seatNum}'번 좌석은 다른 학생에게 배정되어 있습니다. 빈 좌석을 확인해주세요.`);
+            return; // return을 만나면 함수가 여기서 끝나므로, 아래의 저장 코드는 실행되지 않습니다.
+        }
     }
+    // 🌟 [추가 로직 끝]
+
+    // --- 여기서부터는 기존과 동일한 정상 저장 로직입니다 ---
+    // 2. 파이어베이스에 저장할 데이터 꾸러미(객체)를 만듭니다.
+    const p = { 
+        targetMonth: targetMonth, 
+        stuId: stuId, 
+        stuName: stuName, 
+        type: type, 
+        seatNum: seatNum, 
+        timestamp: new Date() 
+    };
+
+    // 요일별 타임(1,2,3 등) 값도 꾸러미에 추가합니다.
+    ['mon','tue','wed','thu','fri','sat','sun'].forEach(day => {
+        p[day] = document.getElementById(`m-${day}`).value;
+    });
+
+    // 3. 파이어베이스에 최종 전송합니다.
+    if (id) {
+        // 기존 문서 ID가 있으면 '업데이트(수정)'
+        await db.collection("applications").doc(id).update(p);
+    } else {
+        // 기존 문서 ID가 없으면 '새로 추가'
+        await db.collection("applications").add(p);
+    }
+    
+    // 4. 저장 완료 후 화면 정리
+    alert("성공적으로 저장되었습니다!"); 
+    resetManualForm(); // 입력창 비우기
+    switchTab('tab-status', document.querySelectorAll('.tab-btn')[1]); // 현황 탭으로 이동
+}
+
+
+    
     function resetManualForm() { document.getElementById('edit-doc-id').value = ""; document.querySelectorAll('#tab-manual input').forEach(i => i.value = ""); }
 
     // --- [4. 도면 설계 로직] ---
@@ -449,6 +519,8 @@
         drawEditGrid();
     }
 
+
+    
     // 2. 아예 싹 지우고 새로 텅 빈 도화지를 만드는 함수 (기존 코드 수정)
     function initializeGrid() {
         // 실수로 누를 것을 대비해 확인창 띄우기
