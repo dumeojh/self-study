@@ -121,10 +121,13 @@
         <div class="form-card" style="text-align: center; background: #e3f2fd;">
             <div style="display: inline-flex; gap: 10px; align-items: center; background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
                 <input type="date" id="daily-date" style="padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold;">
-                <select id="daily-time" style="padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold;">
-                    <option value="1">1타임</option><option value="2">2타임</option><option value="3">3타임</option>
-                </select>
-                <button class="btn btn-primary" style="width: auto;" onclick="loadDailyDataAndRender()">데이터 동기화</button>
+                
+<select id="daily-time" style="padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold;">
+    <option value="1">1타임</option><option value="2">2타임</option><option value="3">3타임</option>
+</select>
+<button class="btn btn-primary" style="width: auto;" onclick="loadDailyDataAndRender()">데이터 동기화</button>
+<button class="btn" style="width: auto; background-color: #ff9800; color: white;" onclick="runManualAttendanceCheck()">⏳ 누락된 타임 일괄 정산</button>
+                
             </div>
             <div style="margin-bottom: 15px;">
                 <button id="btn-view-map" class="view-toggle-btn toggle-active" onclick="toggleDailyView('map')">🗺️ 지도 모드</button><button id="btn-view-list" class="view-toggle-btn toggle-inactive" onclick="toggleDailyView('list')">📋 명단 모드</button>
