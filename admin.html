@@ -290,7 +290,36 @@
         </div>
         </div>
     </div>
-</div>    
+</div>   
+
+    </div> <div id="student-info-modal" class="modal-overlay">
+    </div>
+
+<div id="settings-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+            <h3>⚙️ 야자시간 환경설정</h3>
+            <button class="close-btn" onclick="closeSettingsModal()">&times;</button>
+        </div>
+        <div style="margin-bottom: 15px;">
+            <p style="font-size: 13px; color: gray;">이곳에서 시간을 변경하면 모든 감독 선생님의 컴퓨터에 동일하게 적용되며, 자동 정산 및 타임라인 기준 시간이 변경됩니다.</p>
+            <div class="form-group">
+                <label>1타임 시작 시간</label>
+                <input type="time" id="set-1t-start" value="16:30">
+            </div>
+            <div class="form-group">
+                <label>2타임 시작 시간</label>
+                <input type="time" id="set-2t-start" value="18:50">
+            </div>
+            <div class="form-group">
+                <label>3타임 시작 시간</label>
+                <input type="time" id="set-3t-start" value="20:10">
+            </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveTimeSettings()">설정 저장 및 배포</button>
+    </div>
+</div>
+
 
 <script>
     // --- 파이어베이스 설정 (선생님 열쇠 유지) ---
@@ -940,8 +969,13 @@ async function runManualAttendanceCheck() {
         const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'})); link.download=`출석부_${document.getElementById('daily-date').value}.csv`; link.click();
     }
 
-    // 시스템 시작
-    loadSeatLayout('view').then(() => loadDailyDataAndRender());
+
+// 시스템 시작
+    loadTimeSettings(); // 🌟 1번 지시: 서버에서 변경된 야자 시간을 가장 먼저 불러와라!
+    loadSeatLayout('view').then(() => loadDailyDataAndRender()); // 2번 지시: 화면을 그려라!
+
+
+    
 </script>
 </body>
 </html>
