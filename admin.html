@@ -102,6 +102,18 @@
     background: #f8f9fa; padding: 10px; border-radius: 8px; height: 120px; 
     overflow-y: auto; font-size: 13px; border: 1px solid #dee2e6;
 }
+
+        /* --- [환경 설정 및 4단 타임라인 디자인] --- */
+.timeline-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px;
+}
+.timeline-col {
+    background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px; padding: 5px; font-size: 11px; min-height: 80px;
+}
+.timeline-col h4 {
+    margin: 0 0 8px 0; text-align: center; border-bottom: 1px solid #ccc; padding-bottom: 4px; color: var(--primary); font-size: 13px;
+}
+.time-item { margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px dashed #eee; word-break: keep-all; }
     </style>
 </head>
 <body>
