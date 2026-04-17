@@ -378,12 +378,17 @@
             if (timesArr.includes(timeStr) && cellElements[seat]) {
                 const target = cellElements[seat];
                 target.innerHTML = `${seat}<br><span>${name}</span>`;
-                if (!log) { target.className = 'seat-cell status-absent'; target.onclick = () => manualCheckIn(id, name); }
-                else {
-                    if (currentStatus === "외출") target.className = 'seat-cell status-out';
-                    else if (currentStatus === "귀가") target.className = 'seat-cell status-home';
-                    else target.className = type === "고정" ? 'seat-cell status-present-fixed' : 'seat-cell status-present-flex';
-                }
+// 좌석 색상 결정
+if (!log) { 
+    target.className = 'seat-cell status-absent'; 
+} else {
+    if (currentStatus === "외출") target.className = 'seat-cell status-out';
+    else if (currentStatus === "귀가") target.className = 'seat-cell status-home';
+    else target.className = type === "고정" ? 'seat-cell status-present-fixed' : 'seat-cell status-present-flex';
+}
+
+// 🌟 수정된 부분: 결석이든 출석이든 좌석을 클릭하면 상세 팝업창을 열도록 변경합니다.
+target.onclick = () => openStudentModal(id, name, timesArr, log);
             }
         };
 
@@ -680,6 +685,89 @@ async function saveManualEntry() {
         }; reader.readAsArrayBuffer(file);
     }
 
+// --- [학생 상세 정보 모달 제어 함수] ---
+function openStudentModal(stuId, stuName, timesArr, log) {
+    // 1. 화면에 선택된 학생 정보 채워넣기
+    document.getElementById('modal-id').innerText = stuId;
+    document.getElementById('modal-name').innerText = stuName;
+    document.getElementById('modal-times').innerText = timesArr.map(t => t + "타임").join(", ");
+    
+    // 2. 키오스크 및 출석 기록 확인
+    const kioskEl = document.getElementById('modal-kiosk');
+    const timelineEl = document.getElementById('modal-timeline');
+    
+    if (log && log.history && log.history.length > 0) {
+        kioskEl.innerText = "출석 기록 있음";
+        // 타임라인 내역을 줄바꿈하여 보여줌
+        timelineEl.innerHTML = log.history.map(h => `<div style="border-bottom: 1px dashed #ccc; padding: 4px 0;">${h}</div>`).join('');
+    } else {
+        kioskEl.innerText = "미출석 (기록 없음)";
+        kioskEl.style.color = "var(--danger)";
+        timelineEl.innerHTML = "<div style='color: #666;'>입출입 기록이 없습니다.</div>";
+    }
+
+    // 연락처는 기초 명단에 전화번호 데이터가 추가되어야 정상 작동하므로 현재는 임시값 처리
+    document.getElementById('modal-phone').innerText = "010-0000-0000 (데이터 연동 필요)";
+
+    // 3. 모달창 띄우기
+    document.getElementById('student-info-modal').style.display = 'flex';
+}
+
+function closeStudentModal() {
+    document.getElementById('student-info-modal').style.display = 'none';
+}
+
+// --- [자동 출석 전환 타이머 (시간 연동 로직)] ---
+// 초보자를 위한 설명: 브라우저(관리자 화면)가 켜져 있을 때 1분마다 시간을 체크하여
+// 퇴실하지 않은 학생을 다음 타임 출석으로 자동 연장해주는 로직입니다.
+setInterval(checkAutomaticAttendance, 60000); // 60000 밀리초 = 1분마다 실행
+
+async function checkAutomaticAttendance() {
+    // 현재 접속 날짜와 일치할 때만 작동 (과거 날짜 보는데 자동 출석되면 안되므로)
+    const dateStr = document.getElementById('daily-date').value;
+    if (dateStr !== todayStr) return;
+
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const currentTime = hours * 100 + minutes; // 예: 16시 30분 -> 1630
+
+    // 체크할 기준 시간 설정
+    const time1T_start = 1630; // 1타임 시작 16:30
+    const time2T_start = 1850; // 2타임 시작 18:50
+    const time3T_start = 2010; // 3타임 시작 20:10
+
+    // 오늘 날짜의 출석 로그를 모두 가져와서 검사
+    const logsSnap = await db.collection("attendance_logs").where("date", "==", dateStr).get();
+    
+    logsSnap.forEach(async (doc) => {
+        let data = doc.data();
+        let status = data.status;
+        let updateNeeded = false;
+        let message = "";
+
+        // 학생이 귀가(퇴실)하지 않고 자리에 남아있는 경우(출석 상태) 시간 체크
+        if (status.includes("출석") || status.includes("입실")) {
+            if (currentTime === time1T_start) {
+                updateNeeded = true; message = "1타임 자동 연장 (16:30)";
+            } else if (currentTime === time2T_start) {
+                updateNeeded = true; message = "2타임 자동 연장 (18:50)";
+            } else if (currentTime === time3T_start) {
+                updateNeeded = true; message = "3타임 자동 연장 (20:10)";
+            }
+        }
+
+        // 시간이 일치하여 업데이트가 필요하다면 파이어베이스 데이터 수정
+        if (updateNeeded) {
+            await db.collection("attendance_logs").doc(doc.id).update({
+                lastUpdateTime: new Date(),
+                history: firebase.firestore.FieldValue.arrayUnion(message)
+            });
+            console.log(`[시스템] ${data.stuName} 학생 ${message} 처리 완료`);
+        }
+    });
+}
+    
     // --- [엑셀 다운로드] ---
     function downloadCSV() { 
         let csv = "\uFEFF"; const table = document.getElementById("status-table");
