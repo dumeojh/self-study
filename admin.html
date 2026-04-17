@@ -156,15 +156,26 @@
         </div>
     </div>
 
-    <div id="tab-seats" class="tab-content">
+
+
+<div id="tab-seats" class="tab-content">
         <div class="form-card">
             <h3>자율학습실 구조 설계기</h3>
-            <div style="margin-bottom: 15px;">
-가로(열): <input type="number" id="grid-cols" value="30" style="width: 60px; padding: 5px;"> X 
-세로(행): <input type="number" id="grid-rows" value="20" style="width: 60px; padding: 5px;">
-<button class="btn" style="background: var(--success); color: white;" onclick="resizeGrid()">✅ 크기 변경 (기존 좌석 유지)</button>
-<button class="btn" style="background: var(--danger); color: white;" onclick="initializeGrid()">🗑️ 전체 초기화</button>
+            
+            <div style="background: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 15px; font-size: 14px;">
+                <div style="margin-bottom: 10px;">
+                    <b>1. 전체 테두리 크기 조절:</b> 가로 <input type="number" id="grid-cols" value="30" style="width: 60px; padding: 5px;">칸 X 세로 <input type="number" id="grid-rows" value="20" style="width: 60px; padding: 5px;">칸
+                    <button class="btn" style="background: var(--success); color: white; width: auto; padding: 6px 12px; font-size: 13px;" onclick="resizeGrid()">✅ 적용하기 (기존 유지)</button>
+                </div>
+                <div style="border-top: 1px dashed #ccc; padding-top: 10px;">
+                    <b>2. 중간 줄 삽입/삭제:</b> <input type="number" id="target-index" value="1" min="1" style="width: 50px; padding: 5px;"> 번째
+                    <button class="btn" style="background: var(--primary); width: auto; padding: 6px 10px; font-size: 12px; margin-left: 5px;" onclick="modifyGrid('insertRow')">가로(행) 삽입</button>
+                    <button class="btn" style="background: var(--danger); width: auto; padding: 6px 10px; font-size: 12px;" onclick="modifyGrid('deleteRow')">가로 삭제</button> | 
+                    <button class="btn" style="background: var(--primary); width: auto; padding: 6px 10px; font-size: 12px;" onclick="modifyGrid('insertCol')">세로(열) 삽입</button>
+                    <button class="btn" style="background: var(--danger); width: auto; padding: 6px 10px; font-size: 12px;" onclick="modifyGrid('deleteCol')">세로 삭제</button>
+                </div>
             </div>
+            <button class="btn" style="background: var(--danger); color: white; width: 100%; margin-bottom: 15px;" onclick="initializeGrid()">🗑️ 싹 지우고 전체 도면 초기화</button>
             <div class="tool-bar">
                 <button class="tool-btn seat-0 selected" onclick="selectTool(0, this)">⬜ 통로</button>
                 <button class="tool-btn seat-1" onclick="selectTool(1, this)">🟨 고정석</button>
@@ -177,7 +188,6 @@
             <br><button class="btn btn-primary" style="margin-top: 20px;" onclick="saveSeatLayout()">🌐 도면 서버에 배포 (저장)</button>
         </div>
     </div>
-
     <div id="tab-roster" class="tab-content">
         <div class="form-card">
             <h3>엑셀 기초 명단 등록</h3>
