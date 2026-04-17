@@ -330,33 +330,7 @@
         });
     }
 
-    // --- [화면 맞춤 모드 로직 (로컬 스토리지 활용)] ---
-    function toggleFitScreen() {
-        const isChecked = document.getElementById('fit-screen-checkbox').checked;
-        const container = document.getElementById('supervisor-grid').parentElement; // 감싸고 있는 .seat-grid-container
 
-        if (isChecked) {
-            container.classList.add('fit-screen-active');
-            localStorage.setItem('anseong_fit_mode', 'true'); // 내 브라우저에 '켜짐' 저장
-        } else {
-            container.classList.remove('fit-screen-active');
-            localStorage.setItem('anseong_fit_mode', 'false'); // 내 브라우저에 '꺼짐' 저장
-        }
-    }
-
-    function loadFitScreenPreference() {
-        const savedMode = localStorage.getItem('anseong_fit_mode');
-        const checkbox = document.getElementById('fit-screen-checkbox');
-        const container = document.getElementById('supervisor-grid').parentElement;
-
-        if (savedMode === 'true') {
-            checkbox.checked = true;
-            container.classList.add('fit-screen-active');
-        } else {
-            checkbox.checked = false;
-            container.classList.remove('fit-screen-active');
-        }
-    }
 
     function renderDailySupervisorMap() {
         if(seatMapData.length === 0) return;
