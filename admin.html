@@ -377,7 +377,7 @@
 
         
         const container = document.getElementById('supervisor-grid');
-        container.innerHTML = ''; container.style.gridTemplateColumns = `repeat(${cols}, 55px)`;
+        container.innerHTML = '';
         container.style.setProperty('--cols', cols); // ⭐ 이 줄을 새로 추가해 주세요! (CSS와 연결고리)
         container.style.setProperty('--rows', rows); // ⭐ 세로화면 계산을 위해 이 줄을 반드시 추가해 주세요!
         const cellElements = {};
