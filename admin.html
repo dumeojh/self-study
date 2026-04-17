@@ -330,7 +330,40 @@
         });
     }
 
+// --- [화면 맞춤 4가지 모드 로직 (로컬 스토리지 활용)] ---
+    function changeFitMode() {
+        const mode = document.getElementById('fit-mode-select').value;
+        const container = document.getElementById('supervisor-grid').parentElement; // 감싸고 있는 .seat-grid-container
 
+        // 기존에 붙어있던 뷰포트 클래스를 다 지우고, 선택된 모드만 붙여줍니다.
+        container.classList.remove('fit-width', 'fit-height', 'fit-both');
+        if (mode === 'width') container.classList.add('fit-width');
+        else if (mode === 'height') container.classList.add('fit-height');
+        else if (mode === 'both') container.classList.add('fit-both');
+
+        // 내 브라우저에 현재 선택한 설정을 기억시킵니다.
+        localStorage.setItem('anseong_fit_mode', mode);
+    }
+
+    function loadFitScreenPreference() {
+        // 기억된 설정이 없으면 기본값('none')을 사용합니다.
+        const savedMode = localStorage.getItem('anseong_fit_mode') || 'none';
+        
+        // 이전에 테스트했던 체크박스용 'true/false' 값이 남아있어 에러가 나는 것을 방지하는 안전장치
+        let modeToSet = savedMode;
+        if (savedMode === 'true') modeToSet = 'both';
+        if (savedMode === 'false') modeToSet = 'none';
+
+        // 드롭다운 메뉴의 값을 저장된 값으로 맞추고 화면에 즉시 반영
+        const selectBox = document.getElementById('fit-mode-select');
+        if(selectBox) {
+            selectBox.value = modeToSet;
+            changeFitMode(); 
+        }
+    }
+
+
+    
 
     function renderDailySupervisorMap() {
         if(seatMapData.length === 0) return;
