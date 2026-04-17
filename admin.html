@@ -234,6 +234,41 @@
     </div>
 </div>
 
+<div id="student-info-modal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>🧑‍🎓 학생 상세 정보</h3>
+            <button class="close-btn" onclick="closeStudentModal()">&times;</button>
+        </div>
+        
+        <div class="info-grid">
+            <div class="info-label">학번 / 이름</div>
+            <div class="info-value"><b id="modal-id"></b> &nbsp;|&nbsp; <b id="modal-name"></b></div>
+            
+            <div class="info-label">연락처</div>
+            <div class="info-value"><span id="modal-phone">010-XXXX-XXXX</span> </div>
+            
+            <div class="info-label">신청 타임</div>
+            <div class="info-value" id="modal-times">1T, 2T</div>
+            
+            <div class="info-label">키오스크 체크</div>
+            <div class="info-value" style="color: var(--primary); font-weight: bold;" id="modal-kiosk">확인됨 (16:25)</div>
+            
+            <div class="info-label">선생님 확인</div>
+            <div class="info-value">
+                <input type="checkbox" id="modal-teacher-check" style="transform: scale(1.5); margin-right: 10px;">
+                <label for="modal-teacher-check">현재 자리에 있음 확인</label>
+            </div>
+        </div>
+
+        <div>
+            <div class="info-label" style="display: block; margin-bottom: 5px; text-align: left;">입/출입 타임라인 (추적)</div>
+            <div id="modal-timeline" class="timeline-box">
+                </div>
+        </div>
+    </div>
+</div>    
+
 <script>
     // --- 파이어베이스 설정 (선생님 열쇠 유지) ---
     const firebaseConfig = {
