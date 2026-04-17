@@ -372,14 +372,31 @@
     }
 
     // --- [2. 월별 신청 현황 로직] ---
+// --- [2. 월별 신청 현황 로직] ---
     function renderStatusTable() {
-        const tbody = document.getElementById('status-body'); const month = document.getElementById('filter-month').value;
+        const tbody = document.getElementById('status-body'); 
+        const month = document.getElementById('filter-month').value;
         tbody.innerHTML = "";
+
+        // 1. 객체 형태의 데이터를 배열로 변환합니다 (정렬을 위해)
+        let dataArray = [];
         for (const id in applicationData) {
-            const d = applicationData[id];
-            if (month !== "all" && d.targetMonth !== month) continue;
-            tbody.innerHTML += `<tr onclick="fillEditForm('${id}')"><td><span class="month-tag">${d.targetMonth}</span></td><td>${d.stuId}</td><td>${d.stuName}</td><td><span class="type-tag ${d.type==='고정석'?'fixed':'flex'}">${d.type}</span></td><td><b>${d.seatNum||'-'}</b></td><td>${d.mon||''}</td><td>${d.tue||''}</td><td>${d.wed||''}</td><td>${d.thu||''}</td><td>${d.fri||''}</td><td>${d.sat||''}</td><td>${d.sun||''}</td></tr>`;
+            dataArray.push({ id: id, data: applicationData[id] });
         }
+
+        // 2. 학번(stuId)을 숫자로 변환하여 오름차순(작은 수부터) 정렬합니다
+        dataArray.sort((a, b) => parseInt(a.data.stuId) - parseInt(b.data.stuId));
+
+        // 3. 정렬된 배열을 순서대로 화면에 출력합니다
+        dataArray.forEach(item => {
+            const id = item.id;
+            const d = item.data;
+            
+            // 선택한 월과 다르면 출력하지 않고 넘어갑니다
+            if (month !== "all" && d.targetMonth !== month) return; 
+
+            tbody.innerHTML += `<tr onclick="fillEditForm('${id}')"><td><span class="month-tag">${d.targetMonth}</span></td><td>${d.stuId}</td><td>${d.stuName}</td><td><span class="type-tag ${d.type==='고정석'?'fixed':'flex'}">${d.type}</span></td><td><b>${d.seatNum||'-'}</b></td><td>${d.mon||''}</td><td>${d.tue||''}</td><td>${d.wed||''}</td><td>${d.thu||''}</td><td>${d.fri||''}</td><td>${d.sat||''}</td><td>${d.sun||''}</td></tr>`;
+        });
     }
 
     // --- [3. 개별 수정 로직] ---
