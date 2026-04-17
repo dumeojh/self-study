@@ -490,53 +490,73 @@ async function saveManualEntry() {
     // --- [4. 도면 설계 로직] ---
     let currentTool = 0;
     function selectTool(type, btn) { currentTool = type; document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); }
-// 1. 기존 데이터를 유지하면서 크기만 변경하는 함수 (새로 추가)
+
+    
+// 🌟 1. (수정됨) 가장 안전하게 기존 데이터를 유지하며 전체 크기를 변경하는 함수
     function resizeGrid() {
         let newRows = parseInt(document.getElementById('grid-rows').value);
         let newCols = parseInt(document.getElementById('grid-cols').value);
 
-        // 기존 데이터가 아예 없다면 빈 도화지 생성
-        if (seatMapData.length === 0) {
-            rows = newRows; 
-            cols = newCols;
-            seatMapData = Array.from({length: rows}, () => Array.from({length: cols}, () => ({ type: 0, label: "" })));
-            drawEditGrid();
-            return;
+        if (isNaN(newRows) || isNaN(newCols) || newRows < 1 || newCols < 1) {
+            return alert("올바른 크기를 입력해주세요.");
         }
 
-        // [세로(행) 조정]
-        if (newRows > rows) {
-            // 늘어난 만큼 아래쪽에 새로운 줄(배열) 추가
-            for (let r = rows; r < newRows; r++) {
-                seatMapData.push(Array.from({length: cols}, () => ({ type: 0, label: "" })));
-            }
-        } else if (newRows < rows) {
-            // 줄어든 만큼 아래쪽 줄 삭제 (배열의 길이를 줄이면 자동으로 끝부분이 잘려나갑니다)
-            seatMapData.length = newRows;
-        }
+        // [에러 원천 차단] 새로운 크기의 텅 빈 도화지(배열)를 먼저 만듭니다.
+        let newSeatMap = Array.from({length: newRows}, () => 
+            Array.from({length: newCols}, () => ({ type: 0, label: "" }))
+        );
 
-        // [가로(열) 조정]
-        if (newCols > cols) {
-            // 모든 줄을 차례대로 돌면서, 늘어난 만큼 오른쪽에 빈 칸 추가
-            for (let r = 0; r < newRows; r++) {
-                for (let c = cols; c < newCols; c++) {
-                    seatMapData[r].push({ type: 0, label: "" });
+        // 기존 데이터가 있다면, 새로운 도화지의 겹치는 부분에 그대로 복사(도장 찍기)합니다.
+        for (let r = 0; r < Math.min(rows, newRows); r++) {
+            for (let c = 0; c < Math.min(cols, newCols); c++) {
+                if (seatMapData[r] && seatMapData[r][c]) {
+                    newSeatMap[r][c] = seatMapData[r][c];
                 }
             }
-        } else if (newCols < cols) {
-            // 모든 줄을 돌면서, 줄어든 만큼 오른쪽 칸 삭제
-            for (let r = 0; r < newRows; r++) {
-                seatMapData[r].length = newCols;
-            }
         }
 
-        // 전역 변수 업데이트 후 도면 다시 그리기
+        // 안전하게 복사된 새 도면을 적용합니다.
+        seatMapData = newSeatMap;
         rows = newRows;
         cols = newCols;
         drawEditGrid();
     }
 
+// 🌟 2. (새로 추가됨) 중간의 특정 행(가로)이나 열(세로)을 삽입/삭제하는 함수
+    function modifyGrid(action) {
+        let idx = parseInt(document.getElementById('target-index').value);
+        if (isNaN(idx) || idx < 1) return alert("올바른 번호를 입력하세요.");
 
+        if (action === 'insertRow') { // 가로 빈 줄 삽입
+            if (idx > rows + 1) idx = rows + 1; // 맨 끝보다 큰 숫자를 쓰면 맨 끝에 붙임
+            const newRow = Array.from({length: cols}, () => ({ type: 0, label: "" }));
+            seatMapData.splice(idx - 1, 0, newRow);
+            rows++;
+        } else if (action === 'deleteRow') { // 가로 줄 삭제
+            if (idx > rows) return alert("존재하지 않는 가로 줄 번호입니다.");
+            if (!confirm(`${idx}번째 가로(행) 줄을 정말 삭제하시겠습니까?`)) return;
+            seatMapData.splice(idx - 1, 1);
+            rows--;
+        } else if (action === 'insertCol') { // 세로 빈 칸 삽입
+            if (idx > cols + 1) idx = cols + 1;
+            for (let r = 0; r < rows; r++) {
+                seatMapData[r].splice(idx - 1, 0, { type: 0, label: "" });
+            }
+            cols++;
+        } else if (action === 'deleteCol') { // 세로 칸 삭제
+            if (idx > cols) return alert("존재하지 않는 세로 칸 번호입니다.");
+            if (!confirm(`${idx}번째 세로(열) 칸을 정말 삭제하시겠습니까?`)) return;
+            for (let r = 0; r < rows; r++) {
+                seatMapData[r].splice(idx - 1, 1);
+            }
+            cols--;
+        }
+
+        // 추가/삭제가 완료되면 위에 있는 전체 크기 입력칸의 숫자도 자동으로 맞춰줍니다.
+        document.getElementById('grid-rows').value = rows;
+        document.getElementById('grid-cols').value = cols;
+        drawEditGrid();
+    }
     
     // 2. 아예 싹 지우고 새로 텅 빈 도화지를 만드는 함수 (기존 코드 수정)
     function initializeGrid() {
