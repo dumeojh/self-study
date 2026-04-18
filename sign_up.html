@@ -99,6 +99,41 @@
 </div>
 
 <script>
+// sign_up.html 스크립트 상단에 추가
+async function checkApplyPeriod() {
+    const searchBtn = document.getElementById('search-btn');
+    const noticeBox = document.querySelector('.notice');
+
+    try {
+        const doc = await db.collection("settings").doc("applyPeriod").get();
+        if (doc.exists) {
+            const data = doc.data();
+            const now = new Date();
+            const startTime = new Date(data.start);
+            const endTime = new Date(data.end);
+
+            if (now < startTime || now > endTime) {
+                // 기간이 아닐 때
+                searchBtn.disabled = true;
+                searchBtn.style.background = "#ccc";
+                searchBtn.innerText = "현재는 신청 기간이 아닙니다";
+                
+                noticeBox.innerHTML = `⚠️ <b>지금은 신청 기간이 아닙니다.</b><br>
+                    신청 가능 기간: ${data.start.replace('T', ' ')} ~ ${data.end.replace('T', ' ')}`;
+                noticeBox.style.background = "#f8d7da";
+                noticeBox.style.color = "#721c24";
+                noticeBox.style.borderLeft = "4px solid #dc3545";
+            }
+        }
+    } catch(e) { console.error(e); }
+}
+
+// 페이지 로드 시 실행
+checkApplyPeriod();
+
+
+
+    
     const firebaseConfig = {
         apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
         authDomain: "self-study-project-82bdf.firebaseapp.com",
