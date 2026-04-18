@@ -803,16 +803,60 @@ async function saveManualEntry() {
         document.getElementById('roster-count').innerText = count;
     }
     function deleteRosterItem(id) { if(confirm("삭제?")){ delete currentRoster[id]; db.collection("settings").doc("roster").set({ list: JSON.stringify(currentRoster) }); displayRoster(); } }
-    function handleExcelUpload() {
-        const file = document.getElementById('excel-input').files[0]; if (!file) return alert("파일 선택!");
-        const reader = new FileReader(); reader.onload = (e) => {
-            const sheet = XLSX.read(new Uint8Array(e.target.result), {type: 'array'}).Sheets[XLSX.read(new Uint8Array(e.target.result), {type: 'array'}).SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json(sheet, {header: 1}); let newRoster = {};
-            rows.forEach(row => { const id = String(row[0]).trim(); const name = String(row[1]).trim(); if (id.match(/^[0-9]+$/) && name) newRoster[id] = name; });
-            db.collection("settings").doc("roster").set({ list: JSON.stringify(newRoster), lastUpdated: new Date() }).then(() => { currentRoster = newRoster; alert("등록 완료!"); displayRoster(); });
-        }; reader.readAsArrayBuffer(file);
-    }
+// --- [5. 기초 명단 로직 - 최종 수정본] ---
 
+async function handleExcelUpload() {
+    const file = document.getElementById('excel-input').files[0]; 
+    if (!file) return alert("먼저 엑셀 파일을 선택해 주세요!");
+
+    // 🌟 선생님이 요청하신 안전장치: 기존 명단을 날리기 전에 확인창 띄우기
+    if (!confirm("⚠️ 주의: 기초 명단을 새로 등록하시겠습니까?\n확인을 누르면 기존에 등록된 모든 명단이 삭제되고 새 파일로 교체됩니다.")) return;
+
+    const reader = new FileReader(); 
+    reader.onload = async (e) => {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            // 엑셀 데이터를 배열로 변환
+            const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1}); 
+            let newRoster = {};
+            let count = 0;
+
+            rows.forEach(row => { 
+                // A열: 학번, B열: 이름 (숫자로 된 학번과 이름이 모두 있을 때만 저장)
+                const id = String(row[0] || "").trim(); 
+                const name = String(row[1] || "").trim(); 
+                if (id && id.match(/^[0-9]+$/) && name) {
+                    newRoster[id] = name; 
+                    count++;
+                }
+            });
+
+            if (count === 0) {
+                alert("엑셀 파일에서 유효한 학생 데이터를 찾지 못했습니다.\nA열에 학번, B열에 이름이 있는지 확인해 주세요.");
+                return;
+            }
+
+            // 🌟 핵심: .set()을 사용하여 기존 데이터를 싹 지우고 새 데이터로 문서를 교체함
+            await db.collection("settings").doc("roster").set({ 
+                list: JSON.stringify(newRoster), 
+                lastUpdated: new Date() 
+            });
+
+            currentRoster = newRoster;
+            alert(`✅ 등록 완료! 총 ${count}명의 명단으로 교체되었습니다.`);
+            displayRoster(); // 화면의 표 새로고침
+
+        } catch (err) {
+            console.error(err);
+            alert("파일 읽기 또는 서버 저장 중 오류가 발생했습니다: " + err.message);
+        }
+    }; 
+    reader.readAsArrayBuffer(file);
+}
 
     
 // --- [학생 상세 정보 모달 제어 함수] ---
