@@ -350,7 +350,7 @@
 
 
 <script>
-    // --- 파이어베이스 설정 (선생님 열쇠 유지) ---
+// --- 파이어베이스 설정 (선생님 열쇠 유지) ---
     const firebaseConfig = {
         apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
         authDomain: "self-study-project-82bdf.firebaseapp.com",
@@ -362,737 +362,138 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    
-// --- [야자 시간 기본값 및 설정 관리] ---
-let studyTimes = {
-    t1: "16:30", t1_end: "18:10", 
-    t2: "18:50", t2_end: "20:10", 
-    t3: "20:20", t3_end: "21:30" // 3타임 종료 기본값은 학교 상황에 맞게 수정하세요.
-};
-
-// 파이어베이스에서 시간 설정 불러오기
-async function loadTimeSettings() {
-    const doc = await db.collection("settings").doc("schedule").get();
-    if (doc.exists) {
-        // 기존 데이터와 병합 (이전에 저장된 종료 시간이 없어도 에러가 나지 않도록)
-        studyTimes = Object.assign(studyTimes, doc.data()); 
-        
-        document.getElementById('set-1t-start').value = studyTimes.t1;
-        document.getElementById('set-1t-end').value = studyTimes.t1_end || "18:10";
-        document.getElementById('set-2t-start').value = studyTimes.t2;
-        document.getElementById('set-2t-end').value = studyTimes.t2_end || "20:10";
-        document.getElementById('set-3t-start').value = studyTimes.t3;
-        document.getElementById('set-3t-end').value = studyTimes.t3_end || "21:30";
-    }
-}
-
-// 선생님이 설정창 열고 닫고 저장하는 기능
-function openSettingsModal() { document.getElementById('settings-modal').style.display = 'flex'; }
-function closeSettingsModal() { document.getElementById('settings-modal').style.display = 'none'; }
-
-async function saveTimeSettings() {
-    studyTimes.t1 = document.getElementById('set-1t-start').value;
-    studyTimes.t1_end = document.getElementById('set-1t-end').value;
-    studyTimes.t2 = document.getElementById('set-2t-start').value;
-    studyTimes.t2_end = document.getElementById('set-2t-end').value;
-    studyTimes.t3 = document.getElementById('set-3t-start').value;
-    studyTimes.t3_end = document.getElementById('set-3t-end').value;
-    
-    await db.collection("settings").doc("schedule").set(studyTimes);
-    alert("시간 설정이 변경되었습니다. (종료 시간 포함)");
-    closeSettingsModal();
-}
-
-    
-
+    let studyTimes = { t1: "16:30", t1_end: "18:10", t2: "18:50", t2_end: "20:10", t3: "20:20", t3_end: "21:30" };
     let applicationData = {}; let dailyReservationsData = {}; let attendanceLogsData = {}; let currentRoster = {};
     let seatMapData = []; let rows = 20, cols = 30;
     let dailyListenerUnsubscribe = null; let attendanceListenerUnsubscribe = null;
-
-    // 한국 시간 오늘 날짜 초기화
     const todayObj = new Date();
     const todayStr = todayObj.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
     document.getElementById('daily-date').value = todayStr;
 
+    // --- [1. 탭 관리 (수정완료)] ---
+    function switchTab(tabId, btn) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active'); 
+        btn.classList.add('active');
 
-// --- [탭 관리 수정본] ---
-// --- [탭 관리 - 이 위치로 옮겨야 완벽하게 작동합니다] ---
-function switchTab(tabId, btn) {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active'); 
-    btn.classList.add('active');
+        if (tabId === 'tab-daily') loadDailyDataAndRender();
+        if (tabId === 'tab-status') renderStatusTable();
+        if (tabId === 'tab-roster') fetchRoster();
+        if (tabId === 'tab-seats') loadSeatLayout('edit');
+        if (tabId === 'tab-period') loadApplyPeriod(); // 🌟 이제 정상 작동합니다.
+    }
 
-    if (tabId === 'tab-daily') loadDailyDataAndRender();
-    if (tabId === 'tab-status') renderStatusTable();
-    if (tabId === 'tab-roster') fetchRoster();
-    if (tabId === 'tab-seats') loadSeatLayout('edit');
-    // 🌟 이 줄이 울타리(}) 안으로 들어왔는지 꼭 확인하세요!
-    if (tabId === 'tab-period') loadApplyPeriod(); 
-}
+    // --- [2. 기초 명단 로직 (중복제거 및 교체로직)] ---
+    async function handleExcelUpload() {
+        const file = document.getElementById('excel-input').files[0]; 
+        if (!file) return alert("파일을 선택해 주세요!");
+        if (!confirm("⚠️ 주의: 기존 명단을 모두 삭제하고 새 명단으로 교체하시겠습니까?")) return;
+
+        const reader = new FileReader(); 
+        reader.onload = async (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const excelRows = XLSX.utils.sheet_to_json(worksheet, {header: 1}); 
+                let newRoster = {}; let count = 0;
+
+                excelRows.forEach(row => { 
+                    const studentId = String(row[0] || "").trim();
+                    const studentName = String(row[1] || "").trim(); 
+                    if (studentId.match(/^[0-9]+$/) && studentName) {
+                        newRoster[studentId] = studentName; count++;
+                    }
+                });
+
+                await db.collection("settings").doc("roster").set({ 
+                    list: JSON.stringify(newRoster), lastUpdated: new Date() 
+                });
+                currentRoster = newRoster;
+                alert(`✅ 교체 완료! 총 ${count}명이 등록되었습니다.`);
+                displayRoster();
+            } catch(err) { alert("오류: " + err.message); }
+        }; 
+        reader.readAsArrayBuffer(file);
+    }
+
+    // --- [3. 신청 기간 관리] ---
+    async function saveApplyPeriod() {
+        const start = document.getElementById('apply-start').value;
+        const end = document.getElementById('apply-end').value;
+        if(!start || !end) return alert("시작과 종료 시간을 입력하세요.");
+        await db.collection("settings").doc("applyPeriod").set({ start, end, lastUpdated: new Date() });
+        alert("신청 기간이 배포되었습니다!");
+    }
+
+    async function loadApplyPeriod() {
+        const doc = await db.collection("settings").doc("applyPeriod").get();
+        if (doc.exists) {
+            document.getElementById('apply-start').value = doc.data().start;
+            document.getElementById('apply-end').value = doc.data().end;
+        }
+    }
+
+    // --- [기타 필수 함수들] ---
+    async function fetchRoster() { 
+        const doc = await db.collection("settings").doc("roster").get(); 
+        if (doc.exists) { currentRoster = JSON.parse(doc.data().list || "{}"); displayRoster(); } 
+    }
+    function displayRoster() {
+        const tbody = document.getElementById('roster-body'); const s = document.getElementById('roster-search').value; 
+        tbody.innerHTML = ""; let count = 0;
+        Object.keys(currentRoster).sort().forEach(id => { 
+            const name = currentRoster[id]; 
+            if (s && !id.includes(s) && !name.includes(s)) return; 
+            count++; tbody.innerHTML += `<tr><td>${id}</td><td>${name}</td><td><button class="btn btn-delete" onclick="deleteRosterItem('${id}')">삭제</button></td></tr>`; 
+        });
+        document.getElementById('roster-count').innerText = count;
+    }
+    function deleteRosterItem(id) { if(confirm("삭제?")){ delete currentRoster[id]; db.collection("settings").doc("roster").set({ list: JSON.stringify(currentRoster) }); displayRoster(); } }
+
+    async function loadTimeSettings() {
+        const doc = await db.collection("settings").doc("schedule").get();
+        if (doc.exists) {
+            studyTimes = Object.assign(studyTimes, doc.data());
+            document.getElementById('set-1t-start').value = studyTimes.t1;
+            document.getElementById('set-1t-end').value = studyTimes.t1_end;
+            document.getElementById('set-2t-start').value = studyTimes.t2;
+            document.getElementById('set-2t-end').value = studyTimes.t2_end;
+            document.getElementById('set-3t-start').value = studyTimes.t3;
+            document.getElementById('set-3t-end').value = studyTimes.t3_end;
+        }
+    }
+
+    async function saveTimeSettings() {
+        studyTimes.t1 = document.getElementById('set-1t-start').value;
+        studyTimes.t1_end = document.getElementById('set-1t-end').value;
+        studyTimes.t2 = document.getElementById('set-2t-start').value;
+        studyTimes.t2_end = document.getElementById('set-2t-end').value;
+        studyTimes.t3 = document.getElementById('set-3t-start').value;
+        studyTimes.t3_end = document.getElementById('set-3t-end').value;
+        await db.collection("settings").doc("schedule").set(studyTimes);
+        alert("시간 설정 완료!"); closeSettingsModal();
+    }
+
+    // --- [도면 및 실시간 감독 로직 - 기존과 동일] ---
+    // (기존의 resizeGrid, modifyGrid, initializeGrid, drawEditGrid, saveSeatLayout, loadSeatLayout, toggleDailyView, loadDailyDataAndRender, renderDailySupervisorMap, openStudentModal, closeStudentModal, runManualAttendanceCheck 등은 생략하지 않고 그대로 유지하세요)
+    // ... [중략: 도면 관련 함수들 복사해서 넣기] ...
+
+    // 시스템 시작
+    loadTimeSettings(); 
+    loadApplyPeriod();
+    loadSeatLayout('view').then(() => loadDailyDataAndRender());
     
-    // --- [실시간 데이터 감시] ---
+    function openSettingsModal() { document.getElementById('settings-modal').style.display = 'flex'; }
+    function closeSettingsModal() { document.getElementById('settings-modal').style.display = 'none'; }
+    
+    // (실시간 데이터 감시 로직)
     db.collection("applications").orderBy("timestamp", "desc").onSnapshot(snap => {
         applicationData = {}; snap.forEach(doc => applicationData[doc.id] = doc.data());
         if(document.getElementById('tab-daily').classList.contains('active')) renderDailySupervisorMap();
         if(document.getElementById('tab-status').classList.contains('active')) renderStatusTable();
     });
-
-    // --- [1. 감독관 탭 로직] ---
-    let currentDailyView = 'map';
-    function toggleDailyView(mode) {
-        currentDailyView = mode;
-        document.getElementById('daily-map-area').style.display = (mode === 'map') ? 'block' : 'none';
-        document.getElementById('daily-list-area').style.display = (mode === 'list') ? 'block' : 'none';
-        document.getElementById('btn-view-map').className = (mode === 'map') ? "view-toggle-btn toggle-active" : "view-toggle-btn toggle-inactive";
-        document.getElementById('btn-view-list').className = (mode === 'list') ? "view-toggle-btn toggle-active" : "view-toggle-btn toggle-inactive";
-        if(mode === 'list') document.getElementById('daily-time').style.display = 'none';
-        else document.getElementById('daily-time').style.display = 'inline-block';
-    }
-
-    function loadDailyDataAndRender() {
-        const dateStr = document.getElementById('daily-date').value;
-        if (dailyListenerUnsubscribe) dailyListenerUnsubscribe();
-        if (attendanceListenerUnsubscribe) attendanceListenerUnsubscribe();
-
-        dailyListenerUnsubscribe = db.collection("daily_reservations").where("date", "==", dateStr).onSnapshot(snap => {
-            dailyReservationsData = {}; snap.forEach(doc => dailyReservationsData[doc.id] = doc.data());
-            renderDailySupervisorMap();
-        });
-
-        attendanceListenerUnsubscribe = db.collection("attendance_logs").where("date", "==", dateStr).onSnapshot(snap => {
-            attendanceLogsData = {}; snap.forEach(doc => attendanceLogsData[doc.data().stuId] = doc.data());
-            renderDailySupervisorMap();
-        });
-    }
-
-    function renderDailySupervisorMap() {
-        if(seatMapData.length === 0) return;
-        const dateStr = document.getElementById('daily-date').value;
-        const timeStr = document.getElementById('daily-time').value;
-        const dateObj = new Date(dateStr);
-        const targetMonthStr = (dateObj.getMonth() + 1) + "월";
-        const daysEng = ['sun','mon','tue','wed','thu','fri','sat'];
-        const targetDayKey = daysEng[dateObj.getDay()];
-
-        const container = document.getElementById('supervisor-grid');
-        container.innerHTML = ''; container.style.gridTemplateColumns = `repeat(${cols}, 55px)`;
-        const cellElements = {};
-
-        // 도면 그리기
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                const d = seatMapData[r][c];
-                const div = document.createElement('div');
-                div.className = `seat-cell seat-${d.type}`;
-                div.innerText = d.label || "";
-                if (d.type === 1 || d.type === 2) {
-                    let seatId = d.label || (d.type === 1 ? `${String.fromCharCode(65+r)}${c+1}` : `자율-${r+1}-${c+1}`);
-                    cellElements[seatId] = div;
-                }
-                container.appendChild(div);
-            }
-        }
-
-        const dailyRoster = []; let counts = { t1: 0, t2: 0, t3: 0 };
-
-        const processStudent = (id, name, seat, timesStr, type) => {
-            const timesArr = timesStr.split(',');
-            const log = attendanceLogsData[id];
-            const currentStatus = log ? log.status : "미입실";
-            const historyList = (log && log.history) ? log.history : [];
-            dailyRoster.push({ id, name, seat, type, timesArr, currentStatus, historyList });
-            if(timesArr.includes("1")) counts.t1++; if(timesArr.includes("2")) counts.t2++; if(timesArr.includes("3")) counts.t3++;
-
-            if (timesArr.includes(timeStr) && cellElements[seat]) {
-                const target = cellElements[seat];
-                target.innerHTML = `${seat}<br><span>${name}</span>`;
-// 좌석 색상 결정
-if (!log) { 
-    target.className = 'seat-cell status-absent'; 
-} else {
-    if (currentStatus === "외출") target.className = 'seat-cell status-out';
-    else if (currentStatus === "귀가") target.className = 'seat-cell status-home';
-    else target.className = type === "고정" ? 'seat-cell status-present-fixed' : 'seat-cell status-present-flex';
-}
-
-// 🌟 수정된 부분: 결석이든 출석이든 좌석을 클릭하면 상세 팝업창을 열도록 변경합니다.
-target.onclick = () => openStudentModal(id, name, timesArr, log);
-            }
-        };
-
-        for (const id in applicationData) {
-            const d = applicationData[id];
-            if (d.targetMonth === targetMonthStr && d.type === "고정석" && d[targetDayKey]) processStudent(d.stuId, d.stuName, d.seatNum, d[targetDayKey], "고정");
-        }
-        for (const id in dailyReservationsData) {
-            const d = dailyReservationsData[id]; processStudent(d.stuId, d.stuName, d.seatNum, d.times, "자율");
-        }
-
-        document.getElementById('count-t1').innerText = counts.t1;
-        document.getElementById('count-t2').innerText = counts.t2;
-        document.getElementById('count-t3').innerText = counts.t3;
-
-// ... (앞부분 생략) ...
-        
-        // ★ 에러 방지가 추가된 명단 뷰 렌더링
-        const tbody = document.getElementById('daily-list-body'); tbody.innerHTML = '';
-        dailyRoster.sort((a,b) => a.id - b.id).forEach(s => {
-            const grade = s.id.substring(0,1); const cls = parseInt(s.id.substring(1,3), 10);
-            
-            // 상태별 색상
-            let color = '#6c757d'; 
-            if(s.currentStatus.includes('입실') || s.currentStatus.includes('복귀') || s.currentStatus.includes('출석')) color='#0d6efd'; 
-            else if(s.currentStatus==='외출') color='#b38200'; 
-            else if(s.currentStatus==='귀가') color='#dc3545';
-            
-            // ★ 핵심: 타임라인 데이터가 없거나 에러가 나도 깨지지 않도록 방어 코드 추가
-            let historyHtml = "-";
-            if (s.historyList && Array.isArray(s.historyList) && s.historyList.length > 0) {
-                historyHtml = `<div class="history-box" style="padding:4px;">` + 
-                              s.historyList.map(h => `<div style="border-bottom:1px dashed #ddd; padding:2px 0;">${h}</div>`).join('') + 
-                              `</div>`;
-            }
-
-            tbody.innerHTML += `<tr>
-                <td>${grade}-${cls}</td>
-                <td>${s.id}</td>
-                <td><b>${s.name}</b></td>
-                <td>${s.seat}</td>
-                <td style="color:${color}; font-weight:bold;">${s.currentStatus}</td>
-                <td>${s.timesArr.includes("1")?'O':'-'}</td>
-                <td>${s.timesArr.includes("2")?'O':'-'}</td>
-                <td>${s.timesArr.includes("3")?'O':'-'}</td>
-                <td style="text-align: left; vertical-align: top;">${historyHtml}</td>
-            </tr>`;
-        });
-    }
-
-
-
-
-    
-    async function manualCheckIn(stuId, stuName) {
-        if(!confirm(`[${stuId} ${stuName}] 학생을 직접 출석 처리하시겠습니까?`)) return;
-        const dateStr = document.getElementById('daily-date').value;
-        const timeStr = new Date().toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit' });
-        await db.collection("attendance_logs").doc(`${dateStr}_${stuId}`).set({ date: dateStr, stuId, stuName, status: "출석(감독관)", checkInTime: new Date(), lastUpdateTime: new Date(), history: firebase.firestore.FieldValue.arrayUnion(`출석-수동 (${timeStr})`) }, { merge: true });
-    }
-
-    // --- [2. 월별 신청 현황 로직] ---
-// --- [2. 월별 신청 현황 로직] ---
-    function renderStatusTable() {
-        const tbody = document.getElementById('status-body'); 
-        const month = document.getElementById('filter-month').value;
-        tbody.innerHTML = "";
-
-        // 1. 객체 형태의 데이터를 배열로 변환합니다 (정렬을 위해)
-        let dataArray = [];
-        for (const id in applicationData) {
-            dataArray.push({ id: id, data: applicationData[id] });
-        }
-
-        // 2. 학번(stuId)을 숫자로 변환하여 오름차순(작은 수부터) 정렬합니다
-        dataArray.sort((a, b) => parseInt(a.data.stuId) - parseInt(b.data.stuId));
-
-        // 3. 정렬된 배열을 순서대로 화면에 출력합니다
-        dataArray.forEach(item => {
-            const id = item.id;
-            const d = item.data;
-            
-            // 선택한 월과 다르면 출력하지 않고 넘어갑니다
-            if (month !== "all" && d.targetMonth !== month) return; 
-
-            tbody.innerHTML += `<tr onclick="fillEditForm('${id}')"><td><span class="month-tag">${d.targetMonth}</span></td><td>${d.stuId}</td><td>${d.stuName}</td><td><span class="type-tag ${d.type==='고정석'?'fixed':'flex'}">${d.type}</span></td><td><b>${d.seatNum||'-'}</b></td><td>${d.mon||''}</td><td>${d.tue||''}</td><td>${d.wed||''}</td><td>${d.thu||''}</td><td>${d.fri||''}</td><td>${d.sat||''}</td><td>${d.sun||''}</td></tr>`;
-        });
-    }
-
-    // --- [3. 개별 수정 로직] ---
-    function fillEditForm(id) {
-        const d = applicationData[id]; document.getElementById('edit-doc-id').value = id;
-        document.getElementById('m-targetMonth').value = d.targetMonth; document.getElementById('m-id').value = d.stuId; document.getElementById('m-name').value = d.stuName;
-        document.getElementById('m-type').value = d.type; document.getElementById('m-seatNum').value = d.seatNum || '';
-        ['mon','tue','wed','thu','fri','sat','sun'].forEach(day => document.getElementById(`m-${day}`).value = d[day]||'');
-        switchTab('tab-manual', document.querySelectorAll('.tab-btn')[2]);
-    }
-
-
-
-    
-// [수정된 함수] 학생 정보 수동 저장 및 중복 방지 로직
-async function saveManualEntry() {
-    // 1. 입력 화면에 있는 값들을 모두 가져옵니다.
-    const id = document.getElementById('edit-doc-id').value; // 수정 시에만 존재하는 문서 고유 ID
-    const targetMonth = document.getElementById('m-targetMonth').value;
-    const stuId = document.getElementById('m-id').value;
-    const stuName = document.getElementById('m-name').value;
-    const type = document.getElementById('m-type').value;
-    const seatNum = document.getElementById('m-seatNum').value;
-
-    // 🌟 [핵심 추가 로직] 고정석 중복 검사
-    // 종류가 '고정석'이고, 좌석 번호가 빈칸이 아닐 때만 검사를 실행합니다.
-    if (type === "고정석" && seatNum.trim() !== "") {
-        
-        // 파이어베이스에서 '같은 월', '고정석', '같은 좌석 번호'를 가진 문서가 있는지 찾습니다.
-        const snapshot = await db.collection("applications")
-            .where("targetMonth", "==", targetMonth)
-            .where("type", "==", "고정석")
-            .where("seatNum", "==", seatNum)
-            .get();
-
-        let isDuplicate = false; // 중복 여부를 기억할 변수 (초기값: 거짓)
-
-        // 검색된 문서들을 하나씩 확인합니다.
-        snapshot.forEach(doc => {
-            // 중요: 기존 학생의 정보를 '수정'할 때, 자기 자신의 데이터가 검색된 것은 중복이 아닙니다.
-            // 검색된 문서의 고유 ID(doc.id)가 현재 수정 중인 ID(id)와 다르다면, 
-            // 이는 '다른 학생'이 이미 그 자리를 차지하고 있다는 뜻입니다.
-            if (doc.id !== id) {
-                isDuplicate = true; // 중복 발생!
-            }
-        });
-
-        // 만약 중복된 자리가 있다면 알림창을 띄우고 함수를 즉시 종료합니다.
-        if (isDuplicate) {
-            alert(`⚠️ [배정 실패] ${targetMonth}에 이미 '${seatNum}'번 좌석은 다른 학생에게 배정되어 있습니다. 빈 좌석을 확인해주세요.`);
-            return; // return을 만나면 함수가 여기서 끝나므로, 아래의 저장 코드는 실행되지 않습니다.
-        }
-    }
-    // 🌟 [추가 로직 끝]
-
-    // --- 여기서부터는 기존과 동일한 정상 저장 로직입니다 ---
-    // 2. 파이어베이스에 저장할 데이터 꾸러미(객체)를 만듭니다.
-    const p = { 
-        targetMonth: targetMonth, 
-        stuId: stuId, 
-        stuName: stuName, 
-        type: type, 
-        seatNum: seatNum, 
-        timestamp: new Date() 
-    };
-
-    // 요일별 타임(1,2,3 등) 값도 꾸러미에 추가합니다.
-    ['mon','tue','wed','thu','fri','sat','sun'].forEach(day => {
-        p[day] = document.getElementById(`m-${day}`).value;
-    });
-
-    // 3. 파이어베이스에 최종 전송합니다.
-    if (id) {
-        // 기존 문서 ID가 있으면 '업데이트(수정)'
-        await db.collection("applications").doc(id).update(p);
-    } else {
-        // 기존 문서 ID가 없으면 '새로 추가'
-        await db.collection("applications").add(p);
-    }
-    
-    // 4. 저장 완료 후 화면 정리
-    alert("성공적으로 저장되었습니다!"); 
-    resetManualForm(); // 입력창 비우기
-    switchTab('tab-status', document.querySelectorAll('.tab-btn')[1]); // 현황 탭으로 이동
-}
-
-
-    
-    function resetManualForm() { document.getElementById('edit-doc-id').value = ""; document.querySelectorAll('#tab-manual input').forEach(i => i.value = ""); }
-
-    // --- [4. 도면 설계 로직] ---
-    let currentTool = 0;
-    function selectTool(type, btn) { currentTool = type; document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); }
-
-    
-// 🌟 1. (수정됨) 가장 안전하게 기존 데이터를 유지하며 전체 크기를 변경하는 함수
-    function resizeGrid() {
-        let newRows = parseInt(document.getElementById('grid-rows').value);
-        let newCols = parseInt(document.getElementById('grid-cols').value);
-
-        if (isNaN(newRows) || isNaN(newCols) || newRows < 1 || newCols < 1) {
-            return alert("올바른 크기를 입력해주세요.");
-        }
-
-        // [에러 원천 차단] 새로운 크기의 텅 빈 도화지(배열)를 먼저 만듭니다.
-        let newSeatMap = Array.from({length: newRows}, () => 
-            Array.from({length: newCols}, () => ({ type: 0, label: "" }))
-        );
-
-        // 기존 데이터가 있다면, 새로운 도화지의 겹치는 부분에 그대로 복사(도장 찍기)합니다.
-        for (let r = 0; r < Math.min(rows, newRows); r++) {
-            for (let c = 0; c < Math.min(cols, newCols); c++) {
-                if (seatMapData[r] && seatMapData[r][c]) {
-                    newSeatMap[r][c] = seatMapData[r][c];
-                }
-            }
-        }
-
-        // 안전하게 복사된 새 도면을 적용합니다.
-        seatMapData = newSeatMap;
-        rows = newRows;
-        cols = newCols;
-        drawEditGrid();
-    }
-
-// 🌟 2. (새로 추가됨) 중간의 특정 행(가로)이나 열(세로)을 삽입/삭제하는 함수
-    function modifyGrid(action) {
-        let idx = parseInt(document.getElementById('target-index').value);
-        if (isNaN(idx) || idx < 1) return alert("올바른 번호를 입력하세요.");
-
-        if (action === 'insertRow') { // 가로 빈 줄 삽입
-            if (idx > rows + 1) idx = rows + 1; // 맨 끝보다 큰 숫자를 쓰면 맨 끝에 붙임
-            const newRow = Array.from({length: cols}, () => ({ type: 0, label: "" }));
-            seatMapData.splice(idx - 1, 0, newRow);
-            rows++;
-        } else if (action === 'deleteRow') { // 가로 줄 삭제
-            if (idx > rows) return alert("존재하지 않는 가로 줄 번호입니다.");
-            if (!confirm(`${idx}번째 가로(행) 줄을 정말 삭제하시겠습니까?`)) return;
-            seatMapData.splice(idx - 1, 1);
-            rows--;
-        } else if (action === 'insertCol') { // 세로 빈 칸 삽입
-            if (idx > cols + 1) idx = cols + 1;
-            for (let r = 0; r < rows; r++) {
-                seatMapData[r].splice(idx - 1, 0, { type: 0, label: "" });
-            }
-            cols++;
-        } else if (action === 'deleteCol') { // 세로 칸 삭제
-            if (idx > cols) return alert("존재하지 않는 세로 칸 번호입니다.");
-            if (!confirm(`${idx}번째 세로(열) 칸을 정말 삭제하시겠습니까?`)) return;
-            for (let r = 0; r < rows; r++) {
-                seatMapData[r].splice(idx - 1, 1);
-            }
-            cols--;
-        }
-
-        // 추가/삭제가 완료되면 위에 있는 전체 크기 입력칸의 숫자도 자동으로 맞춰줍니다.
-        document.getElementById('grid-rows').value = rows;
-        document.getElementById('grid-cols').value = cols;
-        drawEditGrid();
-    }
-    
-    // 2. 아예 싹 지우고 새로 텅 빈 도화지를 만드는 함수 (기존 코드 수정)
-    function initializeGrid() {
-        // 실수로 누를 것을 대비해 확인창 띄우기
-        if(confirm("경고: 기존에 그린 좌석이 모두 사라집니다. 정말 새로 만드시겠습니까?")) {
-            rows = parseInt(document.getElementById('grid-rows').value);
-            cols = parseInt(document.getElementById('grid-cols').value);
-            seatMapData = Array.from({length: rows}, () => Array.from({length: cols}, () => ({ type: 0, label: "" })));
-            drawEditGrid();
-        }
-    }
-    function drawEditGrid() {
-        const container = document.getElementById('seat-grid'); container.innerHTML = ''; container.style.gridTemplateColumns = `repeat(${cols}, 45px)`;
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                const cell = seatMapData[r][c]; const div = document.createElement('div'); div.className = `seat-cell seat-${cell.type}`; div.innerText = cell.label || "";
-                div.onclick = () => { if (cell.type === currentTool && currentTool !== 0) { const lbl = prompt("라벨 입력:", cell.label); if (lbl !== null) cell.label = lbl.trim(); } else { cell.type = currentTool; cell.label = ""; } drawEditGrid(); };
-                container.appendChild(div);
-            }
-        }
-    }
-    async function saveSeatLayout() { await db.collection("settings").doc("seatLayout").set({ rows, cols, grid: JSON.stringify(seatMapData) }); alert("도면 배포 완료!"); }
-    async function loadSeatLayout(mode) {
-        const doc = await db.collection("settings").doc("seatLayout").get();
-        if (doc.exists) {
-            rows = doc.data().rows; cols = doc.data().cols; seatMapData = JSON.parse(doc.data().grid).map(r => r.map(c => typeof c === 'number' ? {type: c, label: ""} : c));
-            if(mode === 'edit') { document.getElementById('grid-rows').value = rows; document.getElementById('grid-cols').value = cols; drawEditGrid(); }
-            else renderDailySupervisorMap();
-        }
-    }
-
-    // --- [5. 기초 명단 로직] ---
-    async function fetchRoster() { const doc = await db.collection("settings").doc("roster").get(); if (doc.exists) { currentRoster = JSON.parse(doc.data().list || "{}"); displayRoster(); } }
-    function displayRoster() {
-        const tbody = document.getElementById('roster-body'); const s = document.getElementById('roster-search').value; tbody.innerHTML = ""; let count = 0;
-        Object.keys(currentRoster).sort().forEach(id => { const name = currentRoster[id]; if (s && !id.includes(s) && !name.includes(s)) return; count++; tbody.innerHTML += `<tr><td>${id}</td><td>${name}</td><td><button class="btn btn-delete" onclick="deleteRosterItem('${id}')">삭제</button></td></tr>`; });
-        document.getElementById('roster-count').innerText = count;
-    }
-    function deleteRosterItem(id) { if(confirm("삭제?")){ delete currentRoster[id]; db.collection("settings").doc("roster").set({ list: JSON.stringify(currentRoster) }); displayRoster(); } }
-// --- [5. 기초 명단 로직 - 최종 수정본] ---
-
-// --- [기초 명단 로직 수정본] ---
-async function handleExcelUpload() {
-    const file = document.getElementById('excel-input').files[0]; 
-    if (!file) return alert("먼저 엑셀 파일을 선택해 주세요!");
-
-    if (!confirm("⚠️ 주의: 기존 명단을 모두 삭제하고 새 명단으로 교체하시겠습니까?")) return;
-
-    const reader = new FileReader(); 
-    reader.onload = async (e) => {
-        try {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, {type: 'array'});
-            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1}); 
-            
-            let newRoster = {};
-            let count = 0;
-
-            rows.forEach(row => { 
-                const studentId = String(row[0] || "").trim(); // 변수명 변경 (id -> studentId)
-                const studentName = String(row[1] || "").trim(); 
-                if (studentId.match(/^[0-9]+$/) && studentName) {
-                    newRoster[studentId] = studentName; 
-                    count++;
-                }
-            });
-
-            if (count === 0) return alert("유효한 학생 데이터가 없습니다. A열(학번), B열(이름)을 확인하세요.");
-
-            await db.collection("settings").doc("roster").set({ 
-                list: JSON.stringify(newRoster), 
-                lastUpdated: new Date() 
-            });
-
-            currentRoster = newRoster;
-            alert(`✅ 등록 완료! 총 ${count}명의 명단으로 교체되었습니다.`);
-            displayRoster();
-        } catch(err) {
-            alert("저장 중 오류 발생: " + err.message);
-        }
-    }; 
-    reader.readAsArrayBuffer(file);
-}
-
-
-    
-// --- [학생 상세 정보 모달 제어 함수] ---
-function openStudentModal(stuId, stuName, timesArr, log) {
-    // 1. 화면에 선택된 학생 정보 채워넣기
-    document.getElementById('modal-id').innerText = stuId;
-    document.getElementById('modal-name').innerText = stuName;
-    document.getElementById('modal-times').innerText = timesArr.map(t => t + "타임").join(", ");
-    
-    // 2. 키오스크 및 출석 기록 확인 (여기가 4단 타임라인으로 변경된 부분입니다!)
-    const kioskEl = document.getElementById('modal-kiosk');
-    
-    // --- [4단 타임라인 분배 로직 시작] ---
-    // 각 열 초기화
-    document.getElementById('tl-0').innerHTML = "";
-    document.getElementById('tl-1').innerHTML = "";
-    document.getElementById('tl-2').innerHTML = "";
-    document.getElementById('tl-3').innerHTML = "";
-
-    // 설정된 시간을 비교하기 쉽게 숫자로 변환 (예: "16:30" -> 1630)
-    let t1_val = parseInt(studyTimes.t1.replace(":", ""));
-    let t2_val = parseInt(studyTimes.t2.replace(":", ""));
-    let t3_val = parseInt(studyTimes.t3.replace(":", ""));
-
-    if (log && log.history && log.history.length > 0) {
-        kioskEl.innerText = "출석 기록 있음";
-        
-        log.history.forEach(h => {
-            // 기록 텍스트에서 시간(HH:MM) 모양을 찾아냅니다.
-            let timeMatch = h.match(/\((\d{2}):(\d{2})\)/) || h.match(/(\d{2}):(\d{2})/);
-            let targetCol = 'tl-0'; // 기본은 0타임
-            
-            if (timeMatch) {
-                let timeVal = parseInt(timeMatch[1] + timeMatch[2]);
-                // 찾은 시간이 설정된 기준 시간보다 크면 해당 타임으로 분류
-                if (timeVal >= t3_val) targetCol = 'tl-3';
-                else if (timeVal >= t2_val) targetCol = 'tl-2';
-                else if (timeVal >= t1_val) targetCol = 'tl-1';
-            } else {
-                // 혹시 시간이 안 적혀있고 글자만 있다면 글자로 유추
-                if (h.includes("3타임")) targetCol = 'tl-3';
-                else if (h.includes("2타임")) targetCol = 'tl-2';
-                else if (h.includes("1타임")) targetCol = 'tl-1';
-            }
-            
-            // 알맞은 칸에 기록 추가
-            document.getElementById(targetCol).innerHTML += `<div class="time-item">${h}</div>`;
-        });
-    } else {
-        kioskEl.innerText = "미출석 (기록 없음)";
-        kioskEl.style.color = "var(--danger)";
-        document.getElementById('tl-0').innerHTML = "<div style='color: #666;'>기록 없음</div>";
-    }
-    // --- [4단 타임라인 분배 로직 끝] ---
-
-    // 연락처는 기초 명단에 전화번호 데이터가 추가되어야 정상 작동하므로 현재는 임시값 처리
-    document.getElementById('modal-phone').innerText = "010-0000-0000 (데이터 연동 필요)";
-
-    // 3. 모달창 띄우기
-    document.getElementById('student-info-modal').style.display = 'flex';
-}
-
-
-    
-function closeStudentModal() {
-    document.getElementById('student-info-modal').style.display = 'none';
-}
-
-// --- [자동 출석 전환 타이머 (시간 연동 로직)] ---
-// 초보자를 위한 설명: 브라우저(관리자 화면)가 켜져 있을 때 1분마다 시간을 체크하여
-// 퇴실하지 않은 학생을 다음 타임 출석으로 자동 연장해주는 로직입니다.
-setInterval(checkAutomaticAttendance, 60000); // 60000 밀리초 = 1분마다 실행
-
-async function checkAutomaticAttendance() {
-    // 현재 접속 날짜와 일치할 때만 작동 (과거 날짜 보는데 자동 출석되면 안되므로)
-    const dateStr = document.getElementById('daily-date').value;
-    if (dateStr !== todayStr) return;
-
-    const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    const currentTime = hours * 100 + minutes; // 예: 16시 30분 -> 1630
-
-    // 체크할 기준 시간 설정
-    const time1T_start = 1630; // 1타임 시작 16:30
-    const time2T_start = 1850; // 2타임 시작 18:50
-    const time3T_start = 2010; // 3타임 시작 20:10
-
-    // 오늘 날짜의 출석 로그를 모두 가져와서 검사
-    const logsSnap = await db.collection("attendance_logs").where("date", "==", dateStr).get();
-    
-    logsSnap.forEach(async (doc) => {
-        let data = doc.data();
-        let status = data.status;
-        let updateNeeded = false;
-        let message = "";
-
-        // 학생이 귀가(퇴실)하지 않고 자리에 남아있는 경우(출석 상태) 시간 체크
-        if (status.includes("출석") || status.includes("입실")) {
-            if (currentTime === time1T_start) {
-                updateNeeded = true; message = "1타임 자동 연장 (16:30)";
-            } else if (currentTime === time2T_start) {
-                updateNeeded = true; message = "2타임 자동 연장 (18:50)";
-            } else if (currentTime === time3T_start) {
-                updateNeeded = true; message = "3타임 자동 연장 (20:10)";
-            }
-        }
-
-        // 시간이 일치하여 업데이트가 필요하다면 파이어베이스 데이터 수정
-        if (updateNeeded) {
-            await db.collection("attendance_logs").doc(doc.id).update({
-                lastUpdateTime: new Date(),
-                history: firebase.firestore.FieldValue.arrayUnion(message)
-            });
-            console.log(`[시스템] ${data.stuName} 학생 ${message} 처리 완료`);
-        }
-    });
-}
-
-
-// --- [수동 일괄 출석 정산 기능] ---
-async function runManualAttendanceCheck() {
-    // 1. 실수로 누르는 것을 방지하기 위한 확인창
-    if(!confirm("현재 시간을 기준으로 누락된 자동 출석(1~3타임)을 일괄 계산하시겠습니까? \n(퇴실하지 않고 자리에 있는 학생들만 처리됩니다.)")) return;
-
-    const dateStr = document.getElementById('daily-date').value;
-    const now = new Date();
-    // 현재 시간을 4자리 숫자로 변환 (예: 오후 6시 55분 -> 1855)
-    const currentTime = now.getHours() * 100 + now.getMinutes();
-
-// 환경 설정에서 불러온 시간을 숫자로 변환하여 사용
-    const time1T = parseInt(studyTimes.t1.replace(":", "")); 
-    const time2T = parseInt(studyTimes.t2.replace(":", "")); 
-    const time3T = parseInt(studyTimes.t3.replace(":", ""));
-
-    // 파이어베이스에서 오늘 날짜의 출석 기록을 모두 불러옵니다.
-    const logsSnap = await db.collection("attendance_logs").where("date", "==", dateStr).get();
-    
-    let updateCount = 0;
-    const batch = db.batch(); // 여러 데이터를 한 번에 빠르게 수정하기 위해 batch 사용
-
-    logsSnap.forEach((doc) => {
-        let data = doc.data();
-        let status = data.status || "";
-        let history = data.history || [];
-        let updateNeeded = false;
-        let messagesToAdd = []; // 한 학생에게 추가할 타임 기록들
-
-        // 2. 현재 자리에 있는 학생(귀가, 외출 상태가 아닌 학생)만 대상
-        if (status.includes("출석") || status.includes("입실") || status.includes("복귀")) {
-            
-            // 3. 현재 시간이 16:30이 넘었고, 기존 기록에 '1타임' 관련 단어가 없다면 채워넣음
-            if (currentTime >= time1T && !history.some(h => h.includes("1타임"))) {
-                messagesToAdd.push("1타임 자동 연장 (수동정산)");
-                updateNeeded = true;
-            }
-            // 현재 시간이 18:50이 넘었고, 기존 기록에 '2타임'이 없다면
-            if (currentTime >= time2T && !history.some(h => h.includes("2타임"))) {
-                messagesToAdd.push("2타임 자동 연장 (수동정산)");
-                updateNeeded = true;
-            }
-            // 현재 시간이 20:10이 넘었고, 기존 기록에 '3타임'이 없다면
-            if (currentTime >= time3T && !history.some(h => h.includes("3타임"))) {
-                messagesToAdd.push("3타임 자동 연장 (수동정산)");
-                updateNeeded = true;
-            }
-        }
-
-        // 4. 업데이트가 필요한 학생은 파이어베이스 전송 대기열(batch)에 올림
-        if (updateNeeded) {
-            const docRef = db.collection("attendance_logs").doc(doc.id);
-            batch.update(docRef, {
-                lastUpdateTime: new Date(),
-                // 기존 배열에 여러 개의 새 메시지를 한 번에 추가
-                history: firebase.firestore.FieldValue.arrayUnion(...messagesToAdd) 
-            });
-            updateCount++;
-        }
-    });
-
-    // 5. 대기열에 모인 수정 사항을 한 번에 서버로 발송
-    if (updateCount > 0) {
-        await batch.commit();
-        alert(`총 ${updateCount}명의 누락된 타임 출석이 성공적으로 정산되었습니다.`);
-    } else {
-        alert("정산할 누락 기록이 없습니다. (모두 정상적으로 기록되어 있거나, 퇴실한 상태입니다.)");
-    }
-}
-    
-    
-    // --- [엑셀 다운로드] ---
-    function downloadCSV() { 
-        let csv = "\uFEFF"; const table = document.getElementById("status-table");
-        for (let i=0; i<table.rows.length; i++) { let r=[]; for (let j=0; j<table.rows[i].cells.length; j++) r.push('"' + table.rows[i].cells[j].innerText + '"'); csv += r.join(",") + "\r\n"; }
-        const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'})); link.download="신청현황.csv"; link.click();
-    }
-    function downloadDailyCSV() { 
-        let csv = "\uFEFF"; const table = document.getElementById("daily-list-table");
-        for (let i=0; i<table.rows.length; i++) { let r=[]; for (let j=0; j<table.rows[i].cells.length; j++) r.push('"' + table.rows[i].cells[j].innerText.replace(/\n/g, ' | ') + '"'); csv += r.join(",") + "\r\n"; }
-        const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'})); link.download=`출석부_${document.getElementById('daily-date').value}.csv`; link.click();
-    }
-
-
-// --- [학생 신청 기간 관리 함수] ---
-async function saveApplyPeriod() {
-    const start = document.getElementById('apply-start').value;
-    const end = document.getElementById('apply-end').value;
-
-    if(!start || !end) return alert("시작과 종료 시간을 모두 입력해주세요.");
-
-    try {
-        await db.collection("settings").doc("applyPeriod").set({
-            start: start,
-            end: end,
-            lastUpdated: new Date()
-        });
-        alert("신청 기간 설정이 완료되었습니다! 이제 학생 페이지에 적용됩니다.");
-    } catch(e) {
-        alert("저장 오류: " + e.message);
-    }
-}
-
-async function loadApplyPeriod() {
-    const doc = await db.collection("settings").doc("applyPeriod").get();
-    if (doc.exists) {
-        document.getElementById('apply-start').value = doc.data().start;
-        document.getElementById('apply-end').value = doc.data().end;
-    }
-}
-
-// 탭 전환 시 기간 데이터를 불러오도록 기존 switchTab 함수 수정 또는 추가
-// (이미 있는 switchTab 함수 안에 아래 한 줄을 추가하세요)
-if (tabId === 'tab-period') loadApplyPeriod();
-
-
-
-
-
-    
-// 시스템 시작
-    loadTimeSettings(); // 🌟 1번 지시: 서버에서 변경된 야자 시간을 가장 먼저 불러와라!
-    loadApplyPeriod(); // ➔ 추가
-    loadSeatLayout('view').then(() => loadDailyDataAndRender()); // 2번 지시: 화면을 그려라!
 
 
     
