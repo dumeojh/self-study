@@ -425,6 +425,9 @@ async function saveTimeSettings() {
         if (tabId === 'tab-status') renderStatusTable();
         if (tabId === 'tab-roster') fetchRoster();
         if (tabId === 'tab-seats') loadSeatLayout('edit');
+// ➔ 여기에 아래 한 줄을 추가하세요!
+    if (tabId === 'tab-period') loadApplyPeriod();
+        
     }
 
     // --- [실시간 데이터 감시] ---
@@ -1051,6 +1054,7 @@ async function loadApplyPeriod() {
     
 // 시스템 시작
     loadTimeSettings(); // 🌟 1번 지시: 서버에서 변경된 야자 시간을 가장 먼저 불러와라!
+    loadApplyPeriod(); // ➔ 추가
     loadSeatLayout('view').then(() => loadDailyDataAndRender()); // 2번 지시: 화면을 그려라!
 
 
