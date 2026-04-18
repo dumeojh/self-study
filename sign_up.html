@@ -223,9 +223,12 @@ checkApplyPeriod();
     }
 
 
+
+
+    
     
 async function verifyStudent() {
-    // 1. [보안] 버튼 클릭 시점에 서버 시간을 다시 확인하여 기간 외 신청 차단
+    // 1. [신청 기간 방어] 조회 버튼을 누르는 순간에도 한 번 더 기간을 체크
     const now = new Date();
     try {
         const periodDoc = await db.collection("settings").doc("applyPeriod").get();
@@ -239,7 +242,7 @@ async function verifyStudent() {
         }
     } catch(e) { console.error("기간 확인 오류:", e); }
 
-    // 2. 입력값 가져오기
+    // 2. 입력값 한 번만 가져오기 (여기서 변수 중복 에러가 났었습니다)
     const id = document.getElementById('stu-id').value.trim(); 
     const name = document.getElementById('stu-name').value.trim(); 
     const month = document.getElementById('target-month').value;
@@ -253,7 +256,7 @@ async function verifyStudent() {
         // 3. 본인의 신청 내역 조회
         const q = await db.collection("applications").where("stuId", "==", id).where("targetMonth", "==", month).get();
         
-        // 4. 해당 월의 다른 학생들이 예약한 '고정석' 전체 내역 가져오기
+        // 4. 해당 월의 다른 학생들이 이미 찜한 '고정석' 목록 가져오기
         const takenQuery = await db.collection("applications")
             .where("targetMonth", "==", month)
             .where("type", "==", "고정석")
@@ -261,14 +264,18 @@ async function verifyStudent() {
         
         takenSeats = []; // 초기화
         
+        // 화면 전환
         document.getElementById('apply-section').style.display = 'block'; 
         document.getElementById('search-section').style.display = 'none';
 
         if (!q.empty) {
-            const doc = q.docs[0]; currentDocId = doc.id; const data = doc.data();
+            // [기존 신청자 모드]
+            const doc = q.docs[0]; 
+            currentDocId = doc.id; 
+            const data = doc.data();
             previousSavedSeat = data.seatNum || "";
             
-            // 본인을 제외한 다른 학생들의 예약 좌석 수집
+            // 본인을 제외한 남들이 예약한 좌석만 빨간색으로 처리하기 위해 필터링
             takenQuery.forEach(tDoc => {
                 if (tDoc.id !== currentDocId && tDoc.data().seatNum) {
                     takenSeats.push(tDoc.data().seatNum);
@@ -276,6 +283,8 @@ async function verifyStudent() {
             });
 
             selectType(data.type === "고정석" ? 1 : 0);
+            
+            // 기존 요일/타임 체크박스 복원
             daysEng.forEach(day => { 
                 if (data[day]) { 
                     data[day].split(',').forEach(t => { 
@@ -288,19 +297,20 @@ async function verifyStudent() {
             document.getElementById('submit-btn').className = "btn-main btn-update";
             alert(`기존 신청 내역을 불러왔습니다.`);
         } else { 
-            currentDocId = null; previousSavedSeat = ""; 
+            // [신규 신청자 모드]
+            currentDocId = null; 
+            previousSavedSeat = ""; 
             takenQuery.forEach(tDoc => {
                 if (tDoc.data().seatNum) takenSeats.push(tDoc.data().seatNum);
             });
             alert(`신규 신청을 진행하세요.`); 
         }
-        validateForm();
+        validateForm(); // 버튼 활성화 여부 판단
     } catch(e) { 
         alert("데이터 로드 오류: " + e.message); 
         document.getElementById('search-btn').innerText = "조회하기";
     }
 }
-
 
 
     
