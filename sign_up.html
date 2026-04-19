@@ -331,8 +331,8 @@ async function verifyStudent() {
 
     
 async function submitForm() {
-    const btn = document.getElementById('submit-btn');
-    btn.innerText = "저장 중...";
+    const btn = document.getElementById('submit-btn'); 
+    btn.innerText = "저장 중..."; 
     btn.disabled = true;
 
     const targetMonthVal = document.getElementById('target-month').value;
@@ -341,56 +341,48 @@ async function submitForm() {
     const stuIdVal = document.getElementById('stu-id').value;
     const stuNameVal = document.getElementById('stu-name').value;
 
-    // 데이터 객체 생성
-    const p = {
-        targetMonth: targetMonthVal,
-        stuId: stuIdVal,
-        stuName: stuNameVal,
-        type: typeVal,
-        seatNum: seatNumVal,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp() // 서버 시간 사용 권장
+    const p = { 
+        targetMonth: targetMonthVal, 
+        stuId: stuIdVal, 
+        stuName: stuNameVal, 
+        type: typeVal, 
+        seatNum: seatNumVal, 
+        timestamp: firebase.firestore.FieldValue.serverTimestamp() // 서버 시간 사용
     };
-    daysEng.forEach(d => {
-        p[d] = Array.from(document.querySelectorAll(`[id^="${d}-"]:checked`)).map(el => el.value).join(',');
+
+    daysEng.forEach(d => { 
+        p[d] = Array.from(document.querySelectorAll(`[id^="${d}-"]:checked`)).map(el => el.value).join(','); 
     });
 
     try {
+        // [수정] Transaction 도입: 서버에서 자리를 확인하고 즉시 선점
         await db.runTransaction(async (transaction) => {
-            // 1. 고정석일 경우에만 중복 체크 수행
             if (typeVal === "고정석") {
-                const duplicateQuery = db.collection("applications")
+                const dupQuery = db.collection("applications")
                     .where("targetMonth", "==", targetMonthVal)
                     .where("type", "==", "고정석")
                     .where("seatNum", "==", seatNumVal);
                 
-                const snapshot = await transaction.get(duplicateQuery);
-                
-                let isAlreadyTaken = false;
+                const snapshot = await transaction.get(dupQuery);
+                let isTaken = false;
                 snapshot.forEach(doc => {
-                    if (doc.id !== currentDocId) isAlreadyTaken = true;
+                    if (doc.id !== currentDocId) isTaken = true;
                 });
 
-                if (isAlreadyTaken) {
-                    throw "이미 다른 학생이 선택한 좌석입니다. 다시 선택해주세요.";
-                }
+                if (isTaken) throw "이미 다른 학생이 선택한 좌석입니다.";
             }
 
-            // 2. 문서 저장 (기존 문서가 있으면 update, 없으면 add)
             if (currentDocId) {
-                const docRef = db.collection("applications").doc(currentDocId);
-                transaction.update(docRef, p);
+                transaction.update(db.collection("applications").doc(currentDocId), p);
             } else {
-                const newDocRef = db.collection("applications").doc(); // 새 문서 ID 생성
-                transaction.set(newDocRef, p);
+                transaction.set(db.collection("applications").doc(), p);
             }
         });
-
-        alert("성공적으로 신청이 완료되었습니다.");
+        alert("신청이 완료되었습니다."); 
         location.reload();
-    } catch (e) {
-        alert("신청 실패: " + e);
-        btn.innerText = "신청하기";
-        btn.disabled = false;
+    } catch(e) { 
+        alert("오류: " + e); 
+        btn.innerText = "신청하기"; btn.disabled = false; 
     }
 }
 </script>
