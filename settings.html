@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>안성여고 - 시스템 환경설정 (보안)</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* 기본 스타일은 기존 admin.html과 동일 (생략 관리 위해 핵심만 유지) */
+        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --gray: #6c757d; }
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        h2 { text-align: center; border-bottom: 2px solid var(--danger); padding-bottom: 10px; color: #d32f2f; }
+        .tab-menu { display: flex; gap: 5px; margin-bottom: 25px; background: #eee; padding: 5px; border-radius: 10px; }
+        .tab-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .tab-btn.active { background: white; color: var(--danger); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .form-card { background: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 20px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; }
+        .btn-primary { background: var(--primary); }
+        .btn-success { background: var(--success); }
+        .btn-danger { background: var(--danger); }
+        /* 좌석 설계용 스타일 */
+        .seat-grid-container { background: #e9ecef; padding: 20px; border-radius: 10px; overflow-x: auto; margin-top: 15px; }
+        .seat-grid { display: grid; gap: 4px; justify-content: start; }
+        .seat-cell { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; border-radius: 5px; border: 1px solid #ccc; background: white; cursor: pointer; }
+        .tool-bar { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+        .tool-btn { padding: 8px 12px; border: 2px solid transparent; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: bold; }
+        .tool-btn.selected { border-color: #000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .seat-0 { background: #fff; } .seat-1 { background: #fff3cd; } .seat-2 { background: #d1e7dd; } 
+        .seat-3 { background: #e2e3e5; } .seat-4 { background: #cff4fc; } .seat-5 { background: #f8d7da; }
+        #auth-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #222; z-index: 9999; display: flex; align-items: center; justify-content: center; color: white; flex-direction: column; }
+    </style>
+</head>
+<body style="display: none;" id="main-body"> <div id="auth-overlay">
+    <h3>🔐 보안 구역 - 비밀번호를 입력하세요</h3>
+    <input type="password" id="pass-input" style="padding: 15px; font-size: 20px; text-align: center; border-radius: 10px; border: none; margin-bottom: 20px;">
+    <button onclick="checkPass()" class="btn btn-primary" style="padding: 10px 40px;">입장</button>
+</div>
+
+<div class="container">
+    <h2>⚙️ 시스템 환경설정 (중요)</h2>
+    
+    <div class="tab-menu">
+        <button class="tab-btn active" onclick="switchTab('tab-seats', this)">🪑 좌석 도면 설계</button>
+        <button class="tab-btn" onclick="switchTab('tab-roster', this)">⚙️ 기초 명단 관리</button>
+        <button class="tab-btn" onclick="switchTab('tab-time', this)">⏰ 야자 시간 설정</button>
+    </div>
+
+    <div id="tab-seats" class="tab-content active">
+        <div class="form-card">
+            <h3>자율학습실 구조 설계</h3>
+            <div style="margin-bottom: 10px;">
+                가로 <input type="number" id="grid-cols" value="30" style="width: 50px;"> X 세로 <input type="number" id="grid-rows" value="20" style="width: 50px;">
+                <button class="btn btn-success" onclick="resizeGrid()">크기 조정</button>
+                <button class="btn btn-danger" onclick="initializeGrid()">초기화</button>
+            </div>
+            <div class="tool-bar">
+                <button class="tool-btn seat-0 selected" onclick="selectTool(0, this)">⬜ 통로</button>
+                <button class="tool-btn seat-1" onclick="selectTool(1, this)">🟨 고정석</button>
+                <button class="tool-btn seat-2" onclick="selectTool(2, this)">🟩 자율석</button>
+                <button class="tool-btn seat-3" onclick="selectTool(3, this)">⬛ 벽/기둥</button>
+                <button class="tool-btn seat-4" onclick="selectTool(4, this)">🟦 출입문</button>
+                <button class="tool-btn seat-5" onclick="selectTool(5, this)">🟥 특수공간</button>
+            </div>
+            <div class="seat-grid-container"><div id="seat-grid" class="seat-grid"></div></div>
+            <br><button class="btn btn-primary" style="width:100%;" onclick="saveSeatLayout()">🌐 도면 서버에 배포 (저장)</button>
+        </div>
+    </div>
+
+    <div id="tab-roster" class="tab-content">
+        <div class="form-card">
+            <h3>엑셀 명단 일괄 교체</h3>
+            <input type="file" id="excel-input" accept=".xlsx, .xls, .csv">
+            <button class="btn btn-success" onclick="handleExcelUpload()">명단 서버에 등록</button>
+            <hr>
+            <h4>현재 등록 명단 (<span id="roster-count">0</span>명)</h4>
+            <div style="max-height: 300px; overflow-y: auto;">
+                <table id="roster-table" style="width:100%; border-collapse:collapse;">
+                    <thead><tr style="background:#eee;"><th>학번</th><th>이름</th><th>삭제</th></tr></thead>
+                    <tbody id="roster-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-time" class="tab-content">
+        <div class="form-card">
+            <h3>⏰ 타임별 운영 시간 설정</h3>
+            <div style="display: grid; gap: 10px;">
+                <div>1T: <input type="time" id="set-1t-start"> ~ <input type="time" id="set-1t-end"></div>
+                <div>2T: <input type="time" id="set-2t-start"> ~ <input type="time" id="set-2t-end"></div>
+                <div>3T: <input type="time" id="set-3t-start"> ~ <input type="time" id="set-3t-end"></div>
+            </div>
+            <br><button class="btn btn-primary" onclick="saveTimeSettings()">시간 설정 저장</button>
+        </div>
+    </div>
+    
+    <button class="btn" style="background:#333; width:100%; margin-top:20px;" onclick="location.href='split_admin.html'">⬅️ 일반 관리자 화면으로 나가기</button>
+</div>
+
+<script>
+    // --- 파이어베이스 설정 (기존 키 그대로 사용) ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
+        authDomain: "self-study-project-82bdf.firebaseapp.com",
+        projectId: "self-study-project-82bdf",
+        storageBucket: "self-study-project-82bdf.firebasestorage.app",
+        messagingSenderId: "482006075036",
+        appId: "1:482006075036:web:473445e0f86d48cd22cf59"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // 🔐 비밀번호 체크 함수
+    function checkPass() {
+        const input = document.getElementById('pass-input').value;
+        if(input === "1234") {
+            document.getElementById('auth-overlay').style.display = 'none';
+            document.getElementById('main-body').style.display = 'block';
+            loadInitialData();
+        } else {
+            alert("비밀번호가 틀렸습니다!");
+            document.getElementById('pass-input').value = "";
+        }
+    }
+
+    let currentRoster = {}; let seatMapData = []; let rows = 20, cols = 30; let currentTool = 0;
+
+    function switchTab(tabId, btn) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active'); btn.classList.add('active');
+        if(tabId === 'tab-roster') fetchRoster();
+    }
+
+    // 도면 로직 (admin.html에서 가져온 내용)
+    function selectTool(type, btn) { currentTool = type; document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); }
+    function drawEditGrid() {
+        const container = document.getElementById('seat-grid');
+        container.innerHTML = ''; container.style.gridTemplateColumns = `repeat(${cols}, 45px)`;
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const cell = seatMapData[r][c]; const div = document.createElement('div');
+                div.className = `seat-cell seat-${cell.type}`; div.innerText = cell.label || "";
+                div.onclick = () => {
+                    if (cell.type === currentTool && currentTool !== 0) {
+                        const lbl = prompt("라벨 입력:", cell.label);
+                        if (lbl !== null) cell.label = lbl.trim();
+                    } else { cell.type = currentTool; cell.label = ""; }
+                    drawEditGrid();
+                };
+                container.appendChild(div);
+            }
+        }
+    }
+    async function saveSeatLayout() { await db.collection("settings").doc("seatLayout").set({ rows, cols, grid: JSON.stringify(seatMapData) }); alert("도면 배포 완료!"); }
+    async function loadSeatLayout() {
+        const doc = await db.collection("settings").doc("seatLayout").get();
+        if (doc.exists) {
+            rows = doc.data().rows; cols = doc.data().cols;
+            seatMapData = JSON.parse(doc.data().grid).map(r => r.map(c => typeof c === 'number' ? {type: c, label: ""} : c));
+            document.getElementById('grid-rows').value = rows; document.getElementById('grid-cols').value = cols;
+            drawEditGrid();
+        }
+    }
+    function initializeGrid() { rows = 20; cols = 30; seatMapData = Array.from({length: rows}, () => Array.from({length: cols}, () => ({ type: 0, label: "" }))); drawEditGrid(); }
+    function resizeGrid() {
+        let newRows = parseInt(document.getElementById('grid-rows').value);
+        let newCols = parseInt(document.getElementById('grid-cols').value);
+        let newSeatMap = Array.from({length: newRows}, () => Array.from({length: newCols}, () => ({ type: 0, label: "" })));
+        for (let r = 0; r < Math.min(rows, newRows); r++) {
+            for (let c = 0; c < Math.min(cols, newCols); c++) {
+                if (seatMapData[r] && seatMapData[r][c]) newSeatMap[r][c] = seatMapData[r][c];
+            }
+        }
+        seatMapData = newSeatMap; rows = newRows; cols = newCols; drawEditGrid();
+    }
+
+    // 명단 로직
+    async function fetchRoster() {
+        const doc = await db.collection("settings").doc("roster").get();
+        if (doc.exists) { currentRoster = JSON.parse(doc.data().list || "{}"); displayRoster(); }
+    }
+    function displayRoster() {
+        const tbody = document.getElementById('roster-body'); tbody.innerHTML = "";
+        let ids = Object.keys(currentRoster).sort();
+        ids.forEach(id => {
+            tbody.innerHTML += `<tr><td>${id}</td><td>${currentRoster[id]}</td><td><button class="btn btn-danger" onclick="deleteRosterItem('${id}')" style="padding:2px 5px; font-size:11px;">X</button></td></tr>`;
+        });
+        document.getElementById('roster-count').innerText = ids.length;
+    }
+    async function deleteRosterItem(id) { if(confirm("삭제하시겠습니까?")){ delete currentRoster[id]; await db.collection("settings").doc("roster").set({ list: JSON.stringify(currentRoster) }); displayRoster(); } }
+    async function handleExcelUpload() {
+        const file = document.getElementById('excel-input').files[0];
+        if (!file || !confirm("명단을 새로 교체하시겠습니까?")) return;
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+            const excelRows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
+            let newRoster = {}; let count = 0;
+            excelRows.forEach(row => {
+                const sid = String(row[0] || "").trim(); const sname = String(row[1] || "").trim();
+                if (sid.match(/^[0-9]+$/) && sname) { newRoster[sid] = sname; count++; }
+            });
+            await db.collection("settings").doc("roster").set({ list: JSON.stringify(newRoster), lastUpdated: new Date() });
+            currentRoster = newRoster; alert(`✅ ${count}명 등록 완료!`); displayRoster();
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    // 시간 로직
+    async function loadTimeSettings() {
+        const doc = await db.collection("settings").doc("schedule").get();
+        if (doc.exists) {
+            const d = doc.data();
+            document.getElementById('set-1t-start').value = d.t1; document.getElementById('set-1t-end').value = d.t1_end;
+            document.getElementById('set-2t-start').value = d.t2; document.getElementById('set-2t-end').value = d.t2_end;
+            document.getElementById('set-3t-start').value = d.t3; document.getElementById('set-3t-end').value = d.t3_end;
+        }
+    }
+    async function saveTimeSettings() {
+        const data = {
+            t1: document.getElementById('set-1t-start').value, t1_end: document.getElementById('set-1t-end').value,
+            t2: document.getElementById('set-2t-start').value, t2_end: document.getElementById('set-2t-end').value,
+            t3: document.getElementById('set-3t-start').value, t3_end: document.getElementById('set-3t-end').value
+        };
+        await db.collection("settings").doc("schedule").set(data); alert("서버 저장 완료!");
+    }
+
+    function loadInitialData() { loadSeatLayout(); loadTimeSettings(); }
+</script>
+</body>
+</html>
