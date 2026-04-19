@@ -15,7 +15,6 @@
         h2 { text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin: 0; }
         .header-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 
-        /* 탭 메뉴 */
         .tab-menu { display: flex; gap: 5px; margin-bottom: 25px; background: #eee; padding: 5px; border-radius: 10px; flex-wrap: wrap; }
         .tab-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; background: transparent; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.3s; min-width: 150px; }
         .tab-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -33,12 +32,22 @@
         th { background: #f8f9fa; }
         tbody tr:hover { background-color: #f1f8ff; cursor: pointer; }
 
+        /* 🌟 [디자인 통일] 좌석 격자 및 타입별 색상 */
         .seat-grid { display: grid; gap: 4px; justify-content: start; }
-        .seat-cell { width: 55px; height: 55px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; border-radius: 5px; border: 1px solid #ccc; }
-        .status-absent { background: #fff; border: 2px dashed #adb5bd; color: #6c757d; }
-        .status-present-fixed { background: #e7f1ff; border: 3px solid #0d6efd; color: #0d6efd; }
+        .seat-cell { width: 55px; height: 55px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; border-radius: 5px; border: 1px solid #ccc; transition: 0.2s; text-align: center; line-height: 1.2; }
+        
+        /* 타입별 배경색 (Settings와 통일) */
+        .seat-0 { background: #fff; border: 1px solid #eee; } /* 통로 */
+        .seat-1 { background: #fff; } /* 고정석 기본상태 */
+        .seat-2 { background: #d1e7dd; color: #0f5132; } /* 자율석 구역 */
+        .seat-3 { background: #e2e3e5; color: #41464b; } /* 벽/기둥 */
+        .seat-4 { background: #cff4fc; color: #055160; } /* 출입문 */
+        .seat-5 { background: #f8d7da; color: #842029; } /* 특수공간 */
 
-        /* 수정 폼 스타일 */
+        /* 실시간 상태 색상 (가장 우선순위 높음) */
+        .status-absent { border: 2px dashed #adb5bd !important; color: #6c757d; cursor: pointer; }
+        .status-present-fixed { background: #fff3cd !important; border: 2px solid #ffc107 !important; color: #856404 !important; cursor: pointer; }
+
         .form-card { background:#f8f9fa; padding:25px; border-radius:10px; border:1px solid #ddd; }
         .input-group { margin-bottom: 15px; }
         .input-group label { display: block; margin-bottom: 5px; font-weight: bold; }
@@ -82,7 +91,7 @@
                 <option value="3월">3월</option><option value="4월" selected>4월</option>
                 <option value="5월">5월</option><option value="6월">6월</option>
             </select>
-            <span style="font-size: 13px; color: #666;">* 이름을 클릭하면 수동 수정 화면으로 이동합니다.</span>
+            <span style="font-size: 13px; color: #666;">* 행을 클릭하면 수동 수정 화면으로 이동합니다.</span>
         </div>
         <div style="overflow-x:auto;">
             <table>
@@ -157,6 +166,7 @@
 </div>
 
 <script>
+    // --- 파이어베이스 설정 ---
     const firebaseConfig = {
         apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
         authDomain: "self-study-project-82bdf.firebaseapp.com",
@@ -185,8 +195,9 @@
     async function loadSeatLayout() {
         const doc = await db.collection("settings").doc("seatLayout").get();
         if (doc.exists) {
-            rows = doc.data().rows; cols = doc.data().cols;
-            seatMapData = JSON.parse(doc.data().grid).map(r => r.map(c => typeof c === 'number' ? {type: c, label: ""} : c));
+            const data = doc.data();
+            rows = data.rows; cols = data.cols;
+            seatMapData = JSON.parse(data.grid).map(r => r.map(c => typeof c === 'number' ? {type: c, label: ""} : c));
             renderDailySupervisorMap();
         }
     }
@@ -199,6 +210,7 @@
         });
     }
 
+    // 🌟 [수정된 렌더링 로직] Settings와 동일한 디자인 적용
     function renderDailySupervisorMap() {
         if(seatMapData.length === 0) return;
         const container = document.getElementById('supervisor-grid');
@@ -207,25 +219,46 @@
         const targetDay = ['sun','mon','tue','wed','thu','fri','sat'][new Date(document.getElementById('daily-date').value).getDay()];
         
         const cellEls = {};
+        
+        // 1단계: 도면 베이스 그리기 (벽, 문 등)
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
-                const d = seatMapData[r][c]; const div = document.createElement('div');
-                div.className = `seat-cell seat-${d.type}`; div.innerText = d.label || "";
-                if (d.type === 1 || d.type === 2) cellEls[d.label] = div;
+                const d = seatMapData[r][c]; 
+                const div = document.createElement('div');
+                div.className = `seat-cell seat-${d.type}`; 
+                div.innerText = d.label || "";
+                
+                // 고정석(1)이나 자율석(2)인 경우 나중에 학생 데이터를 매칭하기 위해 저장
+                if (d.type === 1 || d.type === 2) {
+                    if (d.label) cellEls[d.label] = div;
+                }
                 container.appendChild(div);
             }
         }
 
+        // 2단계: 실시간 학생 데이터 매칭
         Object.values(applicationData).forEach(d => {
+            // 이번 교시에 신청한 학생인가?
             if(d.type === "고정석" && d[targetDay] && d[targetDay].includes(timeStr) && cellEls[d.seatNum]) {
                 const target = cellEls[d.seatNum];
                 const log = attendanceLogsData[d.stuId];
-                target.innerHTML = `${d.seatNum}<br>${d.stuName}`;
-                target.className = 'seat-cell ' + (log ? 'status-present-fixed' : 'status-absent');
-                if(log) target.onclick = () => {
-                    document.getElementById('modal-info').innerText = `학번: ${d.stuId}\n성명: ${d.stuName}\n최근상태: ${log.status}\n\n[타임라인]\n${log.history.join('\n')}`;
-                    document.getElementById('student-modal').style.display = 'flex';
-                };
+                
+                target.innerHTML = `${d.seatNum}<br><span style="font-size:12px; color:inherit;">${d.stuName}</span>`;
+                
+                // 출석 여부에 따라 클래스 추가 (고정석 노란색 테마 유지)
+                if(log) {
+                    target.classList.add('status-present-fixed');
+                    target.onclick = () => {
+                        document.getElementById('modal-info').innerText = `학번: ${d.stuId}\n성명: ${d.stuName}\n상태: ${log.status}\n\n[타임라인]\n${log.history.join('\n')}`;
+                        document.getElementById('student-modal').style.display = 'flex';
+                    };
+                } else {
+                    target.classList.add('status-absent');
+                    target.onclick = () => {
+                        document.getElementById('modal-info').innerText = `학번: ${d.stuId}\n성명: ${d.stuName}\n\n[기록 없음]\n아직 입실 스캔을 하지 않았습니다.`;
+                        document.getElementById('student-modal').style.display = 'flex';
+                    };
+                }
             }
         });
     }
@@ -240,7 +273,7 @@
         sortedData.forEach(d => {
             if(month !== "all" && d.targetMonth !== month) return;
             const tr = document.createElement('tr');
-            tr.onclick = () => fillEditForm(d.docId); // 행 클릭 시 수정 폼 이동
+            tr.onclick = () => fillEditForm(d.docId);
             tr.innerHTML = `
                 <td>${d.targetMonth}</td><td>${d.stuId}</td><td><b>${d.stuName}</b></td>
                 <td>${d.type}</td><td>${d.seatNum || '-'}</td>
@@ -250,11 +283,9 @@
         });
     }
 
-    // 🌟 수정 폼에 데이터 채우기 함수
     function fillEditForm(docId) {
         const d = applicationData[docId];
         if(!d) return;
-
         document.getElementById('edit-doc-id').value = docId;
         document.getElementById('m-month').value = d.targetMonth;
         document.getElementById('m-id').value = d.stuId;
@@ -266,12 +297,9 @@
         document.getElementById('m-wed').value = d.wed || "";
         document.getElementById('m-thu').value = d.thu || "";
         document.getElementById('m-fri').value = d.fri || "";
-
         switchTab('tab-manual', document.querySelectorAll('.tab-btn')[2]);
-        alert(`${d.stuName} 학생의 정보를 불러왔습니다.`);
     }
 
-    // 🌟 수동 저장 로직
     async function saveManualEntry() {
         const docId = document.getElementById('edit-doc-id').value;
         const data = {
@@ -287,18 +315,17 @@
             fri: document.getElementById('m-fri').value,
             lastUpdateTime: new Date()
         };
-
         try {
             if(docId) {
                 await db.collection("applications").doc(docId).update(data);
-                alert("성공적으로 수정되었습니다.");
+                alert("수정되었습니다.");
             } else {
                 await db.collection("applications").add(data);
-                alert("신규 학생 정보가 추가되었습니다.");
+                alert("추가되었습니다.");
             }
             resetManualForm();
             switchTab('tab-status', document.querySelectorAll('.tab-btn')[1]);
-        } catch(e) { alert("저장 오류: " + e.message); }
+        } catch(e) { alert("오류: " + e.message); }
     }
 
     function resetManualForm() {
