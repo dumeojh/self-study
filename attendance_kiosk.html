@@ -109,7 +109,9 @@
     });
 
 
-    
+// [기존 변수 선언부 아래에 추가]
+let selectionTimer = null; // 자동 취소용 타이머
+
 async function processCheckInOut() {
     const id = scannerInput.value.trim();
     if (!id) return;
@@ -129,42 +131,81 @@ async function processCheckInOut() {
         const logData = logDoc.exists ? logDoc.data() : null;
         const lastStatus = logData ? logData.status : "미입실";
 
-        // 1. [방어] 중복 스캔 방지 (40초 이내 다시 찍은 경우)
+        // 1. 중복 스캔 방지 (40초)
         if (logData && logData.lastUpdateTime) {
             const diffSec = Math.floor((now - logData.lastUpdateTime.toDate()) / 1000);
             if (diffSec < 40) {
-                showReceipt(studentName, "방금 처리됨", `${diffSec}초 전에 [${lastStatus}] 처리되었습니다.`, "잠시 후 다시 이용해 주세요. ⏳", "#6c757d");
+                showReceipt(studentName, "방금 처리됨", `${diffSec}초 전에 [${lastStatus}] 처리되었습니다.`, "잠시 후 이용해 주세요.", "#6c757d");
                 return;
             }
         }
 
-        // 2. [판단] 학생 상태에 따른 분기 로직
-        
-        // CASE A: 처음 온 학생 (미입실) -> "자동 입실 처리"
+        // 2. 상태별 분기 로직
         if (lastStatus === "미입실") {
             saveAttendance(id, studentName, "입실", now);
         } 
-        
-        // CASE B: 이미 들어와 있는 학생 -> "외출인가 귀가인가? 선택창 열기"
         else if (lastStatus === "입실" || lastStatus === "복귀") {
-            showSelectionModal(id, studentName); // 아래에서 만들 선택창 함수
+            // 🌟 핵심: 메시지창 대신 전용 선택 UI 호출
+            showSmartSelection(id, studentName); 
         }
-        
-        // CASE C: 잠깐 나갔던 학생 (외출 중) -> "자동 복귀 처리"
         else if (lastStatus === "외출") {
             saveAttendance(id, studentName, "복귀", now);
         }
-        
-        // CASE D: 이미 집에 간 학생
         else if (lastStatus === "귀가") {
-            showReceipt(studentName, "이미 귀가함", "오늘은 이미 귀가 처리되었습니다.", "재입실은 관리자에게 문의하세요.", "#6c757d");
+            showReceipt(studentName, "이미 귀가함", "최종 귀가 처리된 학생입니다.", "재입실은 관리자에게 문의하세요.", "#6c757d");
         }
 
     } catch (e) {
-        console.error(e);
-        showReceipt("오류", "통신 실패", "연결 상태를 확인하세요.", e.message, "#dc3545");
+        showReceipt("오류", "통신 실패", "연결 상태 확인 요망", e.message, "#dc3545");
     }
 }
+
+// 🌟 [추가] 스마트 선택 화면 (외출/귀가 전용)
+function showSmartSelection(id, name) {
+    // 결과창(receipt) 영역을 선택창으로 변신시킵니다.
+    const rName = document.getElementById('r-name');
+    const rStatus = document.getElementById('r-status');
+    const rTime = document.getElementById('r-time');
+    const rMsg = document.getElementById('r-msg');
+    
+    rName.innerText = `🙋 ${name} 학생`;
+    rStatus.innerText = "상태 선택";
+    rStatus.style.color = "#333";
+    rTime.innerText = "현재 입실 중입니다. 다음 작업을 선택하세요.";
+    
+    // 버튼 생성 (HTML을 갈아끼움)
+    rMsg.innerHTML = `
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button onclick="confirmSelection('${id}', '${name}', '외출')" style="flex: 1; padding: 25px; font-size: 20px; font-weight: bold; background: var(--out); border: none; border-radius: 10px; cursor: pointer;">잠시 외출</button>
+            <button onclick="confirmSelection('${id}', '${name}', '귀가')" style="flex: 1; padding: 25px; font-size: 20px; font-weight: bold; background: var(--home); color: white; border: none; border-radius: 10px; cursor: pointer;">최종 귀가</button>
+        </div>
+        <div id="cancel-timer" style="margin-top: 15px; color: #dc3545; font-weight: bold;">(10초 뒤 자동 취소됩니다)</div>
+    `;
+
+    document.getElementById('result-overlay').style.display = 'flex';
+
+    // 🌟 자동 취소 타이머 작동 (10초)
+    let timeLeft = 10;
+    if(selectionTimer) clearInterval(selectionTimer);
+    selectionTimer = setInterval(() => {
+        timeLeft--;
+        document.getElementById('cancel-timer').innerText = `(${timeLeft}초 뒤 자동 취소됩니다)`;
+        if (timeLeft <= 0) {
+            clearInterval(selectionTimer);
+            document.getElementById('result-overlay').style.display = 'none';
+            focusScanner();
+        }
+    }, 1000);
+}
+
+// 🌟 [추가] 선택 버튼 클릭 시 처리
+function confirmSelection(id, name, status) {
+    if(selectionTimer) clearInterval(selectionTimer);
+    saveAttendance(id, name, status, new Date());
+}
+
+// saveAttendance, showReceipt, selectStatus 등은 기존과 동일...
+    
 
 // 🌟 [추가함수 1] 실제로 DB에 저장하는 함수 (공통 사용)
 async function saveAttendance(id, name, status, timeObj) {
