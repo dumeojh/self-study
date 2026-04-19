@@ -108,47 +108,89 @@
         if (e.key === 'Enter') { e.preventDefault(); processCheckInOut(); }
     });
 
-    async function processCheckInOut() {
-        const id = scannerInput.value.trim();
-        if (!id) return;
-        scannerInput.value = ""; 
-        
-        const studentName = serverRoster[id];
-        if (!studentName) {
-            showReceipt("오류", `[${id}]`, "등록되지 않은 학번입니다.", "명단을 확인해 주세요.", "#dc3545");
+
+    
+// --- [기존 스크립트 중 processCheckInOut 함수를 아래 내용으로 전면 교체하세요] ---
+
+async function processCheckInOut() {
+    const id = scannerInput.value.trim();
+    if (!id) return;
+    scannerInput.value = ""; 
+    
+    const studentName = serverRoster[id];
+    if (!studentName) {
+        showReceipt("오류", `[${id}]`, "등록되지 않은 학번입니다.", "명단을 확인해 주세요.", "#dc3545");
+        return;
+    }
+
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const currentTimeVal = hours * 100 + minutes; // 예: 16:30 -> 1630
+
+    const logId = `${todayStr}_${id}`;
+    let finalStatus = currentStatus; // 기본값은 현재 선택된 버튼 상태
+
+    try {
+        // 1. 해당 학생의 오늘 기존 기록을 가져옵니다.
+        const logDoc = await db.collection("attendance_logs").doc(logId).get();
+        const logData = logDoc.exists ? logDoc.data() : null;
+        const lastStatus = logData ? logData.status : "미입실";
+
+        // 🌟 [핵심: 자동 판단 로직]
+        // 16:20 ~ 16:50 사이 첫 스캔이면 무조건 '입실'
+        if (currentTimeVal >= 1620 && currentTimeVal <= 1650 && lastStatus === "미입실") {
+            finalStatus = "입실";
+        } 
+        // 이미 입실한 상태에서 다시 스캔하면?
+        else if (lastStatus === "입실" || lastStatus === "복귀" || lastStatus.includes("출석")) {
+            // 자습 종료 시간대(예: 21:00 이후)라면 '귀가'로 자동 제안하거나 판단
+            if (currentTimeVal >= 2100) {
+                finalStatus = "귀가";
+            } else {
+                // 그 외 시간에는 '외출'로 판단
+                finalStatus = "외출";
+            }
+        }
+        // 외출 중인 학생이 스캔하면?
+        else if (lastStatus === "외출") {
+            finalStatus = "복귀";
+        }
+        // 이미 귀가한 학생이면?
+        else if (lastStatus === "귀가") {
+            showReceipt(studentName, "이미 귀가함", "이미 귀가 처리된 학생입니다.", "재입실은 관리자에게 문의하세요.", "#6c757d");
             return;
         }
 
-        const nowTime = new Date();
-        const timeStr = nowTime.toLocaleTimeString('ko-KR', { hour12: false });
-        // ★ 타임라인용 짧은 시간 (예: 18:30)
-        const historyTimeStr = nowTime.toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit' });
-        const logId = `${todayStr}_${id}`;
+        // 2. 최종 결정된 상태로 DB 저장
+        const historyTimeStr = now.toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit' });
         
-        try {
-            // ★ 핵심: 파이어베이스에 배열(history) 형태로 기존 기록 뒤에 계속 추가(arrayUnion)합니다.
-            await db.collection("attendance_logs").doc(logId).set({
-                date: todayStr,
-                stuId: id,
-                stuName: studentName,
-                status: currentStatus, 
-                lastUpdateTime: nowTime,
-                history: firebase.firestore.FieldValue.arrayUnion(`${currentStatus} (${historyTimeStr})`)
-            }, { merge: true }); 
+        await db.collection("attendance_logs").doc(logId).set({
+            date: todayStr,
+            stuId: id,
+            stuName: studentName,
+            status: finalStatus, 
+            lastUpdateTime: now,
+            history: firebase.firestore.FieldValue.arrayUnion(`${finalStatus} (${historyTimeStr})`)
+        }, { merge: true }); 
 
-            let color, statusText, msgText;
-            if (currentStatus === "입실") { color = "#0d6efd"; statusText = "입실 완료"; msgText = "오늘도 화이팅! 📖"; } 
-            else if (currentStatus === "외출") { color = "#b38200"; statusText = "외출 처리됨"; msgText = "너무 늦지 않게 돌아오세요! ⏱️"; } 
-            else if (currentStatus === "복귀") { color = "#198754"; statusText = "복귀 완료"; msgText = "다시 집중해 볼까요? ✨"; } 
-            else if (currentStatus === "귀가") { color = "#dc3545"; statusText = "최종 귀가"; msgText = "조심히 들어가세요! 🏠"; }
+        // 3. 결과 알림 (영수증) 디자인 설정
+        let color, statusText, msgText;
+        if (finalStatus === "입실") { color = "#0d6efd"; statusText = "입실 완료"; msgText = "오늘도 화이팅! 📖"; } 
+        else if (finalStatus === "외출") { color = "#b38200"; statusText = "외출 처리됨"; msgText = "너무 늦지 않게 돌아오세요! ⏱️"; } 
+        else if (finalStatus === "복귀") { color = "#198754"; statusText = "복귀 완료"; msgText = "다시 집중해 볼까요? ✨"; } 
+        else if (finalStatus === "귀가") { color = "#dc3545"; statusText = "최종 귀가"; msgText = "조심히 들어가세요! 🏠"; }
 
-            showReceipt(studentName, statusText, `처리시간: ${timeStr}`, msgText, color);
+        showReceipt(studentName, statusText, `처리시간: ${historyTimeStr}`, msgText, color);
 
-        } catch (e) {
-            showReceipt("통신 오류", "", "인터넷 연결을 확인하세요.", "다시 시도해 주세요.", "#dc3545");
-        }
+    } catch (e) {
+        console.error(e);
+        showReceipt("통신 오류", "", "인터넷 연결을 확인하세요.", "다시 시도해 주세요.", "#dc3545");
     }
+}
 
+
+    
     function showReceipt(name, status, timeInfo, msg, color) {
         document.getElementById('r-name').innerText = name;
         document.getElementById('r-status').innerText = status;
