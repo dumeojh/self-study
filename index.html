@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>안성여고 야간 자율학습 통합 관리</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* 기본 스타일 설정 */
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f4f7f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            margin: 40px 0;
+            text-align: center;
+        }
+
+        header h1 {
+            color: #2c3e50;
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+
+        /* 5개 박스를 감싸는 컨테이너 */
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            max-width: 1000px;
+            padding: 20px;
+        }
+
+        /* 공통 카드 스타일 */
+        .card {
+            background-color: white;
+            width: 280px;
+            height: 180px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-decoration: none; /* 밑줄 제거 */
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* 마우스 올렸을 때 효과 */
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        /* 카드 아이콘 스타일 (이모지로 대체) */
+        .icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+
+        /* 카드 제목 스타일 */
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #34495e;
+            word-break: keep-all;
+        }
+
+        /* 카드 설명(비밀번호 등) */
+        .card-desc {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            margin-top: 8px;
+        }
+
+        /* 모바일 대응: 화면이 작아지면 박스 너비 조정 */
+        @media (max-width: 600px) {
+            .card {
+                width: 100%;
+            }
+            header h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>안성여고 야간 자율학습 통합 관리</h1>
+        <p>원하시는 메뉴를 선택해 주세요.</p>
+    </header>
+
+    <div class="container">
+        <a href="https://dumeojh.github.io/self-study/settings.html" class="card">
+            <div class="icon">⚙️</div>
+            <div class="card-title">환경설정</div>
+            <div class="card-desc">관리자 설정 (암호: 1234)</div>
+        </a>
+
+        <a href="https://dumeojh.github.io/self-study/split_admin.html" class="card">
+            <div class="icon">📊</div>
+            <div class="card-title">야간 자율학습 통합 관리</div>
+            <div class="card-desc">전체 출결 및 관리 현황</div>
+        </a>
+
+        <a href="https://dumeojh.github.io/self-study/kiosk.html" class="card">
+            <div class="icon">🔍</div>
+            <div class="card-title">통합관리 키오스크</div>
+            <div class="card-desc">학생증 바코드 스캔 입실</div>
+        </a>
+
+        <a href="https://dumeojh.github.io/self-study/daily_ticket.html" class="card">
+            <div class="icon">🎟️</div>
+            <div class="card-title">일일 자율석 발권기</div>
+            <div class="card-desc">입실 전 자율석 좌석 결정</div>
+        </a>
+
+        <a href="help.html" class="card" style="border: 2px dashed #bdc3c7; background-color: #fafafa;">
+            <div class="icon">❓</div>
+            <div class="card-title">사용설명서</div>
+            <div class="card-desc">시스템 이용 가이드 (help.html)</div>
+        </a>
+    </div>
+
+</body>
+</html>
