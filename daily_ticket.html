@@ -159,7 +159,7 @@ if (schedDoc.exists) schoolSchedule = schedDoc.data();
 
     
 async function verifyForTicket() {
-    // 1. 버튼 및 입력값 초기 선언 (에러 방지용)
+    // 1. 버튼 및 입력값 초기 선언 (Reference Error 방지)
     const btn = document.getElementById('login-btn');
     const id = document.getElementById('stu-id').value.trim();
     const name = document.getElementById('stu-name').value.trim();
@@ -170,34 +170,31 @@ async function verifyForTicket() {
         return;
     }
 
-    // 3. [보안/안정성] 운영 시간 제약 확인
-    // settings/schedule에 등록된 T1 시작 ~ T3 종료 시간을 기준으로 발권을 제한합니다.
+    // 3. [운영 시간 제약 확인]
     if (schoolSchedule) {
         const now = new Date();
-        const currentMin = now.getHours() * 60 + now.getMinutes(); // 현재 시각을 분으로 환산
+        const currentMin = now.getHours() * 60 + now.getMinutes();
 
-        // 시간 데이터 파싱 (예: "16:00" -> [16, 0])
+        // 필드명 t3_end를 정확히 참조해야 합니다.
         const [startH, startM] = schoolSchedule.t1.split(':').map(Number);
-        const [endH, endM] = schoolSchedule.t3_end.split(':').map(Number);
+        const [endH, endM] = schoolSchedule.t3_end.split(':').map(Number); 
         
         const startMin = startH * 60 + startM;
         const endMin = endH * 60 + endM;
 
-        // 운영 시작 30분 전부터 종료 시각까지만 발권 허용
         if (currentMin < startMin - 30 || currentMin > endMin) {
             alert(`지금은 발권 가능 시간이 아닙니다.\n발권 가능 시간: ${schoolSchedule.t1} ~ ${schoolSchedule.t3_end}`);
-            return;
+            return; 
         }
     }
 
-    // 4. 기초 명단 일치 여부 확인
+    // 4. 명단 확인 및 상태 업데이트
     if (serverRoster[id] !== name) {
-        alert("명단에 없거나 학번과 이름이 일치하지 않습니다. 다시 확인해주세요.");
+        alert("명단에 없거나 학번/이름이 일치하지 않습니다.");
         return;
     }
 
-    // 상태 업데이트 (중복 클릭 방지)
-    btn.innerText = "조회 중...";
+    btn.innerText = "확인 중..."; 
     btn.disabled = true;
 
     try {
