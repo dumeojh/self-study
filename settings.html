@@ -136,6 +136,43 @@
 </div>
 
 <script>
+
+    // --- [도면 편집 보강 로직] ---
+
+function modifyGrid(action) {
+    const idx = parseInt(document.getElementById('target-index').value) - 1; // 0부터 시작하도록 -1
+    
+    if (action === 'insertRow') {
+        // 해당 위치에 빈 가로줄 삽입
+        const newRow = Array.from({length: cols}, () => ({ type: 0, label: "" }));
+        seatMapData.splice(idx, 0, newRow);
+        rows++;
+    } 
+    else if (action === 'deleteRow') {
+        if (!confirm(`${idx + 1}번째 가로줄을 삭제하시겠습니까?`)) return;
+        seatMapData.splice(idx, 1);
+        rows--;
+    } 
+    else if (action === 'insertCol') {
+        // 모든 줄(row)의 해당 위치에 빈 칸 삽입
+        seatMapData.forEach(row => {
+            row.splice(idx, 0, { type: 0, label: "" });
+        });
+        cols++;
+    } 
+    else if (action === 'deleteCol') {
+        if (!confirm(`${idx + 1}번째 세로줄을 삭제하시겠습니까?`)) return;
+        seatMapData.forEach(row => {
+            row.splice(idx, 1);
+        });
+        cols--;
+    }
+
+    // 입력값 UI 업데이트 및 도면 다시 그리기
+    document.getElementById('grid-rows').value = rows;
+    document.getElementById('grid-cols').value = cols;
+    drawEditGrid();
+}
     // --- 파이어베이스 설정 ---
     const firebaseConfig = {
         apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
