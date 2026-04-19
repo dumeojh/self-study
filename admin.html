@@ -670,12 +670,16 @@
     
     function runManualAttendanceCheck() { alert("정산 기능이 실행되었습니다."); }
 
-    // --- 데이터 실시간 감시 ---
-    db.collection("applications").onSnapshot(snap => {
-        applicationData = {}; snap.forEach(doc => applicationData[doc.id] = doc.data());
-        renderDailySupervisorMap();
+// 데이터 실시간 감시
+    db.collection("applications").orderBy("timestamp", "desc").onSnapshot(snap => {
+        applicationData = {}; 
+        snap.forEach(doc => applicationData[doc.id] = doc.data());
+        
+        // 현재 열려있는 탭이 무엇인지에 따라 해당 화면 갱신
+        const activeTab = document.querySelector('.tab-content.active').id;
+        if(activeTab === 'tab-daily') renderDailySupervisorMap();
+        if(activeTab === 'tab-status') renderStatusTable();
     });
-
     // 시스템 시작
     loadTimeSettings();
     loadApplyPeriod();
