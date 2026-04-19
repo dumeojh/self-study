@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>안성여고 야자 시스템 사용설명서</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #007bff;
+            --bg: #f4f7f9;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 20px;
+        }
+
+        header h1 {
+            color: var(--primary);
+            font-weight: 900;
+            font-size: 2rem;
+            margin: 0 0 10px 0;
+        }
+
+        .flow-container {
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .flow-title {
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .flow-steps {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .step {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            flex: 1;
+            min-width: 120px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .arrow {
+            color: #adb5bd;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .section-title {
+            color: var(--secondary);
+            border-left: 5px solid var(--accent);
+            padding-left: 15px;
+            margin-top: 40px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            background: #fff;
+            transition: 0.3s;
+        }
+
+        .card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border-color: #c5d6e8;
+        }
+
+        .card-icon {
+            font-size: 2.5rem;
+            background: #f8f9fa;
+            width: 70px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+            flex-shrink: 0;
+        }
+
+        .card-content h3 {
+            margin: 0 0 10px 0;
+            color: var(--primary);
+            font-size: 1.2rem;
+        }
+
+        .card-content p {
+            margin: 0 0 8px 0;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        .tag-admin { background: #ffeeba; color: #856404; }
+        .tag-student { background: #d1e7dd; color: #0f5132; }
+        .tag-kiosk { background: #cff4fc; color: #055160; }
+
+        .btn-home {
+            display: block;
+            width: 100%;
+            text-align: center;
+            background: var(--primary);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-top: 40px;
+            transition: 0.3s;
+        }
+
+        .btn-home:hover {
+            background: #1a252f;
+        }
+
+        @media (max-width: 600px) {
+            .card { flex-direction: column; align-items: center; text-align: center; }
+            .flow-steps { flex-direction: column; }
+            .arrow { transform: rotate(90deg); margin: 5px 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>안성여고 야간 자율학습 시스템</h1>
+            <p>프로그램 구성 및 사용 안내서</p>
+        </header>
+
+        <div class="flow-container">
+            <div class="flow-title">🔄 전체 시스템 운영 흐름</div>
+            <div class="flow-steps">
+                <div class="step">1. 환경설정<br><span style="font-size:0.8rem; font-weight:normal;">(관리자 셋팅)</span></div>
+                <div class="arrow">➔</div>
+                <div class="step">2. 야자 신청<br><span style="font-size:0.8rem; font-weight:normal;">(학생 좌석/요일 선택)</span></div>
+                <div class="arrow">➔</div>
+                <div class="step">3. 일일 발권<br><span style="font-size:0.8rem; font-weight:normal;">(자율석 학생 당일)</span></div>
+                <div class="arrow">➔</div>
+                <div class="step">4. 키오스크 입실<br><span style="font-size:0.8rem; font-weight:normal;">(바코드 스캔)</span></div>
+                <div class="arrow">➔</div>
+                <div class="step">5. 통합 관리<br><span style="font-size:0.8rem; font-weight:normal;">(감독교사 출결 확인)</span></div>
+            </div>
+        </div>
+
+        <h2 class="section-title">1. 관리자용 메뉴 (선생님)</h2>
+
+        <div class="card">
+            <div class="card-icon">⚙️</div>
+            <div class="card-content">
+                <h3>환경설정 (settings.html)</h3>
+                <span class="tag tag-admin">관리자 전용</span>
+                <p>시스템을 처음 구축하거나 학기 초에 셋팅하는 공간입니다. (비밀번호: 1234)</p>
+                <ul>
+                    <li><b>야자일정:</b> 공휴일, 모의고사 등 야자를 하지 않는 날을 지정합니다.</li>
+                    <li><b>신청기간:</b> 학생들이 홈페이지에서 신청할 수 있는 기간을 열고 닫습니다.</li>
+                    <li><b>기초명단:</b> 학생들의 학번과 이름이 담긴 엑셀(Excel) 파일을 업로드합니다.</li>
+                    <li><b>도면설계:</b> 자습실의 고정석, 자율석, 통로, 문 등을 직접 그려서 배치합니다.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-icon">📊</div>
+            <div class="card-content">
+                <h3>통합 관리 (split_admin.html)</h3>
+                <span class="tag tag-admin">감독/관리자 전용</span>
+                <p>매일 밤 야간 자율학습을 감독하고 학생들의 통계를 확인하는 메인 상황판입니다.</p>
+                <ul>
+                    <li><b>오늘 감독용 좌석표:</b> 오늘 날짜와 타임을 선택하면, 그 자리에 앉아야 할 학생 이름이 뜹니다. 키오스크로 입실을 찍은 학생은 <b>색깔(노랑/초록)</b>이 칠해지고, 안 온 학생은 <b>빨간색 점선</b>으로 표시됩니다.</li>
+                    <li><b>학생 이름 클릭:</b> 해당 학생의 월간 출석률과 상담 리포트를 볼 수 있습니다.</li>
+                    <li><b>월별 신청 현황:</b> 누가 무슨 요일에 어떤 좌석을 신청했는지 엑셀처럼 모아봅니다.</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2 class="section-title">2. 학생용 메뉴</h2>
+
+        <div class="card">
+            <div class="card-icon">📝</div>
+            <div class="card-content">
+                <h3>야간 자율학습 신청 (sign_up.html)</h3>
+                <span class="tag tag-student">학생 전용</span>
+                <p>학생들이 스마트폰이나 PC로 다음 달 자율학습을 신청하는 페이지입니다.</p>
+                <ul>
+                    <li><b>고정석 학생:</b> 요일을 선택하고, 도면에서 자신이 한 달 동안 앉을 자리를 직접 클릭하여 선점합니다. (선착순)</li>
+                    <li><b>자율석 학생:</b> 요일만 선택하여 신청을 완료합니다.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-icon">🎟️</div>
+            <div class="card-content">
+                <h3>일일 자율석 발권기 (daily_ticket.html)</h3>
+                <span class="tag tag-student">자율석 학생 전용</span>
+                <p>자율석을 신청한 학생이 <b>매일 야자 시작 전</b>에 그날 앉을 자리를 고르는 발권기입니다.</p>
+                <ul>
+                    <li>학번을 치면 오늘 본인이 신청한 타임과 겹치지 않는 빈자리만 초록색으로 나타납니다.</li>
+                    <li>자리를 선택하면 하루 동안 그 자리가 본인 자리로 픽스됩니다.</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2 class="section-title">3. 운영/출결 기기</h2>
+
+        <div class="card">
+            <div class="card-icon">🔍</div>
+            <div class="card-content">
+                <h3>통합관리 키오스크 (kiosk.html)</h3>
+                <span class="tag tag-kiosk">공용 키오스크</span>
+                <p>자습실 입구에 태블릿이나 노트북을 두고 바코드 스캐너를 연결해 두는 화면입니다.</p>
+                <ul>
+                    <li>학생이 학생증(바코드)을 찍으면 <b>자동으로 '입실' 처리</b>가 됩니다.</li>
+                    <li>이미 입실한 학생이 다시 스캔하면, 화면에 <b>[잠시 외출] / [최종 귀가]</b> 선택 버튼이 10초간 떠서 스스로 상태를 변경할 수 있습니다.</li>
+                    <li>키오스크의 데이터는 즉시 관리자 화면(통합 관리)의 색상으로 반영됩니다.</li>
+                </ul>
+            </div>
+        </div>
+
+        <a href="index.html" class="btn-home">🏠 메인 화면(index.html)으로 돌아가기</a>
+    </div>
+
+</body>
+</html>
