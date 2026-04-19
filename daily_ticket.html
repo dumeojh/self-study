@@ -98,6 +98,9 @@
 </div>
 
 <script>
+
+    let schoolSchedule = null; // 운영 시간 저장용
+    
     // --- 파이어베이스 설정 ---
     const firebaseConfig = {
         apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
@@ -131,6 +134,8 @@
 
     // 1. 초기 데이터 로딩 (명단 + 도면 + 오늘의 예약 내역)
     async function fetchInitialData() {
+        const schedDoc = await db.collection("settings").doc("schedule").get();
+if (schedDoc.exists) schoolSchedule = schedDoc.data();
         try {
             const rosterDoc = await db.collection("settings").doc("roster").get();
             if (rosterDoc.exists) serverRoster = JSON.parse(rosterDoc.data().list || "{}");
@@ -152,6 +157,21 @@
 
     // 2. 학생 신원 및 스케줄 확인
     async function verifyForTicket() {
+        if (schoolSchedule) {
+    const now = new Date();
+    const currentMin = now.getHours() * 60 + now.getMinutes();
+    const [startH, startM] = schoolSchedule.t1.split(':').map(Number);
+    const [endH, endM] = schoolSchedule.t3_end.split(':').map(Number);
+    
+    const startMin = startH * 60 + startM;
+    const endMin = endH * 60 + endM;
+
+    // 시작 30분 전부터 종료 시간까지만 허용
+    if (currentMin < startMin - 30 || currentMin > endMin) {
+        alert("현재는 발권 가능 시간이 아닙니다.");
+        btn.disabled = false; return;
+    }
+}
         const id = document.getElementById('stu-id').value.trim();
         const name = document.getElementById('stu-name').value.trim();
         const btn = document.getElementById('login-btn');
