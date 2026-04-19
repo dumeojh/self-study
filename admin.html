@@ -608,7 +608,66 @@
         await db.collection("settings").doc("schedule").set(studyTimes);
         alert("저장 완료!"); closeSettingsModal();
     }
-    function renderStatusTable() { /* 신청 현황 표 렌더링 로직 */ }
+
+    
+// --- [월별 신청 현황 로직 복구] ---
+    function renderStatusTable() {
+        const tbody = document.getElementById('status-body'); 
+        const monthFilter = document.getElementById('filter-month').value;
+        tbody.innerHTML = "";
+
+        // 1. 데이터를 배열로 변환하여 학번순 정렬
+        let dataArray = [];
+        for (const id in applicationData) {
+            dataArray.push({ docId: id, ...applicationData[id] });
+        }
+        dataArray.sort((a, b) => parseInt(a.stuId) - parseInt(b.stuId));
+
+        // 2. 표 렌더링
+        dataArray.forEach(d => {
+            // 월 필터링 (전체보기 또는 선택한 월과 일치할 때)
+            if (monthFilter !== "all" && d.targetMonth !== monthFilter) return; 
+
+            const row = document.createElement('tr');
+            row.onclick = () => fillEditForm(d.docId); // 클릭 시 수정 폼으로 이동
+            
+            row.innerHTML = `
+                <td><span class="month-tag">${d.targetMonth}</span></td>
+                <td>${d.stuId}</td>
+                <td><b>${d.stuName}</b></td>
+                <td><span class="type-tag ${d.type === '고정석' ? 'fixed' : 'flex'}">${d.type}</span></td>
+                <td><b>${d.seatNum || '-'}</b></td>
+                <td>${d.mon || ''}</td>
+                <td>${d.tue || ''}</td>
+                <td>${d.wed || ''}</td>
+                <td>${d.thu || ''}</td>
+                <td>${d.fri || ''}</td>
+                <td>${d.sat || ''}</td>
+                <td>${d.sun || ''}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    // 수정 탭으로 데이터를 보내주는 보조 함수
+    function fillEditForm(id) {
+        const d = applicationData[id];
+        if(!d) return;
+        document.getElementById('edit-doc-id').value = id;
+        document.getElementById('m-targetMonth').value = d.targetMonth;
+        document.getElementById('m-id').value = d.stuId;
+        document.getElementById('m-name').value = d.stuName;
+        document.getElementById('m-type').value = d.type;
+        document.getElementById('m-seatNum').value = d.seatNum || '';
+        ['mon','tue','wed','thu','fri','sat','sun'].forEach(day => {
+            document.getElementById(`m-${day}`).value = d[day] || '';
+        });
+        // 탭 전환 (3번째 탭: 개별 수정)
+        switchTab('tab-manual', document.querySelectorAll('.tab-btn')[2]);
+    }
+
+
+    
     function runManualAttendanceCheck() { alert("정산 기능이 실행되었습니다."); }
 
     // --- 데이터 실시간 감시 ---
