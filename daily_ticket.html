@@ -155,82 +155,113 @@ if (schedDoc.exists) schoolSchedule = schedDoc.data();
     }
     fetchInitialData();
 
-    // 2. 학생 신원 및 스케줄 확인
-    async function verifyForTicket() {
-        if (schoolSchedule) {
-    const now = new Date();
-    const currentMin = now.getHours() * 60 + now.getMinutes();
-    const [startH, startM] = schoolSchedule.t1.split(':').map(Number);
-    const [endH, endM] = schoolSchedule.t3_end.split(':').map(Number);
+
+
     
-    const startMin = startH * 60 + startM;
-    const endMin = endH * 60 + endM;
+async function verifyForTicket() {
+    // 1. 버튼 및 입력값 초기 선언 (에러 방지용)
+    const btn = document.getElementById('login-btn');
+    const id = document.getElementById('stu-id').value.trim();
+    const name = document.getElementById('stu-name').value.trim();
 
-    // 시작 30분 전부터 종료 시간까지만 허용
-    if (currentMin < startMin - 30 || currentMin > endMin) {
-        alert("현재는 발권 가능 시간이 아닙니다.");
-        btn.disabled = false; return;
+    // 2. 기본 입력 유효성 검사
+    if (!id || !name) {
+        alert("학번과 이름을 모두 입력해주세요.");
+        return;
     }
-}
-        const id = document.getElementById('stu-id').value.trim();
-        const name = document.getElementById('stu-name').value.trim();
-        const btn = document.getElementById('login-btn');
 
-        if (!id || !name) return alert("학번과 이름을 입력해주세요.");
-        if (serverRoster[id] !== name) return alert("명단에 없거나 학번/이름이 일치하지 않습니다.");
+    // 3. [보안/안정성] 운영 시간 제약 확인
+    // settings/schedule에 등록된 T1 시작 ~ T3 종료 시간을 기준으로 발권을 제한합니다.
+    if (schoolSchedule) {
+        const now = new Date();
+        const currentMin = now.getHours() * 60 + now.getMinutes(); // 현재 시각을 분으로 환산
 
-        btn.innerText = "확인 중..."; btn.disabled = true;
+        // 시간 데이터 파싱 (예: "16:00" -> [16, 0])
+        const [startH, startM] = schoolSchedule.t1.split(':').map(Number);
+        const [endH, endM] = schoolSchedule.t3_end.split(':').map(Number);
+        
+        const startMin = startH * 60 + startM;
+        const endMin = endH * 60 + endM;
 
-        try {
-            // 이번 달 신청 내역 확인
-            const q = await db.collection("applications").where("stuId", "==", id).where("targetMonth", "==", currentMonthStr).get();
-
-            if (q.empty) {
-                alert(`🚨 ${currentMonthStr} 자율학습 신청 내역이 없습니다.`);
-                btn.innerText = "조회하기"; btn.disabled = false; return;
-            }
-
-            const data = q.docs[0].data();
-
-            if (data.type !== "자율석") {
-                alert("🚨 고정석 신청 학생입니다. 고정석은 매일 발권할 필요가 없습니다.");
-                btn.innerText = "조회하기"; btn.disabled = false; return;
-            }
-
-            studentSchedule = data[todayDayEng]; // 오늘(예: 금요일) 타임 정보
-            if (!studentSchedule) {
-                alert("오늘은 자율학습을 신청한 요일이 아닙니다. 푹 쉬세요! 😊");
-                btn.innerText = "조회하기"; btn.disabled = false; return;
-            }
-
-            // --- 발권 자격 증명 완료 ---
-            document.getElementById('login-section').style.display = 'none';
-            document.getElementById('ticket-section').style.display = 'block';
-            
-            document.getElementById('student-info').innerHTML = `
-                <strong>${name} 학생, 환영합니다!</strong><br>
-                <span style="font-size:14px; color:#666;">오늘 예정된 자습: [ ${studentSchedule} ] 타임</span>
-            `;
-
-            // 이미 오늘 발권했는지 검사
-            const myTicket = todayReservations.find(r => r.stuId === id);
-            if (myTicket) {
-                // 이미 발권함 -> 티켓 보여주기
-                document.getElementById('map-area').style.display = 'none';
-                document.getElementById('my-ticket-area').style.display = 'block';
-                document.getElementById('my-seat-name').innerText = myTicket.seatNum;
-                document.getElementById('my-time-info').innerText = `${myTicket.times} 타임`;
-            } else {
-                // 아직 안 함 -> 좌석표 그리기
-                buildTicketGrid();
-            }
-
-        } catch(e) {
-            alert("조회 오류: " + e.message);
-            btn.innerText = "조회하기"; btn.disabled = false;
+        // 운영 시작 30분 전부터 종료 시각까지만 발권 허용
+        if (currentMin < startMin - 30 || currentMin > endMin) {
+            alert(`지금은 발권 가능 시간이 아닙니다.\n발권 가능 시간: ${schoolSchedule.t1} ~ ${schoolSchedule.t3_end}`);
+            return;
         }
     }
 
+    // 4. 기초 명단 일치 여부 확인
+    if (serverRoster[id] !== name) {
+        alert("명단에 없거나 학번과 이름이 일치하지 않습니다. 다시 확인해주세요.");
+        return;
+    }
+
+    // 상태 업데이트 (중복 클릭 방지)
+    btn.innerText = "조회 중...";
+    btn.disabled = true;
+
+    try {
+        // 5. 이번 달 자율학습 신청 내역 확인
+        const q = await db.collection("applications")
+            .where("stuId", "==", id)
+            .where("targetMonth", "==", currentMonthStr)
+            .get();
+
+        if (q.empty) {
+            alert(`🚨 ${currentMonthStr} 자율학습 신청 내역이 없습니다.`);
+            btn.innerText = "조회하기"; btn.disabled = false;
+            return;
+        }
+
+        const data = q.docs[0].data();
+
+        // 6. 신청 종류 확인 (고정석 학생은 발권 불필요)
+        if (data.type !== "자율석") {
+            alert("🚨 고정석 신청 학생입니다.\n고정석은 매일 발권할 필요 없이 지정된 자리로 바로 가면 됩니다.");
+            btn.innerText = "조회하기"; btn.disabled = false;
+            return;
+        }
+
+        // 7. 오늘(해당 요일) 자습 신청 여부 확인
+        studentSchedule = data[todayDayEng]; // 예: data['mon'] -> "1,2"
+        if (!studentSchedule) {
+            alert("오늘은 자율학습을 신청한 요일이 아닙니다. 일정을 확인해주세요! 😊");
+            btn.innerText = "조회하기"; btn.disabled = false;
+            return;
+        }
+
+        // 8. 발권 자격 증명 완료 -> 화면 전환
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('ticket-section').style.display = 'block';
+        
+        document.getElementById('student-info').innerHTML = `
+            <strong>${name} 학생, 환영합니다!</strong><br>
+            <span style="font-size:14px; color:#666;">오늘 예정된 자습: [ ${studentSchedule} ] 타임</span>
+        `;
+
+        // 9. 오늘 이미 발권했는지 중복 예약 검사
+        const myTicket = todayReservations.find(r => r.stuId === id);
+        if (myTicket) {
+            // 이미 발권한 내역이 있음 -> 티켓 화면 바로 표시
+            document.getElementById('map-area').style.display = 'none';
+            document.getElementById('my-ticket-area').style.display = 'block';
+            document.getElementById('my-seat-name').innerText = myTicket.seatNum;
+            document.getElementById('my-time-info').innerText = `${myTicket.times} 타임`;
+        } else {
+            // 아직 발권 전 -> 좌석 선택 도면 그리기
+            buildTicketGrid();
+        }
+
+    } catch(e) {
+        console.error("조회 오류:", e);
+        alert("데이터를 조회하는 중 오류가 발생했습니다: " + e.message);
+        btn.innerText = "조회하기";
+        btn.disabled = false;
+    }
+}
+
+
+    
     // 3. 자율석 전용 좌석표 그리기
     function buildTicketGrid() {
         const container = document.getElementById('ticket-seat-grid');
