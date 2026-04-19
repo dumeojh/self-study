@@ -9,7 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <style>
-        :root { --primary: #007bff; --danger: #dc3545; }
+        :root { --primary: #007bff; --danger: #dc3545; --success: #28a745; }
         body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f7f9; margin: 0; padding: 0; }
         
         /* 🔐 보안 레이어 스타일 */
@@ -26,13 +26,29 @@
             border: 2px solid #ddd; border-radius: 8px; margin: 20px 0; box-sizing: border-box;
         }
 
-        /* 메인 컨텐츠 (인증 전 숨김) */
+        /* 메인 컨텐츠 영역 */
         #main-content { display: none; padding: 20px; max-width: 1100px; margin: 0 auto; }
-        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #eee; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+
+        /* 탭 버튼 스타일 */
+        .settings-menu { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .menu-btn { 
+            flex: 1; min-width: 150px; padding: 15px; font-size: 16px; font-weight: bold; 
+            border: none; border-radius: 10px; cursor: pointer; background: white; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: 0.3s; color: #555;
+        }
+        .menu-btn:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }
+        .menu-btn.active { background: var(--primary); color: white; }
+
+        /* 설정 카드 스타일 */
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #eee; display: none; }
+        .card.active { display: block; animation: fadeIn 0.4s ease; }
+
         .btn { padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-gray { background: #6c757d; color: white; }
-        .btn-danger { background: var(--danger); color: white; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -50,17 +66,38 @@
 </div>
 
 <div id="main-content">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div class="header">
         <h1>⚙️ 시스템 환경설정</h1>
-        <button class="btn btn-gray" onclick="location.href='split_admin.html'">⬅️ 관리 화면으로 돌아가기</button>
+        <button class="btn btn-gray" onclick="location.href='split_admin.html'">⬅️ 나가기</button>
     </div>
 
-    <div class="card">
-        <h3>🪑 좌석 도면 설계 및 명단 관리</h3>
-        <p>여기에 기존에 사용하시던 도면 설계 기능과 명단 관리 기능을 넣으시면 됩니다.</p>
-        </div>
-    
+    <div class="settings-menu">
+        <button class="menu-btn active" onclick="showTab('tab-period', this)">📅 신청기간 설정</button>
+        <button class="menu-btn" onclick="showTab('tab-roster', this)">⚙️ 기초명단 관리</button>
+        <button class="menu-btn" onclick="showTab('tab-seats', this)">🪑 좌석도면 설계</button>
+        <button class="menu-btn" onclick="showTab('tab-time', this)">⏰ 야자시간 설정</button>
     </div>
+
+    <div id="tab-period" class="card active">
+        <h3>신청 가능 기간 설정</h3>
+        <p>학생들이 야간 자율학습을 신청할 수 있는 시작일과 종료일을 설정합니다.</p>
+        </div>
+
+    <div id="tab-roster" class="card">
+        <h3>기초 명단 관리 (엑셀 업로드)</h3>
+        <p>전체 학생 명단을 엑셀 파일로 일괄 등록하거나 수정합니다.</p>
+        </div>
+
+    <div id="tab-seats" class="card">
+        <h3>좌석 도면 설계기</h3>
+        <p>자율학습실의 좌석 배치와 번호를 편집합니다.</p>
+        </div>
+
+    <div id="tab-time" class="card">
+        <h3>야자 교시 시간 설정</h3>
+        <p>1T, 2T, 3T 각 타임의 시작 및 종료 시간을 관리합니다.</p>
+        </div>
+</div>
 
 <script>
     // --- 파이어베이스 설정 ---
@@ -79,15 +116,26 @@
     function checkPass() {
         const input = document.getElementById('pass-input').value;
         if(input === "1234") {
-            // 인증 성공: 오버레이 제거 및 컨텐츠 표시
             document.getElementById('auth-overlay').style.display = 'none';
             document.getElementById('main-content').style.display = 'block';
-            // 데이터 로딩 시작 함수 호출 (필요시)
         } else {
             alert("비밀번호가 올바르지 않습니다.");
             document.getElementById('pass-input').value = "";
             document.getElementById('pass-input').focus();
         }
+    }
+
+    // 탭 전환 기능
+    function showTab(tabId, btn) {
+        // 모든 카드 숨기기
+        document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
+        // 모든 버튼 비활성화
+        document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+        
+        // 선택한 탭 보여주기
+        document.getElementById(tabId).classList.add('active');
+        // 선택한 버튼 활성화
+        btn.classList.add('active');
     }
 
     // 엔터키 지원
