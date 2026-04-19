@@ -13,8 +13,6 @@
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
         
         h2 { text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin: 0; }
-
-        /* 상단 헤더 영역 */
         .header-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 
         /* 탭 메뉴 */
@@ -26,29 +24,27 @@
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* 버튼 스타일 */
         .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; }
         .btn-primary { background: var(--primary); }
         .btn-gray { background: var(--gray); }
 
-        /* 테이블 */
         table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; background: white; }
         th, td { border: 1px solid #dee2e6; padding: 12px 8px; text-align: center; }
         th { background: #f8f9fa; }
         tbody tr:hover { background-color: #f1f8ff; cursor: pointer; }
 
-        /* 좌석 격자 */
         .seat-grid { display: grid; gap: 4px; justify-content: start; }
         .seat-cell { width: 55px; height: 55px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; border-radius: 5px; border: 1px solid #ccc; }
         .status-absent { background: #fff; border: 2px dashed #adb5bd; color: #6c757d; }
         .status-present-fixed { background: #e7f1ff; border: 3px solid #0d6efd; color: #0d6efd; }
-        .status-present-flex { background: #e8f5e9; border: 3px solid #198754; color: #198754; }
 
-        /* 모달 (팝업창) */
-        .modal-overlay { 
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; 
-        }
+        /* 수정 폼 스타일 */
+        .form-card { background:#f8f9fa; padding:25px; border-radius:10px; border:1px solid #ddd; }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .input-group input, .input-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
         .modal-content { background: white; padding: 25px; border-radius: 15px; width: 90%; max-width: 400px; }
     </style>
 </head>
@@ -63,7 +59,6 @@
     <div class="tab-menu">
         <button class="tab-btn active" onclick="switchTab('tab-daily', this)">🧑‍🏫 오늘 감독용 좌석표</button>
         <button class="tab-btn" onclick="switchTab('tab-status', this)">📊 월별 신청 현황</button>
-        <button class="tab-btn" onclick="switchTab('tab-period', this)">📅 신청 기간 설정</button>
         <button class="tab-btn" onclick="switchTab('tab-manual', this)">📝 개별 수정/추가</button>
     </div>
 
@@ -81,39 +76,74 @@
     </div>
 
     <div id="tab-status" class="tab-content">
-        <div style="margin-bottom:10px;">
+        <div style="margin-bottom:10px; display: flex; justify-content: space-between;">
             <select id="filter-month" onchange="renderStatusTable()" style="padding:8px; border-radius:5px;">
                 <option value="all">전체보기</option>
                 <option value="3월">3월</option><option value="4월" selected>4월</option>
                 <option value="5월">5월</option><option value="6월">6월</option>
             </select>
+            <span style="font-size: 13px; color: #666;">* 이름을 클릭하면 수동 수정 화면으로 이동합니다.</span>
         </div>
         <div style="overflow-x:auto;">
             <table>
-                <thead><tr><th>월</th><th>학번</th><th>이름</th><th>종류</th><th>좌석</th><th>상태(월~금)</th></tr></thead>
+                <thead><tr><th>월</th><th>학번</th><th>이름</th><th>종류</th><th>좌석</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th></tr></thead>
                 <tbody id="status-body"></tbody>
             </table>
         </div>
     </div>
 
-    <div id="tab-period" class="tab-content">
-        <div style="background:#f8f9fa; padding:25px; border-radius:10px; border:1px solid #ddd;">
-            <h3>📢 신청 기간 설정</h3>
-            시작 일시: <input type="datetime-local" id="apply-start" style="padding:8px;"><br><br>
-            종료 일시: <input type="datetime-local" id="apply-end" style="padding:8px;"><br><br>
-            <button class="btn btn-primary" onclick="saveApplyPeriod()">저장 및 서버 배포</button>
-        </div>
-    </div>
-
     <div id="tab-manual" class="tab-content">
-        <div style="background:#f8f9fa; padding:25px; border-radius:10px; border:1px solid #ddd;">
-            <h3>✍️ 학생 데이터 수정</h3>
+        <div class="form-card">
+            <h3>✍️ 학생 데이터 개별 수정 / 추가</h3>
             <input type="hidden" id="edit-doc-id">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <div>학번: <input type="number" id="m-id" style="width:100%; padding:8px;"></div>
-                <div>이름: <input type="text" id="m-name" style="width:100%; padding:8px;"></div>
-            </div><br>
-            <button class="btn btn-primary" style="width:100%;" onclick="saveManualEntry()">데이터 반영하기</button>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap:15px;">
+                <div class="input-group">
+                    <label>적용 월</label>
+                    <select id="m-month">
+                        <option value="3월">3월</option><option value="4월">4월</option>
+                        <option value="5월">5월</option><option value="6월">6월</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>학번</label>
+                    <input type="number" id="m-id" placeholder="예: 20101">
+                </div>
+                <div class="input-group">
+                    <label>이름</label>
+                    <input type="text" id="m-name">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                <div class="input-group">
+                    <label>좌석 종류</label>
+                    <select id="m-type">
+                        <option value="고정석">고정석</option>
+                        <option value="자율석">자율석</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>좌석 번호</label>
+                    <input type="text" id="m-seatNum" placeholder="예: A-15">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>요일별 타임 (숫자만 입력, 예: 1,2)</label>
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;">
+                    <div>월 <input type="text" id="m-mon"></div>
+                    <div>화 <input type="text" id="m-tue"></div>
+                    <div>수 <input type="text" id="m-wed"></div>
+                    <div>목 <input type="text" id="m-thu"></div>
+                    <div>금 <input type="text" id="m-fri"></div>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button class="btn btn-primary" style="flex: 2;" onclick="saveManualEntry()">💾 변경사항 저장하기</button>
+                <button class="btn btn-gray" style="flex: 1;" onclick="resetManualForm()">🔄 입력창 비우기</button>
+            </div>
         </div>
     </div>
 </div>
@@ -127,7 +157,6 @@
 </div>
 
 <script>
-    // --- 파이어베이스 설정 ---
     const firebaseConfig = {
         apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
         authDomain: "self-study-project-82bdf.firebaseapp.com",
@@ -145,16 +174,14 @@
     const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
     document.getElementById('daily-date').value = todayStr;
 
-    // --- [탭 관리] ---
     function switchTab(tabId, btn) {
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(tabId).classList.add('active'); btn.classList.add('active');
+        document.getElementById(tabId).classList.add('active'); 
+        if(btn) btn.classList.add('active');
         if(tabId === 'tab-status') renderStatusTable();
-        if(tabId === 'tab-period') loadApplyPeriod();
     }
 
-    // --- [좌석 도면 및 출결 로직] ---
     async function loadSeatLayout() {
         const doc = await db.collection("settings").doc("seatLayout").get();
         if (doc.exists) {
@@ -203,43 +230,86 @@
         });
     }
 
-    // --- [신청 현황 및 기간] ---
     function renderStatusTable() {
         const tbody = document.getElementById('status-body'); tbody.innerHTML = "";
         const month = document.getElementById('filter-month').value;
-        const sortedData = Object.values(applicationData).sort((a,b) => a.stuId - b.stuId);
+        const sortedData = Object.keys(applicationData)
+            .map(id => ({ docId: id, ...applicationData[id] }))
+            .sort((a,b) => a.stuId - b.stuId);
+
         sortedData.forEach(d => {
             if(month !== "all" && d.targetMonth !== month) return;
-            tbody.innerHTML += `<tr><td>${d.targetMonth}</td><td>${d.stuId}</td><td>${d.stuName}</td><td>${d.type}</td><td>${d.seatNum}</td><td>${d.mon||'-'}..</td></tr>`;
+            const tr = document.createElement('tr');
+            tr.onclick = () => fillEditForm(d.docId); // 행 클릭 시 수정 폼 이동
+            tr.innerHTML = `
+                <td>${d.targetMonth}</td><td>${d.stuId}</td><td><b>${d.stuName}</b></td>
+                <td>${d.type}</td><td>${d.seatNum || '-'}</td>
+                <td>${d.mon||''}</td><td>${d.tue||''}</td><td>${d.wed||''}</td><td>${d.thu||''}</td><td>${d.fri||''}</td>
+            `;
+            tbody.appendChild(tr);
         });
     }
 
-    async function loadApplyPeriod() {
-        const doc = await db.collection("settings").doc("applyPeriod").get();
-        if(doc.exists) {
-            document.getElementById('apply-start').value = doc.data().start;
-            document.getElementById('apply-end').value = doc.data().end;
-        }
+    // 🌟 수정 폼에 데이터 채우기 함수
+    function fillEditForm(docId) {
+        const d = applicationData[docId];
+        if(!d) return;
+
+        document.getElementById('edit-doc-id').value = docId;
+        document.getElementById('m-month').value = d.targetMonth;
+        document.getElementById('m-id').value = d.stuId;
+        document.getElementById('m-name').value = d.stuName;
+        document.getElementById('m-type').value = d.type;
+        document.getElementById('m-seatNum').value = d.seatNum || "";
+        document.getElementById('m-mon').value = d.mon || "";
+        document.getElementById('m-tue').value = d.tue || "";
+        document.getElementById('m-wed').value = d.wed || "";
+        document.getElementById('m-thu').value = d.thu || "";
+        document.getElementById('m-fri').value = d.fri || "";
+
+        switchTab('tab-manual', document.querySelectorAll('.tab-btn')[2]);
+        alert(`${d.stuName} 학생의 정보를 불러왔습니다.`);
     }
 
-    async function saveApplyPeriod() {
-        const start = document.getElementById('apply-start').value;
-        const end = document.getElementById('apply-end').value;
-        await db.collection("settings").doc("applyPeriod").set({ start, end, lastUpdated: new Date() });
-        alert("기간 저장 완료!");
-    }
-
+    // 🌟 수동 저장 로직
     async function saveManualEntry() {
-        const id = document.getElementById('edit-doc-id').value;
-        const data = { stuId: document.getElementById('m-id').value, stuName: document.getElementById('m-name').value };
-        if(id) await db.collection("applications").doc(id).update(data);
-        alert("수정 완료");
+        const docId = document.getElementById('edit-doc-id').value;
+        const data = {
+            targetMonth: document.getElementById('m-month').value,
+            stuId: document.getElementById('m-id').value,
+            stuName: document.getElementById('m-name').value,
+            type: document.getElementById('m-type').value,
+            seatNum: document.getElementById('m-seatNum').value,
+            mon: document.getElementById('m-mon').value,
+            tue: document.getElementById('m-tue').value,
+            wed: document.getElementById('m-wed').value,
+            thu: document.getElementById('m-thu').value,
+            fri: document.getElementById('m-fri').value,
+            lastUpdateTime: new Date()
+        };
+
+        try {
+            if(docId) {
+                await db.collection("applications").doc(docId).update(data);
+                alert("성공적으로 수정되었습니다.");
+            } else {
+                await db.collection("applications").add(data);
+                alert("신규 학생 정보가 추가되었습니다.");
+            }
+            resetManualForm();
+            switchTab('tab-status', document.querySelectorAll('.tab-btn')[1]);
+        } catch(e) { alert("저장 오류: " + e.message); }
     }
 
-    // 실시간 감시
+    function resetManualForm() {
+        document.getElementById('edit-doc-id').value = "";
+        document.querySelectorAll('#tab-manual input').forEach(i => i.value = "");
+    }
+
     db.collection("applications").onSnapshot(snap => {
         applicationData = {}; snap.forEach(doc => applicationData[doc.id] = doc.data());
         renderDailySupervisorMap();
+        if(document.getElementById('tab-status').classList.contains('active')) renderStatusTable();
     });
 
     loadSeatLayout(); loadDailyDataAndRender();
