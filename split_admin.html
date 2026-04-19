@@ -31,29 +31,41 @@
         table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; background: white; }
         th, td { border: 1px solid #dee2e6; padding: 12px 8px; text-align: center; }
         th { background: #f8f9fa; }
-        
-        /* 통계 대시보드 스타일 */
-        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 10px; }
-        .stat-card { background: #f8f9fa; padding: 20px; border-radius: 12px; border: 1px solid #ddd; text-align: center; }
-        .stat-card h4 { margin: 0 0 10px 0; color: #555; }
-        .stat-card .value { font-size: 24px; font-weight: bold; color: var(--primary); }
+        tbody tr:hover { background-color: #f1f8ff; }
 
+        /* 좌석 디자인 */
         .seat-grid { display: grid; gap: 4px; justify-content: start; }
         .seat-cell { width: 55px; height: 55px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; border-radius: 5px; border: 1px solid #ccc; transition: 0.2s; text-align: center; line-height: 1.2; }
         .seat-0 { background: #fff; border: 1px solid #eee; }
+        .seat-1 { background: #fff; }
+        .seat-2 { background: #d1e7dd; color: #0f5132; }
         .seat-3 { background: #e2e3e5; color: #41464b; }
         .seat-4 { background: #cff4fc; color: #055160; }
         .seat-5 { background: #f8d7da; color: #842029; }
         .status-absent { border: 2px dashed #adb5bd !important; color: #6c757d; cursor: pointer; }
         .status-present-fixed { background: #fff3cd !important; border: 2px solid #ffc107 !important; color: #856404 !important; cursor: pointer; }
 
+        /* 수정 폼 */
         .form-card { background:#f8f9fa; padding:25px; border-radius:10px; border:1px solid #ddd; }
         .input-group { margin-bottom: 15px; }
         .input-group label { display: block; margin-bottom: 5px; font-weight: bold; }
         .input-group input, .input-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
 
+        /* 통계 & 모달 */
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #eee; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .stat-card .value { font-size: 24px; font-weight: bold; color: var(--primary); margin-top: 10px; }
+
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 25px; border-radius: 15px; width: 90%; max-width: 400px; }
+        .modal-content { background: white; padding: 25px; border-radius: 15px; width: 90%; max-width: 550px; overflow-y: auto; max-height: 90vh; }
+
+        /* 상담 달력 */
+        .counsel-calendar { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .counsel-calendar th, .counsel-calendar td { border: 1px solid #eee; padding: 8px; text-align: center; font-size: 12px; width: 14.2%; }
+        .counsel-calendar td { height: 50px; vertical-align: top; }
+        .stat-apply { border: 2px solid var(--primary) !important; border-radius: 4px; }
+        .stat-present { background: #e7f1ff; color: var(--primary); font-weight: bold; }
+        .stat-absent { background: #fff5f5; color: var(--danger); }
     </style>
 </head>
 <body>
@@ -68,7 +80,8 @@
         <button class="tab-btn active" onclick="switchTab('tab-daily', this)">🧑‍🏫 오늘 감독용 좌석표</button>
         <button class="tab-btn" onclick="switchTab('tab-status', this)">📊 월별 신청 현황</button>
         <button class="tab-btn" onclick="switchTab('tab-manual', this)">📝 개별 수정/추가</button>
-        <button class="tab-btn" onclick="switchTab('tab-stats', this)">📈 통계 분석</button> </div>
+        <button class="tab-btn" onclick="switchTab('tab-stats', this)">📈 통계 분석</button>
+    </div>
 
     <div id="tab-daily" class="tab-content active">
         <div style="text-align:center; background:#e3f2fd; padding:15px; border-radius:10px; margin-bottom:15px;">
@@ -90,6 +103,7 @@
                 <option value="3월">3월</option><option value="4월" selected>4월</option>
                 <option value="5월">5월</option><option value="6월">6월</option>
             </select>
+            <span style="font-size: 12px; color: #666;">* 이름 클릭: 상담 리포트 / 학번 클릭: 데이터 수정</span>
         </div>
         <div style="overflow-x:auto;">
             <table>
@@ -120,44 +134,48 @@
             </div>
             <div style="margin-top: 20px; display: flex; gap: 10px;">
                 <button class="btn btn-primary" style="flex: 2;" onclick="saveManualEntry()">💾 변경사항 저장</button>
-                <button class="btn btn-gray" style="flex: 1;" onclick="resetManualForm()">🔄 리셋</button>
+                <button class="btn btn-gray" style="flex: 1;" onclick="resetManualForm()">🔄 입력창 비우기</button>
             </div>
         </div>
     </div>
 
     <div id="tab-stats" class="tab-content">
         <div class="form-card">
-            <h3>📊 자율학습 신청 통계 분석</h3>
+            <h3>📊 신청 및 참여 통계 요약</h3>
             <div class="stat-grid">
-                <div class="stat-card"><h4>총 신청 인원</h4><div id="stat-total" class="value">0명</div></div>
-                <div class="stat-card"><h4>오늘 최대 인원</h4><div id="stat-today-max" class="value">0명</div></div>
-                <div class="stat-card"><h4>가장 붐비는 요일</h4><div id="stat-busy-day" class="value">-</div></div>
-                <div class="stat-card"><h4>최다 신청 타임</h4><div id="stat-busy-time" class="value">-</div></div>
+                <div class="stat-card"><h4>총 신청 학생</h4><div id="stat-total" class="value">0명</div></div>
+                <div class="stat-card"><h4>주간 평균 신청</h4><div id="stat-avg-day" class="value">0명</div></div>
+                <div class="stat-card"><h4>최다 신청 요일</h4><div id="stat-peak-day" class="value">-</div></div>
+                <div class="stat-card"><h4>최다 신청 타임</h4><div id="stat-peak-time" class="value">-</div></div>
             </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px;">
-                <div>
-                    <h4>📅 요일별 신청 학생수</h4>
-                    <table style="margin-top:0;">
-                        <thead><tr><th>요일</th><th>신청 인원</th></tr></thead>
-                        <tbody id="stat-day-table"></tbody>
-                    </table>
-                </div>
-                <div>
-                    <h4>🏫 학년별 참여 비중</h4>
-                    <table style="margin-top:0;">
-                        <thead><tr><th>학년</th><th>인원</th></tr></thead>
-                        <tbody id="stat-grade-table"></tbody>
-                    </table>
-                </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                <div id="stat-grade-chart" class="stat-card" style="text-align:left;"><h4>🏫 학년별 참여</h4><div id="grade-list"></div></div>
+                <div id="stat-day-chart" class="stat-card" style="text-align:left;"><h4>📅 요일별 신청 현황</h4><div id="day-list"></div></div>
             </div>
         </div>
     </div>
 </div>
 
-<div id="student-modal" class="modal-overlay">
+<div id="counsel-modal" class="modal-overlay">
     <div class="modal-content">
-        <h3>🧑‍🎓 학생 출결 상세</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary); padding-bottom:10px;">
+            <h3 id="counsel-title" style="margin:0;">🧑‍🎓 상담 리포트</h3>
+            <button class="btn btn-gray" style="padding:5px 10px;" onclick="document.getElementById('counsel-modal').style.display='none'">닫기</button>
+        </div>
+        <div id="counsel-calendar-area"></div>
+        <div style="background:#f8f9fa; padding:15px; border-radius:10px; margin-top:15px; display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:14px;">
+            <div>총 신청: <b id="c-total-apply" style="color:var(--primary);">0</b>회</div>
+            <div>실제 출석: <b id="c-total-present" style="color:var(--success);">0</b>회</div>
+            <div>참여율: <b id="c-rate" style="color:var(--danger);">0</b>%</div>
+            <div>누적 시간: <b id="c-total-time">0</b>분</div>
+        </div>
+        <div id="c-comment" style="margin-top:15px; font-size:13px; color:#555; font-style:italic;"></div>
+    </div>
+</div>
+
+<div id="student-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width:400px;">
+        <h3>🧑‍🎓 출결 상세 타임라인</h3>
         <div id="modal-info" style="margin-bottom:15px; line-height:1.6; white-space: pre-wrap;"></div>
         <button class="btn btn-gray" style="width:100%" onclick="document.getElementById('student-modal').style.display='none'">닫기</button>
     </div>
@@ -186,47 +204,68 @@
         document.getElementById(tabId).classList.add('active'); 
         if(btn) btn.classList.add('active');
         if(tabId === 'tab-status') renderStatusTable();
-        if(tabId === 'tab-stats') calculateStats(); // 통계 계산 실행
+        if(tabId === 'tab-stats') renderGeneralStats();
     }
 
-    // --- 통계 계산 로직 ---
-    function calculateStats() {
+    // --- 통계 로직 ---
+    function renderGeneralStats() {
         const apps = Object.values(applicationData);
-        document.getElementById('stat-total').innerText = `${apps.length}명`;
-
-        let dayCounts = { '월': 0, '화': 0, '수': 0, '목': 0, '금': 0 };
-        let gradeCounts = { '1학년': 0, '2학년': 0, '3학년': 0 };
-        let timeCounts = { '1타임': 0, '2타임': 0, '3타임': 0 };
-
-        apps.forEach(d => {
-            if(d.mon) dayCounts['월']++; if(d.tue) dayCounts['화']++; if(d.wed) dayCounts['수']++; if(d.thu) dayCounts['목']++; if(d.fri) dayCounts['금']++;
-            
-            const grade = d.stuId ? d.stuId.substring(0, 1) : "";
-            if(grade === "1") gradeCounts['1학년']++; else if(grade === "2") gradeCounts['2학년']++; else if(grade === "3") gradeCounts['3학년']++;
-
-            [d.mon, d.tue, d.wed, d.thu, d.fri].forEach(t => {
-                if(t && t.includes('1')) timeCounts['1타임']++;
-                if(t && t.includes('2')) timeCounts['2타임']++;
-                if(t && t.includes('3')) timeCounts['3타임']++;
-            });
+        document.getElementById('stat-total').innerText = apps.length + "명";
+        let dayStats = { '월':0, '화':0, '수':0, '목':0, '금':0 };
+        let gradeStats = { '1학년':0, '2학년':0, '3학년':0 };
+        
+        apps.forEach(a => {
+            if(a.mon) dayStats['월']++; if(a.tue) dayStats['화']++; if(a.wed) dayStats['수']++; if(a.thu) dayStats['목']++; if(a.fri) dayStats['금']++;
+            const g = String(a.stuId)[0];
+            if(g==='1') gradeStats['1학년']++; else if(g==='2') gradeStats['2학년']++; else if(g==='3') gradeStats['3학년']++;
         });
 
-        // 요일 표 업데이트
-        const dayTable = document.getElementById('stat-day-table');
-        dayTable.innerHTML = Object.entries(dayCounts).map(([day, count]) => `<tr><td>${day}</td><td>${count}명</td></tr>`).join('');
-
-        // 학년 표 업데이트
-        const gradeTable = document.getElementById('stat-grade-table');
-        gradeTable.innerHTML = Object.entries(gradeCounts).map(([grade, count]) => `<tr><td>${grade}</td><td>${count}명</td></tr>`).join('');
-
-        // 요약 정보
-        const maxDay = Object.keys(dayCounts).reduce((a, b) => dayCounts[a] > dayCounts[b] ? a : b);
-        const maxTime = Object.keys(timeCounts).reduce((a, b) => timeCounts[a] > timeCounts[b] ? a : b);
-        document.getElementById('stat-busy-day').innerText = `${maxDay}요일`;
-        document.getElementById('stat-busy-time').innerText = maxTime;
+        document.getElementById('day-list').innerHTML = Object.entries(dayStats).map(([d,v])=>`<p>${d}: <b>${v}명</b></p>`).join('');
+        document.getElementById('grade-list').innerHTML = Object.entries(gradeStats).map(([d,v])=>`<p>${d}: <b>${v}명</b></p>`).join('');
     }
 
-    // --- 기존 로직들 (유지) ---
+    // --- 상담용 달력 리포트 로직 ---
+    async function openCounsel(docId) {
+        const student = applicationData[docId];
+        if(!student) return;
+        document.getElementById('counsel-title').innerText = `${student.stuId} ${student.stuName} 상담 리포트`;
+        document.getElementById('counsel-modal').style.display = 'flex';
+
+        const monthMap = { "3월": 2, "4월": 3, "5월": 4, "6월": 5, "7월": 6 };
+        const mIdx = monthMap[student.targetMonth] || 3;
+        const year = 2026;
+
+        const logsSnap = await db.collection("attendance_logs").where("stuId", "==", String(student.stuId)).get();
+        let logs = {};
+        logsSnap.forEach(doc => { if(doc.data().date.includes(`-0${mIdx+1}-`)) logs[doc.data().date] = doc.data(); });
+
+        const firstDay = new Date(year, mIdx, 1).getDay();
+        const lastDate = new Date(year, mIdx+1, 0).getDate();
+        let html = `<table class="counsel-calendar"><thead><tr><th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th></tr></thead><tbody><tr>`;
+        
+        let tApply = 0, tPresent = 0;
+        for(let i=0; i<firstDay; i++) html += `<td></td>`;
+        for(let d=1; d<=lastDate; d++) {
+            const dStr = `${year}-${String(mIdx+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const dayKey = ['sun','mon','tue','wed','thu','fri','sat'][new Date(year, mIdx, d).getDay()];
+            const isApplied = student[dayKey] && student[dayKey].length > 0;
+            const isPresent = logs[dStr] !== undefined;
+
+            let cls = isApplied ? "stat-apply " : "";
+            if(isApplied) { tApply++; if(isPresent) { cls += "stat-present"; tPresent++; } else { cls += "stat-absent"; } }
+            html += `<td class="${cls}"><b>${d}</b><br>${isPresent?'✅':''}</td>`;
+            if((firstDay+d)%7===0) html += `</tr><tr>`;
+        }
+        document.getElementById('counsel-calendar-area').innerHTML = html + `</tr></tbody></table>`;
+        const rate = tApply>0 ? Math.round((tPresent/tApply)*100) : 0;
+        document.getElementById('c-total-apply').innerText = tApply;
+        document.getElementById('c-total-present').innerText = tPresent;
+        document.getElementById('c-rate').innerText = rate;
+        document.getElementById('c-total-time').innerText = tPresent * 130; // 1T 기준 가상 계산
+        document.getElementById('c-comment').innerText = rate >= 80 ? "성실하게 참여하고 있습니다." : "참여율을 높이기 위한 상담이 필요합니다.";
+    }
+
+    // --- 기존 기능 유지 ---
     async function loadSeatLayout() {
         const doc = await db.collection("settings").doc("seatLayout").get();
         if (doc.exists) {
@@ -263,7 +302,7 @@
             if(d.type === "고정석" && d[targetDay] && d[targetDay].includes(timeStr) && cellEls[d.seatNum]) {
                 const target = cellEls[d.seatNum]; const log = attendanceLogsData[d.stuId];
                 target.innerHTML = `${d.seatNum}<br><span style="font-size:12px;">${d.stuName}</span>`;
-                if(log) { target.classList.add('status-present-fixed'); } else { target.classList.add('status-absent'); }
+                if(log) target.classList.add('status-present-fixed'); else target.classList.add('status-absent');
             }
         });
     }
@@ -273,8 +312,14 @@
         const month = document.getElementById('filter-month').value;
         Object.keys(applicationData).map(id => ({ docId: id, ...applicationData[id] })).sort((a,b) => a.stuId - b.stuId).forEach(d => {
             if(month !== "all" && d.targetMonth !== month) return;
-            const tr = document.createElement('tr'); tr.onclick = () => fillEditForm(d.docId);
-            tr.innerHTML = `<td>${d.targetMonth}</td><td>${d.stuId}</td><td><b>${d.stuName}</b></td><td>${d.type}</td><td>${d.seatNum || '-'}</td><td>${d.mon||''}</td><td>${d.tue||''}</td><td>${d.wed||''}</td><td>${d.thu||''}</td><td>${d.fri||''}</td>`;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${d.targetMonth}</td>
+                <td onclick="fillEditForm('${d.docId}')" style="cursor:pointer; color:var(--primary); text-decoration:underline;">${d.stuId}</td>
+                <td onclick="openCounsel('${d.docId}')" style="cursor:pointer;"><b>${d.stuName}</b></td>
+                <td>${d.type}</td><td>${d.seatNum || '-'}</td>
+                <td>${d.mon||''}</td><td>${d.tue||''}</td><td>${d.wed||''}</td><td>${d.thu||''}</td><td>${d.fri||''}</td>
+            `;
             tbody.appendChild(tr);
         });
     }
@@ -301,7 +346,6 @@
         applicationData = {}; snap.forEach(doc => applicationData[doc.id] = doc.data());
         renderDailySupervisorMap();
         if(document.getElementById('tab-status').classList.contains('active')) renderStatusTable();
-        if(document.getElementById('tab-stats').classList.contains('active')) calculateStats();
     });
 
     loadSeatLayout(); loadDailyDataAndRender();
