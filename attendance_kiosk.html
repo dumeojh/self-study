@@ -134,12 +134,12 @@ async function processCheckInOut() {
         const logData = logDoc.exists ? logDoc.data() : null;
         const lastStatus = logData ? logData.status : "미입실";
 
-        // ✅ [수정 포인트 1] 중복 스캔 방지 (60초 제한)
+        // ✅ [수정 포인트 1] 중복 스캔 방지 (30초 제한)
         if (logData && logData.lastUpdateTime) {
             const lastTime = logData.lastUpdateTime.toDate(); 
             const diffSec = Math.floor((now - lastTime) / 1000); 
 
-            if (diffSec < 60) {
+            if (diffSec < 30) {
                 showReceipt(studentName, "방금 처리됨", `${diffSec}초 전에 이미 처리되었습니다.`, "잠시 후 다시 스캔해 주세요. ⏳", "#6c757d");
                 return; 
             }
