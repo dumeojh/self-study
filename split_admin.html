@@ -11,37 +11,29 @@
         :root { --primary: #007bff; --success: #28a745; --warning: #ffc107; --danger: #dc3545; --gray: #6c757d; }
         body { font-family: 'Malgun Gothic', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; color: #333; }
         .container { max-width: 1250px; margin: 0 auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        
         h2 { text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin: 0; }
         .header-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-
         .tab-menu { display: flex; gap: 5px; margin-bottom: 25px; background: #eee; padding: 5px; border-radius: 10px; flex-wrap: wrap; }
         .tab-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; background: transparent; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.3s; min-width: 120px; }
         .tab-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        
         .tab-content { display: none; animation: fadeIn 0.3s ease; }
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
         .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; }
         .btn-primary { background: var(--primary); }
         .btn-gray { background: var(--gray); }
-
         table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; background: white; }
         th, td { border: 1px solid #dee2e6; padding: 12px 8px; text-align: center; }
         th { background: #f8f9fa; }
         tbody tr:hover { background-color: #f1f8ff; }
-
-        .seat-grid { display: grid; gap: 4px; justify-content: start; }
-        .seat-cell { width: 55px; height: 55px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; border-radius: 5px; border: 1px solid #ccc; transition: 0.2s; text-align: center; line-height: 1.2; }
-        .seat-0 { background: #fff; border: 1px solid #eee; }
+        .seat-grid { display: grid; gap: 4px; justify-content: start; overflow-x: auto; padding: 10px; background: #eee; border-radius: 10px; }
+        .seat-cell { width: 55px; height: 55px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; border-radius: 5px; border: 1px solid #ccc; transition: 0.2s; text-align: center; line-height: 1.2; background: white; }
+        .seat-0 { background: transparent; border: none; }
         .seat-3 { background: #e2e3e5; color: #41464b; }
         .seat-4 { background: #cff4fc; color: #055160; }
         .seat-5 { background: #f8d7da; color: #842029; }
         .status-absent { border: 2px dashed #adb5bd !important; color: #6c757d; }
         .status-present-fixed { background: #fff3cd !important; border: 2px solid #ffc107 !important; color: #856404 !important; }
-
-        /* 상담 리포트 모달 & 달력 */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
         .modal-content { background: white; padding: 25px; border-radius: 15px; width: 95%; max-width: 650px; overflow-y: auto; max-height: 90vh; }
         .counsel-calendar { width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: fixed; }
@@ -53,15 +45,14 @@
         .slot-applied { border: 1px solid var(--primary); color: var(--primary); }
         .slot-present { background: var(--primary); color: white !important; }
         .slot-absent { background: #fff0f0; color: var(--danger) !important; border-color: var(--danger); }
-
-        /* 입력 폼 스타일 */
         .form-card { background:#f8f9fa; padding:25px; border-radius:10px; border:1px solid #ddd; }
         .input-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
-        .input-group-item { flex: 1; min-width: 100px; }
+        .input-group-item { flex: 1; min-width: 120px; }
         .input-group-item label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 13px; color: #555; }
         .input-group-item input, .input-group-item select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; height: 42px; }
         .time-input-row { display: flex; gap: 8px; flex-wrap: wrap; }
         .time-item { flex: 1; min-width: 80px; text-align: center; background: white; padding: 10px; border-radius: 8px; border: 1px solid #ddd; }
+        .time-item label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -69,7 +60,7 @@
 <div class="container">
     <div class="header-area">
         <h2 style="flex-grow: 1;">안성여고 야간 자율학습 통합 관리</h2>
-        <button class="btn" style="background:#6c757d;" onclick="location.href='settings.html'">⚙️ 환경설정</button>
+        <button class="btn btn-gray" onclick="location.href='settings.html'">⚙️ 환경설정</button>
     </div>
     
     <div class="tab-menu">
@@ -90,7 +81,7 @@
     </div>
 
     <div id="tab-status" class="tab-content">
-        <select id="filter-month" onchange="renderStatusTable()" style="padding:8px; margin-bottom:10px;">
+        <select id="filter-month" onchange="renderStatusTable()" style="padding:8px; margin-bottom:10px; border-radius:5px; border:1px solid #ddd;">
             <option value="all">전체보기</option>
             <option value="3월">3월</option><option value="4월" selected>4월</option><option value="5월">5월</option>
         </select>
@@ -107,10 +98,18 @@
             <h3>✍️ 학생 데이터 개별 수정 / 추가</h3>
             <input type="hidden" id="edit-doc-id">
             <div class="input-row">
-                <div class="input-group-item"><label>적용 월</label><select id="m-month"><option value="3월">3월</option><option value="4월">4월</option><option value="5월">5월</option></select></div>
+                <div class="input-group-item">
+                    <label>적용 월</label>
+                    <select id="m-month">
+                        <option value="3월">3월</option><option value="4월">4월</option><option value="5월">5월</option>
+                    </select>
+                </div>
                 <div class="input-group-item"><label>학번</label><input type="number" id="m-id"></div>
                 <div class="input-group-item"><label>이름</label><input type="text" id="m-name"></div>
-                <div class="input-group-item"><label>좌석 종류</label><select id="m-type"><option value="고정석">고정석</option><option value="자율석">자율석</option></select></div>
+                <div class="input-group-item">
+                    <label>좌석 종류</label>
+                    <select id="m-type"><option value="고정석">고정석</option><option value="자율석">자율석</option></select>
+                </div>
                 <div class="input-group-item"><label>좌석 번호</label><input type="text" id="m-seatNum"></div>
             </div>
             <div class="time-input-row">
@@ -122,7 +121,14 @@
                 <div class="time-item"><label>토</label><input type="text" id="m-sat"></div>
                 <div class="time-item"><label>일</label><input type="text" id="m-sun"></div>
             </div>
-            <button class="btn btn-primary" style="width:100%; margin-top:20px;" onclick="saveManualEntry()">💾 저장</button>
+            <button class="btn btn-primary" style="width:100%; margin-top:20px; height:50px; font-size:16px;" onclick="saveManualEntry()">💾 데이터 저장하기</button>
+        </div>
+    </div>
+
+    <div id="tab-stats" class="tab-content">
+        <div class="form-card">
+            <h3>📊 전체 신청 통계 현황</h3>
+            <div id="stats-container">데이터를 불러오는 중입니다...</div>
         </div>
     </div>
 </div>
@@ -156,7 +162,15 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    let applicationData = {}; let attendanceLogsData = {}; let seatMapData = []; let rows = 20, cols = 30;
+    let applicationData = {}; 
+    let attendanceLogsData = {}; 
+    let seatMapData = []; 
+    let rows = 20, cols = 30;
+
+    // 초기화: 오늘 날짜 설정
+    const today = new Date();
+    const todayStr = today.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
+    document.getElementById('daily-date').value = todayStr;
 
     function switchTab(tabId, btn) {
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -164,9 +178,62 @@
         document.getElementById(tabId).classList.add('active'); 
         if(btn) btn.classList.add('active');
         if(tabId === 'tab-status') renderStatusTable();
+        if(tabId === 'tab-stats') renderSimpleStats();
     }
 
-    // --- [🌟 상담 리포트 로직 수정 및 추가] ---
+    // --- [지도 렌더링] ---
+    async function loadSeatLayout() {
+        const doc = await db.collection("settings").doc("seatLayout").get();
+        if (doc.exists) {
+            rows = doc.data().rows; cols = doc.data().cols;
+            seatMapData = JSON.parse(doc.data().grid);
+            renderDailySupervisorMap();
+        }
+    }
+
+    function loadDailyDataAndRender() {
+        const dateStr = document.getElementById('daily-date').value;
+        db.collection("attendance_logs").where("date", "==", dateStr).onSnapshot(snap => {
+            attendanceLogsData = {};
+            snap.forEach(doc => attendanceLogsData[String(doc.data().stuId)] = doc.data());
+            renderDailySupervisorMap();
+        });
+    }
+
+    function renderDailySupervisorMap() {
+        if(seatMapData.length === 0) return;
+        const container = document.getElementById('supervisor-grid');
+        container.innerHTML = ''; 
+        container.style.gridTemplateColumns = `repeat(${cols}, 55px)`;
+        
+        const timeStr = document.getElementById('daily-time').value;
+        const targetDay = ['sun','mon','tue','wed','thu','fri','sat'][new Date(document.getElementById('daily-date').value).getDay()];
+        
+        const cellEls = {};
+        seatMapData.forEach((rowCells, r) => {
+            rowCells.forEach((d, c) => {
+                const cell = typeof d === 'number' ? {type: d, label: ""} : d;
+                const div = document.createElement('div');
+                div.className = `seat-cell seat-${cell.type}`;
+                div.innerText = cell.label || "";
+                if ((cell.type === 1 || cell.type === 2) && cell.label) cellEls[cell.label] = div;
+                container.appendChild(div);
+            });
+        });
+
+        // 신청 데이터 매칭
+        Object.values(applicationData).forEach(d => {
+            if(d.type === "고정석" && d[targetDay] && d[targetDay].includes(timeStr) && cellEls[d.seatNum]) {
+                const target = cellEls[d.seatNum];
+                const log = attendanceLogsData[String(d.stuId)];
+                target.innerHTML = `${d.seatNum}<br><span style="font-size:10px;">${d.stuName}</span>`;
+                if(log) target.classList.add('status-present-fixed');
+                else target.classList.add('status-absent');
+            }
+        });
+    }
+
+    // --- [상담 리포트] ---
     async function openCounsel(docId) {
         const student = applicationData[docId]; if(!student) return;
         document.getElementById('counsel-modal').style.display = 'flex';
@@ -176,7 +243,6 @@
         const mIdx = monthMap[student.targetMonth] || 3;
         const year = 2026;
 
-        // 해당 학생의 모든 출석 로그 가져오기
         const logsSnap = await db.collection("attendance_logs").where("stuId", "==", String(student.stuId)).get();
         let logs = {};
         logsSnap.forEach(doc => { logs[doc.data().date] = doc.data(); });
@@ -199,8 +265,7 @@
                 const isPresent = history.includes(`${t}타임 입실`);
                 let cls = "time-slot";
                 if(isApplied) { 
-                    tApply++; 
-                    cls += " slot-applied"; 
+                    tApply++; cls += " slot-applied"; 
                     if(isPresent) { cls += " slot-present"; tPresent++; } else { cls += " slot-absent"; } 
                 }
                 slotHtml += `<div class="${cls}">${t}T</div>`;
@@ -215,20 +280,11 @@
         document.getElementById('c-total-apply').innerText = tApply;
         document.getElementById('c-total-present').innerText = tPresent;
         document.getElementById('c-rate').innerText = rate + "%";
-        document.getElementById('c-total-min').innerText = tPresent * 80; // 1타임 80분 기준
+        document.getElementById('c-total-min').innerText = tPresent * 80;
         document.getElementById('c-comment').innerText = rate >= 80 ? "✨ 계획한 학습 시간을 아주 잘 준수하고 있습니다." : "⚠️ 신청 대비 실제 참여가 다소 부족합니다. 사유를 확인해 보세요.";
     }
 
-    // --- [기존 기능 로직들] ---
-    async function loadSeatLayout() {
-        const doc = await db.collection("settings").doc("seatLayout").get();
-        if (doc.exists) {
-            rows = doc.data().rows; cols = doc.data().cols;
-            seatMapData = JSON.parse(doc.data().grid);
-            renderDailySupervisorMap();
-        }
-    }
-
+    // --- [명단 및 수정] ---
     function renderStatusTable() {
         const tbody = document.getElementById('status-body'); tbody.innerHTML = "";
         const month = document.getElementById('filter-month').value;
@@ -242,25 +298,62 @@
 
     function fillEditForm(id) {
         const d = applicationData[id]; document.getElementById('edit-doc-id').value = id;
-        document.getElementById('m-month').value = d.targetMonth; document.getElementById('m-id').value = d.stuId; document.getElementById('m-name').value = d.stuName;
-        document.getElementById('m-type').value = d.type; document.getElementById('m-seatNum').value = d.seatNum||"";
+        document.getElementById('m-month').value = d.targetMonth; 
+        document.getElementById('m-id').value = d.stuId; 
+        document.getElementById('m-name').value = d.stuName;
+        document.getElementById('m-type').value = d.type || "고정석"; 
+        document.getElementById('m-seatNum').value = d.seatNum||"";
         ['mon','tue','wed','thu','fri','sat','sun'].forEach(k => document.getElementById(`m-${k}`).value = d[k]||"");
         switchTab('tab-manual', document.querySelectorAll('.tab-btn')[2]);
     }
 
     async function saveManualEntry() {
         const id = document.getElementById('edit-doc-id').value;
-        const data = { targetMonth: document.getElementById('m-month').value, stuId: document.getElementById('m-id').value, stuName: document.getElementById('m-name').value, type: document.getElementById('m-type').value, seatNum: document.getElementById('m-seatNum').value, mon: document.getElementById('m-mon').value, tue: document.getElementById('m-tue').value, wed: document.getElementById('m-wed').value, thu: document.getElementById('m-thu').value, fri: document.getElementById('m-fri').value, sat: document.getElementById('m-sat').value, sun: document.getElementById('m-sun').value };
-        if(id) await db.collection("applications").doc(id).update(data); else await db.collection("applications").add(data);
-        alert("저장완료"); renderStatusTable();
+        const data = { 
+            targetMonth: document.getElementById('m-month').value, 
+            stuId: String(document.getElementById('m-id').value), 
+            stuName: document.getElementById('m-name').value, 
+            type: document.getElementById('m-type').value, 
+            seatNum: document.getElementById('m-seatNum').value, 
+            mon: document.getElementById('m-mon').value, 
+            tue: document.getElementById('m-tue').value, 
+            wed: document.getElementById('m-wed').value, 
+            thu: document.getElementById('m-thu').value, 
+            fri: document.getElementById('m-fri').value, 
+            sat: document.getElementById('m-sat').value, 
+            sun: document.getElementById('m-sun').value,
+            lastUpdateTime: new Date()
+        };
+        try {
+            if(id) await db.collection("applications").doc(id).update(data); 
+            else await db.collection("applications").add(data);
+            alert("성공적으로 저장되었습니다.");
+            resetManualForm();
+            switchTab('tab-status', document.querySelectorAll('.tab-btn')[1]);
+        } catch(e) { alert("저장 중 오류 발생: " + e.message); }
     }
 
+    function resetManualForm() {
+        document.getElementById('edit-doc-id').value = "";
+        document.querySelectorAll('#tab-manual input').forEach(i => i.value = "");
+    }
+
+    function renderSimpleStats() {
+        const apps = Object.values(applicationData);
+        let html = `<p>총 신청 인원: <b>${apps.length}명</b></p>`;
+        document.getElementById('stats-container').innerHTML = html;
+    }
+
+    // 실시간 데이터 감시
     db.collection("applications").onSnapshot(snap => {
-        applicationData = {}; snap.forEach(doc => applicationData[doc.id] = doc.data());
+        applicationData = {}; 
+        snap.forEach(doc => applicationData[doc.id] = doc.data());
         renderStatusTable();
+        renderDailySupervisorMap(); // 데이터 로드 완료 후 지도 갱신
     });
 
     loadSeatLayout();
+    loadDailyDataAndRender();
 </script>
 </body>
 </html>
