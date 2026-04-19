@@ -9,30 +9,34 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <style>
-        :root { --primary: #007bff; --danger: #dc3545; }
+        :root { --primary: #007bff; --danger: #dc3545; --gray: #6c757d; }
         body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f7f9; margin: 0; padding: 0; }
         
-        /* 🔐 보안 레이어 스타일 */
+        /* 🔐 보안 레이어 (인증 화면) */
         #auth-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.85); z-index: 9999; display: flex; justify-content: center; align-items: center;
         }
         .auth-box { 
-            background: white; padding: 40px; border-radius: 15px; text-align: center; 
-            width: 90%; max-width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+            background: white; padding: 40px; border-radius: 20px; text-align: center; 
+            width: 90%; max-width: 380px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); 
         }
+        .auth-box h2 { margin-top: 0; color: #333; }
         .auth-box input { 
-            width: 100%; padding: 12px; font-size: 24px; text-align: center; 
-            border: 2px solid #ddd; border-radius: 8px; margin: 20px 0; box-sizing: border-box;
+            width: 100%; padding: 15px; font-size: 24px; text-align: center; 
+            border: 2px solid #ddd; border-radius: 10px; margin: 20px 0; box-sizing: border-box;
         }
+        .auth-box input:focus { border-color: var(--primary); outline: none; }
 
-        /* 메인 컨텐츠 (인증 전 숨김) */
+        /* 메인 컨텐츠 (인증 전까지 숨김) */
         #main-content { display: none; padding: 20px; max-width: 1100px; margin: 0 auto; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #eee; }
-        .btn { padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        
+        /* 버튼 공통 */
+        .btn { padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 16px; }
         .btn-primary { background: var(--primary); color: white; }
-        .btn-gray { background: #6c757d; color: white; }
-        .btn-danger { background: var(--danger); color: white; }
+        .btn-gray { background: var(--gray); color: white; }
+        .btn-block { width: 100%; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -40,12 +44,15 @@
 <div id="auth-overlay">
     <div class="auth-box">
         <h2>🔒 관리자 인증</h2>
-        <p>환경설정 진입을 위해<br>비밀번호를 입력하세요.</p>
+        <p style="color: #666;">시스템 설정을 위해<br>비밀번호를 입력하세요.</p>
+        
         <input type="password" id="pass-input" placeholder="Password" autofocus>
-        <div style="display: flex; gap: 10px;">
-            <button class="btn btn-primary" style="flex: 2;" onclick="checkPass()">확인</button>
-            <button class="btn btn-gray" style="flex: 1;" onclick="location.href='split_admin.html'">취소</button>
+        
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button class="btn btn-primary btn-block" onclick="checkPass()">인증 확인</button>
+            <button class="btn btn-gray btn-block" onclick="location.href='split_admin.html'">취소 및 관리화면으로 돌아가기</button>
         </div>
+        <p style="font-size: 12px; color: #aaa; margin-top: 20px;">Anseong Girls' High School</p>
     </div>
 </div>
 
@@ -57,10 +64,9 @@
 
     <div class="card">
         <h3>🪑 좌석 도면 설계 및 명단 관리</h3>
-        <p>여기에 기존에 사용하시던 도면 설계 기능과 명단 관리 기능을 넣으시면 됩니다.</p>
-        </div>
-    
+        <p>여기에 기존에 사용하시던 [도면 설계], [기초 명단 업로드] 등의 로직을 넣으시면 됩니다.</p>
     </div>
+</div>
 
 <script>
     // --- 파이어베이스 설정 ---
@@ -79,10 +85,14 @@
     function checkPass() {
         const input = document.getElementById('pass-input').value;
         if(input === "1234") {
-            // 인증 성공: 오버레이 제거 및 컨텐츠 표시
+            // 인증 성공: 오버레이 숨기고 컨텐츠 표시
             document.getElementById('auth-overlay').style.display = 'none';
             document.getElementById('main-content').style.display = 'block';
-            // 데이터 로딩 시작 함수 호출 (필요시)
+            
+            // 엑셀 라이브러리 로드 체크 (보안 차단 대비)
+            if (typeof XLSX === 'undefined') {
+                alert("⚠️ 경고: 브라우저 보안 정책으로 인해 엑셀 라이브러리가 차단되었습니다. 주소창의 자물쇠 아이콘을 눌러 '추적 방지'를 해제해야 엑셀 업로드가 가능합니다.");
+            }
         } else {
             alert("비밀번호가 올바르지 않습니다.");
             document.getElementById('pass-input').value = "";
@@ -90,7 +100,7 @@
         }
     }
 
-    // 엔터키 지원
+    // 엔터키 입력 시 바로 확인
     document.getElementById('pass-input').addEventListener('keypress', (e) => {
         if(e.key === 'Enter') checkPass();
     });
