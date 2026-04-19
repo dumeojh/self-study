@@ -240,22 +240,52 @@ function showSelectionModal(id, name) {
     }
 }
     
-    function showReceipt(name, status, timeInfo, msg, color) {
-        document.getElementById('r-name').innerText = name;
-        document.getElementById('r-status').innerText = status;
-        document.getElementById('r-status').style.color = color;
-        document.getElementById('r-time').innerText = timeInfo;
-        document.getElementById('r-msg').innerText = msg;
-        
-        const overlay = document.getElementById('result-overlay');
-        overlay.style.display = 'flex';
-
-        setTimeout(() => {
-            overlay.style.display = 'none';
-            selectStatus('입실', document.querySelector('.btn-in')); 
-            focusScanner();
-        }, 2500);
+/**
+ * 출결 처리 결과(영수증)를 화면에 표시하고 시각적 피드백을 제공하는 함수
+ */
+function showReceipt(name, status, timeInfo, msg, color) {
+    // 1. 시각적 알림 강화: 상태에 따라 키오스크 배경색 변경
+    const container = document.querySelector('.kiosk-box');
+    const originalBg = "#ffffff"; // 기본 하얀색
+    
+    // '귀가' 포함 시 연한 빨강, 그 외(입실/복귀)는 연한 파랑/녹색 계열로 피드백
+    if (status.includes("귀가")) {
+        container.style.backgroundColor = "#fff5f5"; // 귀가 경고색
+    } else if (status.includes("입실") || status.includes("복귀")) {
+        container.style.backgroundColor = "#f0f9ff"; // 입실 확인색
     }
+
+    // 2. 결과 데이터 표시
+    document.getElementById('r-name').innerText = name;
+    document.getElementById('r-status').innerText = status;
+    document.getElementById('r-status').style.color = color;
+    document.getElementById('r-time').innerText = timeInfo;
+    document.getElementById('r-msg').innerText = msg;
+    
+    // 3. 결과 오버레이 표시
+    const overlay = document.getElementById('result-overlay');
+    overlay.style.display = 'flex';
+
+    // 4. 초기화 로직 (2.5초 후 실행)
+    setTimeout(() => {
+        // 결과창 닫기
+        overlay.style.display = 'none';
+        
+        // 배경색 원래대로 복구
+        container.style.backgroundColor = originalBg;
+        
+        // [중요] 다음 학생을 위해 무조건 '입실' 모드로 강제 초기화
+        // 버튼 선택 시각 효과를 입실 버튼(btn-in)으로 돌려놓습니다.
+        selectStatus('입실', document.querySelector('.btn-in')); 
+        
+        // 입력창 비우고 포커스 (바코드 스캐너 대기)
+        const scannerInput = document.getElementById('scanner-input');
+        scannerInput.value = "";
+        focusScanner();
+        
+        console.log("시스템이 다음 학생을 위해 [입실] 모드로 자동 초기화되었습니다.");
+    }, 2500); // 2.5초간 결과 유지
+}
 </script>
 </body>
 </html>
