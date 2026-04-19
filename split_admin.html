@@ -6,42 +6,62 @@
     <title>안성여고 - 자율학습 통합 관리자</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
     <style>
-        /* 기존 admin.html 스타일 유지 */
         :root { --primary: #007bff; --success: #28a745; --warning: #ffc107; --danger: #dc3545; --gray: #6c757d; }
-        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; }
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; color: #333; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        h2 { text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+        
+        h2 { text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin: 0; }
+
+        /* 상단 헤더 영역 */
+        .header-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+
+        /* 탭 메뉴 */
         .tab-menu { display: flex; gap: 5px; margin-bottom: 25px; background: #eee; padding: 5px; border-radius: 10px; flex-wrap: wrap; }
-        .tab-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; background: transparent; cursor: pointer; font-weight: bold; }
-        .tab-btn.active { background: white; color: var(--primary); }
-        .tab-content { display: none; }
+        .tab-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; background: transparent; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.3s; min-width: 150px; }
+        .tab-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
         .tab-content.active { display: block; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 버튼 스타일 */
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; }
+        .btn-primary { background: var(--primary); }
+        .btn-gray { background: var(--gray); }
+
+        /* 테이블 */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; background: white; }
         th, td { border: 1px solid #dee2e6; padding: 12px 8px; text-align: center; }
         th { background: #f8f9fa; }
+        tbody tr:hover { background-color: #f1f8ff; cursor: pointer; }
+
+        /* 좌석 격자 */
         .seat-grid { display: grid; gap: 4px; justify-content: start; }
         .seat-cell { width: 55px; height: 55px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; border-radius: 5px; border: 1px solid #ccc; }
-        .status-absent { background: #fff; border: 2px dashed #adb5bd; color: #6c757d; cursor: pointer; }
+        .status-absent { background: #fff; border: 2px dashed #adb5bd; color: #6c757d; }
         .status-present-fixed { background: #e7f1ff; border: 3px solid #0d6efd; color: #0d6efd; }
         .status-present-flex { background: #e8f5e9; border: 3px solid #198754; color: #198754; }
-        .view-toggle-btn { padding: 10px 20px; border: none; cursor: pointer; font-weight: bold; }
-        .toggle-active { background: #052c65; color: white; }
-        .toggle-inactive { background: #e9ecef; color: #6c757d; }
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 25px; border-radius: 15px; width: 90%; max-width: 500px; }
-        .info-grid { display: grid; grid-template-columns: 120px 1fr; gap: 10px; margin-bottom: 15px; }
-        .info-label { font-weight: bold; background: #f8f9fa; padding: 8px; border-radius: 5px; text-align: center; }
-        .timeline-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 10px; }
-        .timeline-col { background: #f8f9fa; border: 1px solid #dee2e6; padding: 5px; font-size: 11px; min-height: 80px; }
+
+        /* 모달 (팝업창) 공통 */
+        .modal-overlay { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; 
+        }
+        .modal-content { background: white; padding: 25px; border-radius: 15px; width: 90%; }
+
+        /* 환경설정 인증창 전용 */
+        #auth-modal .modal-content { max-width: 300px; text-align: center; }
+        #admin-password { width: 100%; padding: 12px; font-size: 20px; text-align: center; border: 2px solid #ddd; border-radius: 8px; margin: 15px 0; box-sizing: border-box; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2 style="margin:0; flex-grow: 1;">안성여고 야간 자율학습 통합 관리</h2>
-        <button class="btn" style="background:#6c757d; color:white; padding:10px;" onclick="location.href='settings.html'">⚙️ 환경설정</button>
+    <div class="header-area">
+        <h2 style="flex-grow: 1;">안성여고 야간 자율학습 통합 관리</h2>
+        <button class="btn" style="background:#6c757d;" onclick="openAuthModal()">⚙️ 환경설정</button>
     </div>
     
     <div class="tab-menu">
@@ -52,78 +72,79 @@
     </div>
 
     <div id="tab-daily" class="tab-content active">
-        <div style="text-align:center; background:#e3f2fd; padding:15px; border-radius:10px;">
-            <input type="date" id="daily-date" onchange="loadDailyDataAndRender()">
-            <select id="daily-time" onchange="renderDailySupervisorMap()">
+        <div style="text-align:center; background:#e3f2fd; padding:15px; border-radius:10px; margin-bottom:15px;">
+            날짜: <input type="date" id="daily-date" onchange="loadDailyDataAndRender()">
+            교시: <select id="daily-time" onchange="renderDailySupervisorMap()">
                 <option value="1">1타임</option><option value="2">2타임</option><option value="3">3타임</option>
             </select>
-            <button class="btn" style="background:var(--primary)" onclick="loadDailyDataAndRender()">동기화</button>
-            <button class="btn" style="background:#ff9800" onclick="runManualAttendanceCheck()">일괄 정산</button>
-            <div style="margin-top:15px;">
-                <button id="btn-view-map" class="view-toggle-btn toggle-active" onclick="toggleDailyView('map')">🗺️ 지도</button>
-                <button id="btn-view-list" class="view-toggle-btn toggle-inactive" onclick="toggleDailyView('list')">📋 명단</button>
-            </div>
-            <div id="daily-map-area">
-                <div style="background:white; padding:20px; border-radius:10px; margin-top:15px; overflow-x:auto;">
-                    <div id="supervisor-grid" class="seat-grid"></div>
-                </div>
-            </div>
-            <div id="daily-list-area" style="display:none;">
-                <table style="background:white;"><thead><tr><th>학번</th><th>이름</th><th>좌석</th><th>상태</th><th>1T</th><th>2T</th><th>3T</th></tr></thead><tbody id="daily-list-body"></tbody></table>
-            </div>
+            <button class="btn btn-primary" onclick="loadDailyDataAndRender()">데이터 동기화</button>
+        </div>
+        <div style="overflow-x:auto; background:white; padding:15px; border-radius:10px; border:1px solid #ddd;">
+            <div id="supervisor-grid" class="seat-grid"></div>
         </div>
     </div>
 
     <div id="tab-status" class="tab-content">
-        <select id="filter-month" onchange="renderStatusTable()"><option value="all">전체</option><option value="3월">3월</option><option value="4월" selected>4월</option></select>
-        <table style="background:white;"><thead><tr><th>월</th><th>학번</th><th>이름</th><th>종류</th><th>좌석</th><th>요일별 타임</th></tr></thead><tbody id="status-body"></tbody></table>
+        <div style="margin-bottom:10px;">
+            <select id="filter-month" onchange="renderStatusTable()" style="padding:8px; border-radius:5px;">
+                <option value="all">전체보기</option>
+                <option value="3월">3월</option><option value="4월" selected>4월</option>
+                <option value="5월">5월</option><option value="6월">6월</option>
+            </select>
+        </div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead><tr><th>월</th><th>학번</th><th>이름</th><th>종류</th><th>좌석</th><th>상태(월~금)</th></tr></thead>
+                <tbody id="status-body"></tbody>
+            </table>
+        </div>
     </div>
 
     <div id="tab-period" class="tab-content">
-        <div style="background:#f8f9fa; padding:20px; border-radius:10px;">
-            <h3>신청 기간 설정</h3>
-            시작: <input type="datetime-local" id="apply-start"><br>
-            종료: <input type="datetime-local" id="apply-end"><br><br>
-            <button class="btn btn-primary" onclick="saveApplyPeriod()">저장</button>
+        <div style="background:#f8f9fa; padding:25px; border-radius:10px; border:1px solid #ddd;">
+            <h3>📢 신청 기간 설정</h3>
+            <p>설정된 기간 외에는 학생 신청이 차단됩니다.</p>
+            시작 일시: <input type="datetime-local" id="apply-start" style="padding:8px;"><br><br>
+            종료 일시: <input type="datetime-local" id="apply-end" style="padding:8px;"><br><br>
+            <button class="btn btn-primary" onclick="saveApplyPeriod()">저장 및 서버 배포</button>
         </div>
     </div>
 
     <div id="tab-manual" class="tab-content">
-        <div style="background:#f8f9fa; padding:20px; border-radius:10px;">
+        <div style="background:#f8f9fa; padding:25px; border-radius:10px; border:1px solid #ddd;">
+            <h3>✍️ 학생 데이터 수정</h3>
             <input type="hidden" id="edit-doc-id">
-            학번: <input type="number" id="m-id"> 이름: <input type="text" id="m-name"> <br><br>
-            종류: <select id="m-type"><option value="고정석">고정석</option><option value="자율석">자율석</option></select>
-            좌석: <input type="text" id="m-seatNum">
-            <br><br>
-            요일별 타임 (예: 1,2,3): 
-            월<input type="text" id="m-mon" style="width:30px"> 화<input type="text" id="m-tue" style="width:30px">
-            수<input type="text" id="m-wed" style="width:30px"> 목<input type="text" id="m-thu" style="width:30px">
-            금<input type="text" id="m-fri" style="width:30px">
-            <br><br>
-            <button class="btn btn-primary" onclick="saveManualEntry()">저장 / 수정</button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <div>학번: <input type="number" id="m-id" style="width:100%; padding:8px;"></div>
+                <div>이름: <input type="text" id="m-name" style="width:100%; padding:8px;"></div>
+            </div><br>
+            <button class="btn btn-primary" style="width:100%;" onclick="saveManualEntry()">데이터 반영하기</button>
         </div>
     </div>
 </div>
 
-<div id="student-info-modal" class="modal-overlay">
+<div id="auth-modal" class="modal-overlay">
     <div class="modal-content">
-        <h3>🧑‍🎓 학생 정보</h3>
-        <div class="info-grid">
-            <div class="info-label">학번 / 이름</div><div id="modal-id-name"></div>
-            <div class="info-label">신청 타임</div><div id="modal-times"></div>
+        <h3>🔑 관리자 인증</h3>
+        <p>환경설정 진입을 위해<br>비밀번호를 입력하세요.</p>
+        <input type="password" id="admin-password" placeholder="Password">
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-primary" style="flex:1" onclick="checkAdminPass()">확인</button>
+            <button class="btn btn-gray" style="flex:1" onclick="closeAuthModal()">취소</button>
         </div>
-        <div class="timeline-grid">
-            <div class="timeline-col"><h4>0T</h4><div id="tl-0"></div></div>
-            <div class="timeline-col"><h4>1T</h4><div id="tl-1"></div></div>
-            <div class="timeline-col"><h4>2T</h4><div id="tl-2"></div></div>
-            <div class="timeline-col"><h4>3T</h4><div id="tl-3"></div></div>
-        </div>
-        <br><button class="btn btn-gray" onclick="closeStudentModal()">닫기</button>
+    </div>
+</div>
+
+<div id="student-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width:400px;">
+        <h3>🧑‍🎓 학생 출결 상세</h3>
+        <div id="modal-info" style="margin-bottom:15px; line-height:1.6;"></div>
+        <button class="btn btn-gray" style="width:100%" onclick="document.getElementById('student-modal').style.display='none'">닫기</button>
     </div>
 </div>
 
 <script>
-    // --- 파이어베이스 설정 ---
+    // --- 파이어베이스 설정 (선생님 계정 정보) ---
     const firebaseConfig = {
         apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
         authDomain: "self-study-project-82bdf.firebaseapp.com",
@@ -132,21 +153,46 @@
         messagingSenderId: "482006075036",
         appId: "1:482006075036:web:473445e0f86d48cd22cf59"
     };
-    firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    let applicationData = {}; let dailyReservationsData = {}; let attendanceLogsData = {}; let seatMapData = []; let rows = 20, cols = 30;
+    let applicationData = {}; let dailyReservationsData = {}; let attendanceLogsData = {}; 
+    let seatMapData = []; let rows = 20, cols = 30;
+
+    // 초기 날짜 설정
     const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
     document.getElementById('daily-date').value = todayStr;
 
+    // --- [비밀번호 인증 로직] ---
+    function openAuthModal() {
+        document.getElementById('auth-modal').style.display = 'flex';
+        document.getElementById('admin-password').focus();
+    }
+    function closeAuthModal() {
+        document.getElementById('auth-modal').style.display = 'none';
+        document.getElementById('admin-password').value = '';
+    }
+    function checkAdminPass() {
+        const pass = document.getElementById('admin-password').value;
+        if(pass === "1234") {
+            location.href = 'settings.html';
+        } else {
+            alert("비밀번호가 올바르지 않습니다.");
+            document.getElementById('admin-password').value = '';
+        }
+    }
+    document.getElementById('admin-password').addEventListener('keypress', (e) => { if(e.key === 'Enter') checkAdminPass(); });
+
+    // --- [탭 관리] ---
     function switchTab(tabId, btn) {
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(tabId).classList.add('active'); btn.classList.add('active');
-        if (tabId === 'tab-status') renderStatusTable();
-        if (tabId === 'tab-period') loadApplyPeriod();
+        if(tabId === 'tab-status') renderStatusTable();
+        if(tabId === 'tab-period') loadApplyPeriod();
     }
 
+    // --- [실시간 감독 및 도면 로직] ---
     async function loadSeatLayout() {
         const doc = await db.collection("settings").doc("seatLayout").get();
         if (doc.exists) {
@@ -156,17 +202,8 @@
         }
     }
 
-    function toggleDailyView(mode) {
-        document.getElementById('daily-map-area').style.display = (mode === 'map') ? 'block' : 'none';
-        document.getElementById('daily-list-area').style.display = (mode === 'list') ? 'block' : 'none';
-    }
-
     function loadDailyDataAndRender() {
         const dateStr = document.getElementById('daily-date').value;
-        db.collection("daily_reservations").where("date", "==", dateStr).onSnapshot(snap => {
-            dailyReservationsData = {}; snap.forEach(doc => dailyReservationsData[doc.id] = doc.data());
-            renderDailySupervisorMap();
-        });
         db.collection("attendance_logs").where("date", "==", dateStr).onSnapshot(snap => {
             attendanceLogsData = {}; snap.forEach(doc => attendanceLogsData[doc.data().stuId] = doc.data());
             renderDailySupervisorMap();
@@ -180,74 +217,57 @@
         const timeStr = document.getElementById('daily-time').value;
         const targetDay = ['sun','mon','tue','wed','thu','fri','sat'][new Date(document.getElementById('daily-date').value).getDay()];
         
-        // 도면 그리기
         const cellEls = {};
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
                 const d = seatMapData[r][c]; const div = document.createElement('div');
                 div.className = `seat-cell seat-${d.type}`; div.innerText = d.label || "";
-                if (d.type === 1 || d.type === 2) {
-                    let sId = d.label || (d.type === 1 ? `고정-${r}-${c}` : `자율-${r}-${c}`);
-                    cellEls[sId] = div;
-                }
+                if (d.type === 1 || d.type === 2) cellEls[d.label] = div;
                 container.appendChild(div);
             }
         }
 
-        // 학생 매칭 (명단 로직 생략 간소화)
-        for (const id in applicationData) {
-            const d = applicationData[id];
-            if (d.type === "고정석" && d[targetDay] && d[targetDay].includes(timeStr) && cellEls[d.seatNum]) {
+        Object.values(applicationData).forEach(d => {
+            if(d.type === "고정석" && d[targetDay] && d[targetDay].includes(timeStr) && cellEls[d.seatNum]) {
                 const target = cellEls[d.seatNum];
                 const log = attendanceLogsData[d.stuId];
                 target.innerHTML = `${d.seatNum}<br>${d.stuName}`;
-                target.className = log ? 'seat-cell status-present-fixed' : 'seat-cell status-absent';
-                target.onclick = () => openStudentModal(d.stuId, d.stuName, d[targetDay], log);
+                target.className = 'seat-cell ' + (log ? 'status-present-fixed' : 'status-absent');
+                if(log) target.onclick = () => {
+                    document.getElementById('modal-info').innerText = `학번: ${d.stuId}\n성명: ${d.stuName}\n기록:\n${log.history.join('\n')}`;
+                    document.getElementById('student-modal').style.display = 'flex';
+                };
             }
-        }
+        });
     }
 
-    function openStudentModal(id, name, times, log) {
-        document.getElementById('modal-id-name').innerText = `${id} ${name}`;
-        document.getElementById('modal-times').innerText = times;
-        document.getElementById('tl-1').innerText = log ? log.history.join("\n") : "기록 없음";
-        document.getElementById('student-info-modal').style.display = 'flex';
+    // --- [신청 현황 및 기간] ---
+    function renderStatusTable() {
+        const tbody = document.getElementById('status-body'); tbody.innerHTML = "";
+        const month = document.getElementById('filter-month').value;
+        Object.keys(applicationData).sort().forEach(id => {
+            const d = applicationData[id];
+            if(month !== "all" && d.targetMonth !== month) return;
+            tbody.innerHTML += `<tr><td>${d.targetMonth}</td><td>${d.stuId}</td><td>${d.stuName}</td><td>${d.type}</td><td>${d.seatNum}</td><td>${d.mon||'-'}..</td></tr>`;
+        });
     }
-    function closeStudentModal() { document.getElementById('student-info-modal').style.display = 'none'; }
+
+    async function loadApplyPeriod() {
+        const doc = await db.collection("settings").doc("applyPeriod").get();
+        if(doc.exists) {
+            document.getElementById('apply-start').value = doc.data().start;
+            document.getElementById('apply-end').value = doc.data().end;
+        }
+    }
 
     async function saveApplyPeriod() {
         const start = document.getElementById('apply-start').value;
         const end = document.getElementById('apply-end').value;
-        await db.collection("settings").doc("applyPeriod").set({ start, end }); alert("저장됨");
-    }
-    async function loadApplyPeriod() {
-        const doc = await db.collection("settings").doc("applyPeriod").get();
-        if(doc.exists) { document.getElementById('apply-start').value = doc.data().start; document.getElementById('apply-end').value = doc.data().end; }
+        await db.collection("settings").doc("applyPeriod").set({ start, end, lastUpdated: new Date() });
+        alert("기간 저장 완료!");
     }
 
-    function renderStatusTable() {
-        const tbody = document.getElementById('status-body'); tbody.innerHTML = "";
-        const month = document.getElementById('filter-month').value;
-        Object.keys(applicationData).forEach(id => {
-            const d = applicationData[id];
-            if(month !== "all" && d.targetMonth !== month) return;
-            tbody.innerHTML += `<tr onclick="fillEditForm('${id}')"><td>${d.targetMonth}</td><td>${d.stuId}</td><td>${d.stuName}</td><td>${d.type}</td><td>${d.seatNum}</td><td>${d.mon||''}</td></tr>`;
-        });
-    }
-
-    function fillEditForm(id) {
-        const d = applicationData[id]; document.getElementById('edit-doc-id').value = id;
-        document.getElementById('m-id').value = d.stuId; document.getElementById('m-name').value = d.stuName;
-        switchTab('tab-manual', document.querySelectorAll('.tab-btn')[3]);
-    }
-
-    async function saveManualEntry() {
-        const id = document.getElementById('edit-doc-id').value;
-        const data = { stuId: document.getElementById('m-id').value, stuName: document.getElementById('m-name').value };
-        if(id) await db.collection("applications").doc(id).update(data);
-        alert("수정 완료");
-    }
-
+    // 데이터 초기 로드 및 감시
     db.collection("applications").onSnapshot(snap => {
         applicationData = {}; snap.forEach(doc => applicationData[doc.id] = doc.data());
         renderDailySupervisorMap();
