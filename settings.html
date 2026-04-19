@@ -9,54 +9,38 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <style>
-        :root { --primary: #007bff; --danger: #dc3545; --success: #28a745; --gray: #6c757d; }
+        :root { --primary: #007bff; --danger: #dc3545; --success: #28a745; --gray: #6c757d; --warning: #ffc107; }
         body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f7f9; margin: 0; padding: 0; }
-        
-        /* 🔐 보안 레이어 */
         #auth-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; justify-content: center; align-items: center; }
         .auth-box { background: white; padding: 40px; border-radius: 20px; text-align: center; width: 90%; max-width: 380px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); }
         .auth-box input { width: 100%; padding: 15px; font-size: 24px; text-align: center; border: 2px solid #ddd; border-radius: 10px; margin: 20px 0; box-sizing: border-box; }
-
-        /* 메인 레이아웃 */
         #main-content { display: none; padding: 20px; max-width: 1100px; margin: 0 auto; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
-
-        /* 탭 메뉴 */
         .settings-menu { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
         .menu-btn { flex: 1; min-width: 120px; padding: 15px; font-weight: bold; border: none; border-radius: 10px; cursor: pointer; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.3s; }
         .menu-btn.active { background: var(--primary); color: white; }
-
-        /* 카드 스타일 */
         .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #eee; display: none; }
         .card.active { display: block; animation: fadeIn 0.4s ease; }
         h3 { margin-top: 0; border-left: 6px solid var(--primary); padding-left: 12px; margin-bottom: 20px; }
-
-        /* 📅 달력 스타일 */
         .calendar-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         .calendar-table th { background: #f8f9fa; padding: 10px; border: 1px solid #ddd; font-size: 14px; }
-        .calendar-table td { height: 85px; border: 1px solid #ddd; vertical-align: top; padding: 8px; cursor: pointer; transition: 0.2s; }
+        .calendar-table td { height: 95px; border: 1px solid #ddd; vertical-align: top; padding: 8px; cursor: pointer; transition: 0.2s; }
         .calendar-table td:hover { background: #f0f7ff; }
         .calendar-table td.is-active { background: #e7f1ff; box-shadow: inset 0 0 0 2px var(--primary); }
         .status-badge { font-size: 11px; margin-top: 8px; padding: 4px; border-radius: 4px; display: block; text-align: center; font-weight: bold; }
         .status-on { background: var(--primary); color: white; }
         .status-off { background: #eee; color: #999; }
-
-        /* 🪑 도면 설계 */
+        .reason-text { font-size: 10px; color: var(--danger); margin-top: 5px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .seat-grid-container { background: #e9ecef; padding: 20px; border-radius: 10px; overflow-x: auto; margin: 15px 0; border: 1px solid #ccc; }
         .seat-grid { display: grid; gap: 3px; justify-content: start; }
         .seat-cell { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; font-size: 10px; border-radius: 4px; border: 1px solid #bbb; background: white; cursor: pointer; }
-        .tool-bar { display: flex; gap: 5px; margin-bottom: 15px; flex-wrap: wrap; padding: 10px; background: #fff; border-radius: 8px; border: 1px solid #ddd; }
+        .tool-bar { display: flex; gap: 5px; margin-bottom: 15px; padding: 10px; background: #fff; border-radius: 8px; border: 1px solid #ddd; }
         .tool-btn { padding: 8px 12px; font-size: 13px; border-radius: 5px; border: 1px solid #ddd; cursor: pointer; font-weight: bold; }
         .tool-btn.selected { border: 2px solid #000; box-shadow: 0 0 8px rgba(0,0,0,0.2); }
-        
         .seat-0 { background: #fff; } .seat-1 { background: #fff3cd; } .seat-2 { background: #d1e7dd; } 
         .seat-3 { background: #e2e3e5; } .seat-4 { background: #cff4fc; } .seat-5 { background: #f8d7da; }
-
-        /* 버튼 및 입력 */
         .btn { padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; }
         .btn-save { background: var(--primary); width: 100%; padding: 18px; margin-top: 15px; font-size: 18px; }
-        input[type="time"], input[type="datetime-local"], input[type="number"] { border: 1px solid #ddd; border-radius: 6px; padding: 10px; }
-
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
@@ -68,7 +52,7 @@
         <input type="password" id="pass-input" placeholder="Password" autofocus>
         <div style="display: flex; gap: 10px;">
             <button class="btn" style="background:var(--primary); flex:2;" onclick="checkPass()">확인</button>
-            <button class="btn" style="background:var(--gray); flex:1;" onclick="location.href='split_admin.html'">취소 및 돌아가기</button>
+            <button class="btn" style="background:var(--gray); flex:1;" onclick="location.href='split_admin.html'">취소</button>
         </div>
     </div>
 </div>
@@ -76,7 +60,7 @@
 <div id="main-content">
     <div class="header">
         <h1>⚙️ 통합 환경설정</h1>
-        <button class="btn" style="background:var(--gray);" onclick="location.href='split_admin.html'">⬅️ 관리 화면으로</button>
+        <button class="btn" style="background:var(--gray);" onclick="location.href='split_admin.html'">⬅️ 관리 화면</button>
     </div>
 
     <div class="settings-menu">
@@ -89,9 +73,8 @@
 
     <div id="tab-schedule" class="card active">
         <h3>📅 야자 운영 달력 설정</h3>
-        <div class="calendar-month-nav">
-            <input type="month" id="calendar-month-select" onchange="renderCalendar()">
-        </div>
+        <p style="font-size:12px; color:#666;">* 클릭 시 상태 변경. '야자없음' 선택 시 사유를 입력합니다.</p>
+        <div style="text-align:center; margin-bottom:15px;"><input type="month" id="calendar-month-select" onchange="renderCalendar()" style="font-size:16px; padding:5px;"></div>
         <div id="calendar-container"></div>
         <button class="btn btn-save" onclick="saveCalendarSchedule()">💾 달력 일정 저장</button>
     </div>
@@ -99,16 +82,16 @@
     <div id="tab-period" class="card">
         <h3>⏰ 학생 신청 가능 기간 설정</h3>
         <div style="display:grid; gap:15px; padding:20px; background:#f8f9fa; border-radius:10px;">
-            <div>시작: <input type="datetime-local" id="apply-start" style="width:250px;"></div>
-            <div>종료: <input type="datetime-local" id="apply-end" style="width:250px;"></div>
+            <div>시작: <input type="datetime-local" id="apply-start"></div>
+            <div>종료: <input type="datetime-local" id="apply-end"></div>
         </div>
         <button class="btn btn-save" onclick="saveApplyPeriod()">💾 신청 기간 저장</button>
     </div>
 
     <div id="tab-roster" class="card">
         <h3>⚙️ 기초 명단 업로드 (엑셀)</h3>
-        <input type="file" id="excel-input" accept=".xlsx, .xls" style="margin-bottom: 15px;">
-        <button class="btn" style="background:var(--success); width:100%;" onclick="handleExcelUpload()">🚀 명단 서버 전송</button>
+        <input type="file" id="excel-input" accept=".xlsx, .xls">
+        <button class="btn" style="background:var(--success); margin-top:10px;" onclick="handleExcelUpload()">🚀 명단 서버 전송</button>
         <hr>
         <h4>등록 명단 (<span id="roster-count">0</span>명)</h4>
         <div id="roster-list" style="max-height:200px; overflow-y:auto; font-size:12px; border:1px solid #ddd; padding:10px;"></div>
@@ -117,17 +100,14 @@
     <div id="tab-seats" class="card">
         <h3>🪑 자율학습실 좌석 도면 설계</h3>
         <div style="background: #f1f3f5; padding: 15px; border-radius: 10px; margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
-            <div>가로 <input type="number" id="grid-cols" value="30" style="width:50px;"> X 세로 <input type="number" id="grid-rows" value="20" style="width:50px;"> <button class="btn" style="background:var(--gray); padding: 5px 10px; font-size:12px;" onclick="resizeGrid()">리셋</button></div>
-            <div style="border-left: 2px solid #ccc; height: 30px; margin: 0 10px;"></div>
-            <div>
-                <input type="number" id="target-index" value="1" style="width: 40px;"> 번째 위치에: 
-                <button class="btn" style="background:#495057; padding: 5px 8px; font-size:11px;" onclick="modifyGrid('insertRow')">행삽입</button>
-                <button class="btn" style="background:#adb5bd; padding: 5px 8px; font-size:11px; color:#333;" onclick="modifyGrid('deleteRow')">행삭제</button>
-                <button class="btn" style="background:#495057; padding: 5px 8px; font-size:11px;" onclick="modifyGrid('insertCol')">열삽입</button>
-                <button class="btn" style="background:#adb5bd; padding: 5px 8px; font-size:11px; color:#333;" onclick="modifyGrid('deleteCol')">열삭제</button>
+            <div>가로 <input type="number" id="grid-cols" value="30" style="width:45px;"> X 세로 <input type="number" id="grid-rows" value="20" style="width:45px;"> <button class="btn" style="background:var(--gray); padding: 5px 8px; font-size:11px;" onclick="resizeGrid()">리셋</button></div>
+            <div><input type="number" id="target-index" value="1" style="width: 35px;"> 번째: 
+                <button class="btn" style="background:#495057; padding: 5px 6px; font-size:11px;" onclick="modifyGrid('insertRow')">행삽입</button>
+                <button class="btn" style="background:#adb5bd; padding: 5px 6px; font-size:11px; color:#333;" onclick="modifyGrid('deleteRow')">행삭제</button>
+                <button class="btn" style="background:#495057; padding: 5px 6px; font-size:11px;" onclick="modifyGrid('insertCol')">열삽입</button>
+                <button class="btn" style="background:#adb5bd; padding: 5px 6px; font-size:11px; color:#333;" onclick="modifyGrid('deleteCol')">열삭제</button>
             </div>
-            <div style="border-left: 2px solid #ccc; height: 30px; margin: 0 10px;"></div>
-            <button class="btn" style="background:var(--warning); padding: 5px 15px; font-size:12px; color:#000;" onclick="undo()">↩️ 되돌리기</button>
+            <button class="btn" style="background:var(--warning); padding: 5px 10px; font-size:11px; color:#000;" onclick="undo()">↩️되돌리기</button>
         </div>
         <div class="tool-bar">
             <button class="tool-btn seat-0 selected" onclick="selectTool(0, this)">⬜통로</button>
@@ -143,29 +123,16 @@
 
     <div id="tab-time" class="card">
         <h3>⏱️ 야간 자율학습 운영 시간 설정</h3>
-        <div style="display:grid; gap:20px; padding:20px; background:#f8f9fa; border-radius:12px;">
-            <div style="display:flex; align-items:center; gap:15px;">
-                <b style="width:60px;">1타임:</b> 
-                <input type="time" id="t1-start" onchange="calculateMinutes(1)"> <span>~</span> <input type="time" id="t1-end" onchange="calculateMinutes(1)">
-                <b id="t1-min" style="margin-left:auto; color:var(--primary);">0분</b>
-            </div>
-            <div style="display:flex; align-items:center; gap:15px;">
-                <b style="width:60px;">2타임:</b> 
-                <input type="time" id="t2-start" onchange="calculateMinutes(2)"> <span>~</span> <input type="time" id="t2-end" onchange="calculateMinutes(2)">
-                <b id="t2-min" style="margin-left:auto; color:var(--primary);">0분</b>
-            </div>
-            <div style="display:flex; align-items:center; gap:15px;">
-                <b style="width:60px;">3타임:</b> 
-                <input type="time" id="t3-start" onchange="calculateMinutes(3)"> <span>~</span> <input type="time" id="t3-end" onchange="calculateMinutes(3)">
-                <b id="t3-min" style="margin-left:auto; color:var(--primary);">0분</b>
-            </div>
+        <div style="display:grid; gap:15px; padding:20px; background:#f8f9fa; border-radius:12px;">
+            <div style="display:flex; align-items:center; gap:10px;"><b>1T:</b> <input type="time" id="t1-start" onchange="calculateMinutes(1)"> ~ <input type="time" id="t1-end" onchange="calculateMinutes(1)"> <b id="t1-min" style="margin-left:auto;">0분</b></div>
+            <div style="display:flex; align-items:center; gap:10px;"><b>2T:</b> <input type="time" id="t2-start" onchange="calculateMinutes(2)"> ~ <input type="time" id="t2-end" onchange="calculateMinutes(2)"> <b id="t2-min" style="margin-left:auto;">0분</b></div>
+            <div style="display:flex; align-items:center; gap:10px;"><b>3T:</b> <input type="time" id="t3-start" onchange="calculateMinutes(3)"> ~ <input type="time" id="t3-end" onchange="calculateMinutes(3)"> <b id="t3-min" style="margin-left:auto;">0분</b></div>
         </div>
         <button class="btn btn-save" onclick="saveTimeSettings()">💾 운영 시간 저장</button>
     </div>
 </div>
 
 <script>
-    // --- 파이어베이스 설정 ---
     const firebaseConfig = {
         apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
         authDomain: "self-study-project-82bdf.firebaseapp.com",
@@ -177,8 +144,7 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    let currentTool = 0; let seatMapData = []; let rows = 20, cols = 30; let currentSchedule = {};
-    let historyStack = []; // 되돌리기를 위한 기록 저장소
+    let currentTool = 0, seatMapData = [], rows = 20, cols = 30, currentSchedule = {}, historyStack = [];
 
     function checkPass() {
         if(document.getElementById('pass-input').value === "1234") {
@@ -195,38 +161,7 @@
         btn.classList.add('active');
     }
 
-    // --- [되돌리기 핵심 로직] ---
-    function saveHistory() {
-        if (historyStack.length >= 20) historyStack.shift(); // 최대 20개까지만 보관
-        historyStack.push(JSON.stringify({rows, cols, grid: seatMapData}));
-    }
-
-    function undo() {
-        if (historyStack.length === 0) return alert("되돌릴 기록이 없습니다.");
-        const prevState = JSON.parse(historyStack.pop());
-        rows = prevState.rows;
-        cols = prevState.cols;
-        seatMapData = prevState.grid;
-        document.getElementById('grid-rows').value = rows;
-        document.getElementById('grid-cols').value = cols;
-        drawEditGrid();
-    }
-
-    // --- [시간 계산] ---
-    function calculateMinutes(num) {
-        const start = document.getElementById(`t${num}-start`).value;
-        const end = document.getElementById(`t${num}-end`).value;
-        const display = document.getElementById(`t${num}-min`);
-        if (start && end) {
-            const s = new Date(`1970-01-01T${start}:00`);
-            const e = new Date(`1970-01-01T${end}:00`);
-            let diff = (e - s) / 1000 / 60;
-            if (diff < 0) diff += 1440;
-            display.innerText = diff + "분";
-        }
-    }
-
-    // --- [달력 로직] ---
+    // --- [1. 달력 로직: 사유 기능 추가] ---
     function renderCalendar() {
         const monthInput = document.getElementById('calendar-month-select');
         if(!monthInput.value) {
@@ -241,122 +176,65 @@
         for(let date=1; date<=lastDate; date++) {
             const dStr = `${year}-${String(month).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
             const dayIdx = new Date(year, month-1, date).getDay();
-            if(currentSchedule[dStr] === undefined) currentSchedule[dStr] = (dayIdx !== 0 && dayIdx !== 6);
-            const active = currentSchedule[dStr];
-            html += `<td class="${active?'is-active':''}" onclick="toggleDate('${dStr}')"><b>${date}</b><span class="status-badge ${active?'status-on':'status-off'}">${active?'야자운영':'야자없음'}</span></td>`;
+            if(currentSchedule[dStr] === undefined) {
+                const isWeekend = (dayIdx === 0 || dayIdx === 6);
+                currentSchedule[dStr] = { active: !isWeekend, reason: isWeekend ? "주말" : "" };
+            }
+            const data = currentSchedule[dStr];
+            html += `<td class="${data.active?'is-active':''}" onclick="toggleDate('${dStr}')">
+                <b>${date}</b>
+                <span class="status-badge ${data.active?'status-on':'status-off'}">${data.active?'야자운영':'야자없음'}</span>
+                ${!data.active && data.reason ? `<div class="reason-text">[${data.reason}]</div>` : ''}
+            </td>`;
             if((firstDay+date)%7 === 0) html += `</tr><tr>`;
         }
-        html += `</tr></tbody></table>`;
-        document.getElementById('calendar-container').innerHTML = html;
-    }
-    function toggleDate(d) { currentSchedule[d] = !currentSchedule[d]; renderCalendar(); }
-    async function saveCalendarSchedule() { await db.collection("settings").doc("calendarSchedule").set({data: JSON.stringify(currentSchedule)}); alert("달력 저장완료"); }
-
-    // --- [도면 설계 핵심 로직] ---
-    function selectTool(t, b) { currentTool = t; document.querySelectorAll('.tool-btn').forEach(x=>x.classList.remove('selected')); b.classList.add('selected'); }
-    
-    function resizeGrid() {
-        if(!confirm("현재 도면이 초기화됩니다. 계속할까요?")) return;
-        saveHistory();
-        rows = parseInt(document.getElementById('grid-rows').value); 
-        cols = parseInt(document.getElementById('grid-cols').value);
-        seatMapData = Array.from({length:rows}, ()=>Array.from({length:cols}, ()=>({type:0, label:""}))); 
-        drawEditGrid();
+        document.getElementById('calendar-container').innerHTML = html + `</tr></tbody></table>`;
     }
 
-    function modifyGrid(a) {
-        saveHistory(); // 변경 전 상태 기록
-        const i = parseInt(document.getElementById('target-index').value)-1;
-        if(i < 0) return;
-
-        if(a === 'insertRow') {
-            seatMapData.splice(i, 0, Array.from({length:cols}, ()=>({type:0, label:""})));
-            rows++;
-        } else if(a === 'deleteRow') {
-            if(rows <= 1) return;
-            seatMapData.splice(i, 1);
-            rows--;
-        } else if(a === 'insertCol') {
-            seatMapData.forEach(row => row.splice(i, 0, {type:0, label:""}));
-            cols++;
-        } else if(a === 'deleteCol') {
-            if(cols <= 1) return;
-            seatMapData.forEach(row => row.splice(i, 1));
-            cols--;
+    function toggleDate(dStr) {
+        const isNowActive = currentSchedule[dStr] ? currentSchedule[dStr].active : false;
+        if (!isNowActive) {
+            currentSchedule[dStr] = { active: true, reason: "" };
+        } else {
+            const reason = prompt("야자 미운영 사유 (예: 시험, 소풍, 모의고사):", "공휴일");
+            currentSchedule[dStr] = { active: false, reason: reason || "사유미기재" };
         }
-        document.getElementById('grid-rows').value = rows;
-        document.getElementById('grid-cols').value = cols;
-        drawEditGrid();
+        renderCalendar();
     }
 
-    function drawEditGrid() {
-        const g = document.getElementById('seat-grid'); g.innerHTML = ''; g.style.gridTemplateColumns = `repeat(${cols}, 42px)`;
-        seatMapData.forEach((row, r) => row.forEach((cell, c) => {
-            const d = document.createElement('div'); d.className = `seat-cell seat-${cell.type}`; d.innerText = cell.label;
-            d.onclick = () => { 
-                saveHistory(); // 칸을 클릭하여 수정하기 직전 상태 저장
-                if([1,2,5].includes(currentTool)) cell.label = prompt("라벨/좌석번호:", cell.label)||cell.label; 
-                cell.type = currentTool; 
-                drawEditGrid(); 
-            };
-            g.appendChild(d);
-        }));
-    }
-    async function saveSeatLayout() { await db.collection("settings").doc("seatLayout").set({rows, cols, grid:JSON.stringify(seatMapData)}); alert("도면 배포완료"); }
+    // --- [도면 및 기타 로직] ---
+    function saveHistory() { if (historyStack.length >= 20) historyStack.shift(); historyStack.push(JSON.stringify({rows, cols, grid: seatMapData})); }
+    function undo() { if (historyStack.length === 0) return; const p = JSON.parse(historyStack.pop()); rows = p.rows; cols = p.cols; seatMapData = p.grid; drawEditGrid(); }
+    function calculateMinutes(n) { const s = document.getElementById(`t${n}-start`).value, e = document.getElementById(`t${n}-end`).value; if(s&&e){ let d = (new Date(`1970-01-01T${e}`)-new Date(`1970-01-01T${s}`))/60000; if(d<0)d+=1440; document.getElementById(`t${n}-min`).innerText=d+"분";} }
+    function selectTool(t, b) { currentTool = t; document.querySelectorAll('.tool-btn').forEach(x=>x.classList.remove('selected')); b.classList.add('selected'); }
+    function resizeGrid() { saveHistory(); rows = parseInt(document.getElementById('grid-rows').value); cols = parseInt(document.getElementById('grid-cols').value); seatMapData = Array.from({length:rows}, ()=>Array.from({length:cols}, ()=>({type:0, label:""}))); drawEditGrid(); }
+    function modifyGrid(a) { saveHistory(); const i = parseInt(document.getElementById('target-index').value)-1; if(i<0)return; if(a==='insertRow'){seatMapData.splice(i,0,Array.from({length:cols},()=>({type:0,label:""}))); rows++;} else if(a==='deleteRow'){seatMapData.splice(i,1); rows--;} else if(a==='insertCol'){seatMapData.forEach(r=>r.splice(i,0,{type:0,label:""})); cols++;} else if(a==='deleteCol'){seatMapData.forEach(r=>r.splice(i,1)); cols--;} drawEditGrid(); }
+    function drawEditGrid() { const g = document.getElementById('seat-grid'); g.innerHTML = ''; g.style.gridTemplateColumns = `repeat(${cols}, 42px)`; seatMapData.forEach(row => row.forEach(cell => { const d = document.createElement('div'); d.className = `seat-cell seat-${cell.type}`; d.innerText = cell.label; d.onclick = () => { saveHistory(); if([1,2,5].includes(currentTool)) cell.label = prompt("라벨:", cell.label)||cell.label; cell.type = currentTool; drawEditGrid(); }; g.appendChild(d); })); }
 
-    // --- [기타 설정 및 데이터 통합 로드] ---
-    async function handleExcelUpload() {
-        const file = document.getElementById('excel-input').files[0];
-        if(!file) return;
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
-            const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1});
-            let roster = {}; data.forEach(r => { if(r[0]&&r[1]) roster[r[0]] = r[1]; });
-            await db.collection("settings").doc("roster").set({list: JSON.stringify(roster)});
-            alert("명단 업데이트 완료"); loadAllSettings();
-        };
-        reader.readAsArrayBuffer(file);
-    }
+    // --- [데이터 저장 및 로드] ---
+    async function saveCalendarSchedule() { await db.collection("settings").doc("calendarSchedule").set({data: JSON.stringify(currentSchedule)}); alert("달력 저장완료"); }
+    async function saveApplyPeriod() { await db.collection("settings").doc("applyPeriod").set({start: document.getElementById('apply-start').value, end: document.getElementById('apply-end').value}); alert("기간 저장완료"); }
+    async function saveSeatLayout() { await db.collection("settings").doc("seatLayout").set({rows, cols, grid: JSON.stringify(seatMapData)}); alert("도면 배포완료"); }
+    async function saveTimeSettings() { await db.collection("settings").doc("schedule").set({t1: document.getElementById('t1-start').value, t1_end: document.getElementById('t1-end').value, t2: document.getElementById('t2-start').value, t2_end: document.getElementById('t2-end').value, t3: document.getElementById('t3-start').value, t3_end: document.getElementById('t3-end').value}); alert("시간 저장완료"); }
 
     async function loadAllSettings() {
-        const cal = await db.collection("settings").doc("calendarSchedule").get();
-        if(cal.exists) currentSchedule = JSON.parse(cal.data().data);
-        renderCalendar();
-
-        const p = await db.collection("settings").doc("applyPeriod").get();
-        if(p.exists) { document.getElementById('apply-start').value = p.data().start; document.getElementById('apply-end').value = p.data().end; }
-
-        const r = await db.collection("settings").doc("roster").get();
-        if(r.exists) {
-            const list = JSON.parse(r.data().list);
-            document.getElementById('roster-count').innerText = Object.keys(list).length;
-            document.getElementById('roster-list').innerText = Object.entries(list).map(([id, n]) => `${id}(${n})`).join(', ');
-        }
-
-        const s = await db.collection("settings").doc("seatLayout").get();
-        if(s.exists) {
-            rows = s.data().rows; cols = s.data().cols;
-            seatMapData = JSON.parse(s.data().grid).map(row => row.map(c => typeof c === 'number' ? {type:c, label:""} : c));
-            document.getElementById('grid-rows').value = rows; document.getElementById('grid-cols').value = cols;
-            drawEditGrid();
-        }
-
-        const t = await db.collection("settings").doc("schedule").get();
-        if(t.exists) {
-            const d = t.data();
-            document.getElementById('t1-start').value = d.t1; document.getElementById('t1-end').value = d.t1_end;
-            document.getElementById('t2-start').value = d.t2; document.getElementById('t2-end').value = d.t2_end;
-            document.getElementById('t3-start').value = d.t3; document.getElementById('t3-end').value = d.t3_end;
-        } else {
-            document.getElementById('t1-start').value = "16:00"; document.getElementById('t1-end').value = "18:10";
-            document.getElementById('t2-start').value = "18:50"; document.getElementById('t2-end').value = "20:10";
-            document.getElementById('t3-start').value = "20:10"; document.getElementById('t3-end').value = "21:30";
-        }
+        const cal = await db.collection("settings").doc("calendarSchedule").get(); if(cal.exists) currentSchedule = JSON.parse(cal.data().data); renderCalendar();
+        const p = await db.collection("settings").doc("applyPeriod").get(); if(p.exists) { document.getElementById('apply-start').value = p.data().start; document.getElementById('apply-end').value = p.data().end; }
+        const r = await db.collection("settings").doc("roster").get(); if(r.exists) { const list = JSON.parse(r.data().list); document.getElementById('roster-count').innerText = Object.keys(list).length; document.getElementById('roster-list').innerText = Object.entries(list).map(([id, n]) => `${id}(${n})`).join(', '); }
+        const s = await db.collection("settings").doc("seatLayout").get(); if(s.exists) { rows = s.data().rows; cols = s.data().cols; seatMapData = JSON.parse(s.data().grid).map(row => row.map(c => typeof c === 'number' ? {type:c, label:""} : c)); drawEditGrid(); }
+        const t = await db.collection("settings").doc("schedule").get(); if(t.exists) { const d = t.data(); document.getElementById('t1-start').value = d.t1; document.getElementById('t1-end').value = d.t1_end; document.getElementById('t2-start').value = d.t2; document.getElementById('t2-end').value = d.t2_end; document.getElementById('t3-start').value = d.t3; document.getElementById('t3-end').value = d.t3_end; }
+        else { document.getElementById('t1-start').value = "16:00"; document.getElementById('t1-end').value = "18:10"; document.getElementById('t2-start').value = "18:50"; document.getElementById('t2-end').value = "20:10"; document.getElementById('t3-start').value = "20:10"; document.getElementById('t3-end').value = "21:30"; }
         for(let i=1; i<=3; i++) calculateMinutes(i);
     }
-    async function saveApplyPeriod() { await db.collection("settings").doc("applyPeriod").set({start: document.getElementById('apply-start').value, end: document.getElementById('apply-end').value}); alert("기간 저장완료"); }
-    async function saveTimeSettings() { await db.collection("settings").doc("schedule").set({t1: document.getElementById('t1-start').value, t1_end: document.getElementById('t1-end').value, t2: document.getElementById('t2-start').value, t2_end: document.getElementById('t2-end').value, t3: document.getElementById('t3-start').value, t3_end: document.getElementById('t3-end').value}); alert("시간 저장완료"); }
+
+    async function handleExcelUpload() {
+        const file = document.getElementById('excel-input').files[0]; if(!file) return;
+        const reader = new FileReader(); reader.onload = async (e) => {
+            const data = XLSX.utils.sheet_to_json(XLSX.read(new Uint8Array(e.target.result), {type:'array'}).Sheets[XLSX.read(new Uint8Array(e.target.result), {type:'array'}).SheetNames[0]], {header:1});
+            let roster = {}; data.forEach(r => { if(r[0]&&r[1]) roster[r[0]] = r[1]; });
+            await db.collection("settings").doc("roster").set({list: JSON.stringify(roster)}); alert("명단 업데이트 완료"); loadAllSettings();
+        }; reader.readAsArrayBuffer(file);
+    }
 </script>
 </body>
 </html>
