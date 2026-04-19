@@ -99,7 +99,38 @@
 </div>
 
 <script>
-// sign_up.html 스크립트 상단에 추가
+// =========================================================
+// 1. Firebase 초기화를 스크립트 가장 위로 올렸습니다. (db 에러 해결)
+// =========================================================
+const firebaseConfig = {
+    apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
+    authDomain: "self-study-project-82bdf.firebaseapp.com",
+    projectId: "self-study-project-82bdf",
+    storageBucket: "self-study-project-82bdf.firebasestorage.app",
+    messagingSenderId: "482006075036",
+    appId: "1:482006075036:web:473445e0f86d48cd22cf59"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// =========================================================
+// 2. 전역 변수 및 기초 UI 설정
+// =========================================================
+let serverRoster = {}; let selectedType = null; let currentDocId = null; 
+let seatMapData = []; let layoutRows = 0; let layoutCols = 0;
+let selectedSeatId = ""; let previousSavedSeat = "";
+let takenSeats = [];
+
+const daysEng = ['mon','tue','wed','thu','fri','sat','sun'];
+
+const tbody = document.getElementById('schedule-body');
+['월','화','수','목','금','토','일'].forEach((day, idx) => {
+    tbody.innerHTML += `<tr><td><strong>${day}</strong></td>${[1,2,3].map(t => `<td><input type="checkbox" class="time-chk" id="${daysEng[idx]}-${t}" value="${t}" onchange="validateForm()"><label class="time-label" for="${daysEng[idx]}-${t}">${t}T</label></td>`).join('')}</tr>`;
+});
+
+// =========================================================
+// 3. 신청 기간 확인 함수 (db가 생성된 이후이므로 정상 작동함)
+// =========================================================
 async function checkApplyPeriod() {
     const searchBtn = document.getElementById('search-btn');
     const noticeBox = document.querySelector('.notice');
@@ -125,110 +156,74 @@ async function checkApplyPeriod() {
                 noticeBox.style.borderLeft = "4px solid #dc3545";
             }
         }
-    } catch(e) { console.error(e); }
+    } catch(e) { console.error("기간 확인 중 오류 발생:", e); }
 }
 
-// 페이지 로드 시 실행
+// 페이지 로드 시 기간 확인 함수 실행
 checkApplyPeriod();
 
-
-
-    
-    const firebaseConfig = {
-        apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
-        authDomain: "self-study-project-82bdf.firebaseapp.com",
-        projectId: "self-study-project-82bdf",
-        storageBucket: "self-study-project-82bdf.firebasestorage.app",
-        messagingSenderId: "482006075036",
-        appId: "1:482006075036:web:473445e0f86d48cd22cf59"
-    };
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    let serverRoster = {}; let selectedType = null; let currentDocId = null; 
-    let seatMapData = []; let layoutRows = 0; let layoutCols = 0;
-    let selectedSeatId = ""; let previousSavedSeat = "";
-// 🌟 [추가] 이미 예약된 좌석들을 담아둘 바구니(배열)
-    let takenSeats = [];
-    
-    const daysEng = ['mon','tue','wed','thu','fri','sat','sun'];
-
-    const tbody = document.getElementById('schedule-body');
-    ['월','화','수','목','금','토','일'].forEach((day, idx) => {
-        tbody.innerHTML += `<tr><td><strong>${day}</strong></td>${[1,2,3].map(t => `<td><input type="checkbox" class="time-chk" id="${daysEng[idx]}-${t}" value="${t}" onchange="validateForm()"><label class="time-label" for="${daysEng[idx]}-${t}">${t}T</label></td>`).join('')}</tr>`;
-    });
-
-    async function fetchInitialData() {
-        try {
-            const rosterDoc = await db.collection("settings").doc("roster").get();
-            if (rosterDoc.exists) serverRoster = JSON.parse(rosterDoc.data().list || "{}");
+// =========================================================
+// 4. 나머지 데이터 불러오기 및 폼 관련 함수들
+// =========================================================
+async function fetchInitialData() {
+    try {
+        const rosterDoc = await db.collection("settings").doc("roster").get();
+        if (rosterDoc.exists) serverRoster = JSON.parse(rosterDoc.data().list || "{}");
+        
+        const layoutDoc = await db.collection("settings").doc("seatLayout").get();
+        if (layoutDoc.exists) {
+            const data = layoutDoc.data();
+            layoutRows = data.rows; layoutCols = data.cols;
             
-            const layoutDoc = await db.collection("settings").doc("seatLayout").get();
-            if (layoutDoc.exists) {
-                const data = layoutDoc.data();
-                layoutRows = data.rows; layoutCols = data.cols;
-                
-                // 구버전 호환성 포함 파싱
-                const rawGrid = JSON.parse(data.grid);
-                seatMapData = rawGrid.map(row => row.map(c => typeof c === 'number' ? {type: c, label: ""} : c));
-            }
-        } catch(e) { console.error(e); }
-    }
-    fetchInitialData();
+            const rawGrid = JSON.parse(data.grid);
+            seatMapData = rawGrid.map(row => row.map(c => typeof c === 'number' ? {type: c, label: ""} : c));
+        }
+    } catch(e) { console.error(e); }
+}
+fetchInitialData();
 
-// [수정] 좌석 도면 그리기 (예약된 좌석 표시 로직 추가)
-    function buildSeatGrid() {
-        const container = document.getElementById('student-seat-grid');
-        container.style.gridTemplateColumns = `repeat(${layoutCols}, 35px)`;
-        container.innerHTML = '';
+function buildSeatGrid() {
+    const container = document.getElementById('student-seat-grid');
+    container.style.gridTemplateColumns = `repeat(${layoutCols}, 35px)`;
+    container.innerHTML = '';
 
-        for (let r = 0; r < layoutRows; r++) {
-            for (let c = 0; c < layoutCols; c++) {
-                const cellData = seatMapData[r][c];
-                const div = document.createElement('div');
-                div.className = 'seat-cell';
+    for (let r = 0; r < layoutRows; r++) {
+        for (let c = 0; c < layoutCols; c++) {
+            const cellData = seatMapData[r][c];
+            const div = document.createElement('div');
+            div.className = 'seat-cell';
+            
+            if (cellData.type === 0) {
+                div.classList.add('seat-empty');
+            } else if (cellData.type === 1) {
+                const finalLabel = cellData.label || `${r+1}-${c+1}`;
+                div.innerText = finalLabel;
                 
-                if (cellData.type === 0) {
-                    div.classList.add('seat-empty');
-                } else if (cellData.type === 1) {
-                    const finalLabel = cellData.label || `${r+1}-${c+1}`;
-                    div.innerText = finalLabel;
-                    
-                    // 🌟 [추가 핵심 로직] 이 자리가 누군가 예약한 자리(takenSeats)에 포함되어 있는지 확인
-                    if (takenSeats.includes(finalLabel)) {
-                        div.classList.add('seat-taken'); // 회색 처리 + 취소선
-                        // onclick 이벤트를 달지 않음 -> 클릭해도 아무 반응이 없게 됨
-                    } else {
-                        // 아직 아무도 예약하지 않은 빈자리
-                        div.classList.add('seat-available');
-                        div.onclick = () => pickSeat(finalLabel, div);
-                        
-                        if(previousSavedSeat === finalLabel) pickSeat(finalLabel, div);
-                    }
+                if (takenSeats.includes(finalLabel)) {
+                    div.classList.add('seat-taken'); 
                 } else {
-                    // 2, 3, 4, 5 (자율구역, 벽, 문, 특수)
-                    div.classList.add(`seat-${cellData.type}`, 'seat-static');
-                    div.innerText = cellData.label || "";
+                    div.classList.add('seat-available');
+                    div.onclick = () => pickSeat(finalLabel, div);
+                    if(previousSavedSeat === finalLabel) pickSeat(finalLabel, div);
                 }
-                container.appendChild(div);
+            } else {
+                div.classList.add(`seat-${cellData.type}`, 'seat-static');
+                div.innerText = cellData.label || "";
             }
+            container.appendChild(div);
         }
     }
-    function pickSeat(label, cellElement) {
-        document.querySelectorAll('.seat-cell').forEach(el => el.classList.remove('seat-selected'));
-        cellElement.classList.add('seat-selected');
-        selectedSeatId = label;
-        document.getElementById('selected-seat-display').innerText = `✅ 선택된 좌석: [ ${label} ]`;
-        validateForm();
-    }
+}
 
+function pickSeat(label, cellElement) {
+    document.querySelectorAll('.seat-cell').forEach(el => el.classList.remove('seat-selected'));
+    cellElement.classList.add('seat-selected');
+    selectedSeatId = label;
+    document.getElementById('selected-seat-display').innerText = `✅ 선택된 좌석: [ ${label} ]`;
+    validateForm();
+}
 
-
-
-    
-    
 async function verifyStudent() {
-    // 1. [신청 기간 방어] 조회 버튼을 누르는 순간에도 한 번 더 기간을 체크
     const now = new Date();
     try {
         const periodDoc = await db.collection("settings").doc("applyPeriod").get();
@@ -242,7 +237,6 @@ async function verifyStudent() {
         }
     } catch(e) { console.error("기간 확인 오류:", e); }
 
-    // 2. 입력값 한 번만 가져오기 (여기서 변수 중복 에러가 났었습니다)
     const id = document.getElementById('stu-id').value.trim(); 
     const name = document.getElementById('stu-name').value.trim(); 
     const month = document.getElementById('target-month').value;
@@ -253,29 +247,24 @@ async function verifyStudent() {
     document.getElementById('search-btn').innerText = "조회 중...";
     
     try {
-        // 3. 본인의 신청 내역 조회
         const q = await db.collection("applications").where("stuId", "==", id).where("targetMonth", "==", month).get();
         
-        // 4. 해당 월의 다른 학생들이 이미 찜한 '고정석' 목록 가져오기
         const takenQuery = await db.collection("applications")
             .where("targetMonth", "==", month)
             .where("type", "==", "고정석")
             .get();
         
-        takenSeats = []; // 초기화
+        takenSeats = []; 
         
-        // 화면 전환
         document.getElementById('apply-section').style.display = 'block'; 
         document.getElementById('search-section').style.display = 'none';
 
         if (!q.empty) {
-            // [기존 신청자 모드]
             const doc = q.docs[0]; 
             currentDocId = doc.id; 
             const data = doc.data();
             previousSavedSeat = data.seatNum || "";
             
-            // 본인을 제외한 남들이 예약한 좌석만 빨간색으로 처리하기 위해 필터링
             takenQuery.forEach(tDoc => {
                 if (tDoc.id !== currentDocId && tDoc.data().seatNum) {
                     takenSeats.push(tDoc.data().seatNum);
@@ -284,7 +273,6 @@ async function verifyStudent() {
 
             selectType(data.type === "고정석" ? 1 : 0);
             
-            // 기존 요일/타임 체크박스 복원
             daysEng.forEach(day => { 
                 if (data[day]) { 
                     data[day].split(',').forEach(t => { 
@@ -297,7 +285,6 @@ async function verifyStudent() {
             document.getElementById('submit-btn').className = "btn-main btn-update";
             alert(`기존 신청 내역을 불러왔습니다.`);
         } else { 
-            // [신규 신청자 모드]
             currentDocId = null; 
             previousSavedSeat = ""; 
             takenQuery.forEach(tDoc => {
@@ -305,31 +292,27 @@ async function verifyStudent() {
             });
             alert(`신규 신청을 진행하세요.`); 
         }
-        validateForm(); // 버튼 활성화 여부 판단
+        validateForm(); 
     } catch(e) { 
         alert("데이터 로드 오류: " + e.message); 
         document.getElementById('search-btn').innerText = "조회하기";
     }
 }
 
+function selectType(type) {
+    selectedType = type;
+    document.querySelectorAll('.type-btn').forEach(btn => btn.classList.toggle('active', parseInt(btn.dataset.type) === type));
+    if(type === 1) { document.getElementById('seat-map-section').style.display = 'block'; buildSeatGrid(); } 
+    else { document.getElementById('seat-map-section').style.display = 'none'; selectedSeatId = ""; }
+    validateForm();
+}
 
-    
-    function selectType(type) {
-        selectedType = type;
-        document.querySelectorAll('.type-btn').forEach(btn => btn.classList.toggle('active', parseInt(btn.dataset.type) === type));
-        if(type === 1) { document.getElementById('seat-map-section').style.display = 'block'; buildSeatGrid(); } 
-        else { document.getElementById('seat-map-section').style.display = 'none'; selectedSeatId = ""; }
-        validateForm();
-    }
+function validateForm() {
+    let sc = 0; daysEng.forEach(d => { if(document.querySelectorAll(`[id^="${d}-"]:checked`).length > 0) sc++; });
+    let ok = true; if (selectedType === 1 && (sc < 3 || selectedSeatId === "")) ok = false;
+    document.getElementById('submit-btn').disabled = !(selectedType !== null && ok);
+}
 
-    function validateForm() {
-        let sc = 0; daysEng.forEach(d => { if(document.querySelectorAll(`[id^="${d}-"]:checked`).length > 0) sc++; });
-        let ok = true; if (selectedType === 1 && (sc < 3 || selectedSeatId === "")) ok = false;
-        document.getElementById('submit-btn').disabled = !(selectedType !== null && ok);
-    }
-
-
-    
 async function submitForm() {
     const btn = document.getElementById('submit-btn'); 
     btn.innerText = "저장 중..."; 
@@ -347,7 +330,7 @@ async function submitForm() {
         stuName: stuNameVal, 
         type: typeVal, 
         seatNum: seatNumVal, 
-        timestamp: firebase.firestore.FieldValue.serverTimestamp() // 서버 시간 사용
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
     };
 
     daysEng.forEach(d => { 
@@ -355,7 +338,6 @@ async function submitForm() {
     });
 
     try {
-        // [수정] Transaction 도입: 서버에서 자리를 확인하고 즉시 선점
         await db.runTransaction(async (transaction) => {
             if (typeVal === "고정석") {
                 const dupQuery = db.collection("applications")
