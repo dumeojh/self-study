@@ -66,9 +66,9 @@
     <div class="auth-box">
         <h2>🔒 관리자 인증</h2>
         <input type="password" id="pass-input" placeholder="Password" autofocus>
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-            <button class="btn" style="background:var(--primary);" onclick="checkPass()">확인</button>
-            <button class="btn" style="background:var(--gray);" onclick="location.href='split_admin.html'">취소 및 돌아가기</button>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn" style="background:var(--primary); flex:2;" onclick="checkPass()">확인</button>
+            <button class="btn" style="background:var(--gray); flex:1;" onclick="location.href='split_admin.html'">취소 및 돌아가기</button>
         </div>
     </div>
 </div>
@@ -116,18 +116,26 @@
 
     <div id="tab-seats" class="card">
         <h3>🪑 자율학습실 좌석 도면 설계</h3>
-        <div style="background: #f1f3f5; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
-            가로 <input type="number" id="grid-cols" value="30" style="width:50px;"> X 세로 <input type="number" id="grid-rows" value="20" style="width:50px;">
-            <button class="btn" style="background:var(--gray); font-size:12px;" onclick="resizeGrid()">리셋</button> | 
-            <input type="number" id="target-index" value="1" style="width: 40px;"> 번째에 
-            <button class="btn" style="background:var(--primary); font-size:11px;" onclick="modifyGrid('insertRow')">가로삽입</button>
-            <button class="btn" style="background:var(--danger); font-size:11px;" onclick="modifyGrid('deleteRow')">가로삭제</button>
+        <div style="background: #f1f3f5; padding: 15px; border-radius: 10px; margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+            <div>가로 <input type="number" id="grid-cols" value="30" style="width:50px;"> X 세로 <input type="number" id="grid-rows" value="20" style="width:50px;"> <button class="btn" style="background:var(--gray); padding: 5px 10px; font-size:12px;" onclick="resizeGrid()">리셋</button></div>
+            <div style="border-left: 2px solid #ccc; height: 30px; margin: 0 10px;"></div>
+            <div>
+                <input type="number" id="target-index" value="1" style="width: 40px;"> 번째 위치에: 
+                <button class="btn" style="background:#495057; padding: 5px 8px; font-size:11px;" onclick="modifyGrid('insertRow')">행삽입</button>
+                <button class="btn" style="background:#adb5bd; padding: 5px 8px; font-size:11px; color:#333;" onclick="modifyGrid('deleteRow')">행삭제</button>
+                <button class="btn" style="background:#495057; padding: 5px 8px; font-size:11px;" onclick="modifyGrid('insertCol')">열삽입</button>
+                <button class="btn" style="background:#adb5bd; padding: 5px 8px; font-size:11px; color:#333;" onclick="modifyGrid('deleteCol')">열삭제</button>
+            </div>
+            <div style="border-left: 2px solid #ccc; height: 30px; margin: 0 10px;"></div>
+            <button class="btn" style="background:var(--warning); padding: 5px 15px; font-size:12px; color:#000;" onclick="undo()">↩️ 되돌리기</button>
         </div>
         <div class="tool-bar">
             <button class="tool-btn seat-0 selected" onclick="selectTool(0, this)">⬜통로</button>
             <button class="tool-btn seat-1" onclick="selectTool(1, this)">🟨고정</button>
             <button class="tool-btn seat-2" onclick="selectTool(2, this)">🟩자율</button>
             <button class="tool-btn seat-3" onclick="selectTool(3, this)">⬛벽</button>
+            <button class="tool-btn seat-4" onclick="selectTool(4, this)">🟦문</button>
+            <button class="tool-btn seat-5" onclick="selectTool(5, this)">🟥특수</button>
         </div>
         <div class="seat-grid-container"><div id="seat-grid" class="seat-grid"></div></div>
         <button class="btn btn-save" onclick="saveSeatLayout()">🌐 도면 서버 배포</button>
@@ -170,6 +178,7 @@
     const db = firebase.firestore();
 
     let currentTool = 0; let seatMapData = []; let rows = 20, cols = 30; let currentSchedule = {};
+    let historyStack = []; // 되돌리기를 위한 기록 저장소
 
     function checkPass() {
         if(document.getElementById('pass-input').value === "1234") {
@@ -186,7 +195,24 @@
         btn.classList.add('active');
     }
 
-    // --- [시간 계산 로직] ---
+    // --- [되돌리기 핵심 로직] ---
+    function saveHistory() {
+        if (historyStack.length >= 20) historyStack.shift(); // 최대 20개까지만 보관
+        historyStack.push(JSON.stringify({rows, cols, grid: seatMapData}));
+    }
+
+    function undo() {
+        if (historyStack.length === 0) return alert("되돌릴 기록이 없습니다.");
+        const prevState = JSON.parse(historyStack.pop());
+        rows = prevState.rows;
+        cols = prevState.cols;
+        seatMapData = prevState.grid;
+        document.getElementById('grid-rows').value = rows;
+        document.getElementById('grid-cols').value = cols;
+        drawEditGrid();
+    }
+
+    // --- [시간 계산] ---
     function calculateMinutes(num) {
         const start = document.getElementById(`t${num}-start`).value;
         const end = document.getElementById(`t${num}-end`).value;
@@ -226,7 +252,59 @@
     function toggleDate(d) { currentSchedule[d] = !currentSchedule[d]; renderCalendar(); }
     async function saveCalendarSchedule() { await db.collection("settings").doc("calendarSchedule").set({data: JSON.stringify(currentSchedule)}); alert("달력 저장완료"); }
 
-    // --- [명단 및 도면 로직] ---
+    // --- [도면 설계 핵심 로직] ---
+    function selectTool(t, b) { currentTool = t; document.querySelectorAll('.tool-btn').forEach(x=>x.classList.remove('selected')); b.classList.add('selected'); }
+    
+    function resizeGrid() {
+        if(!confirm("현재 도면이 초기화됩니다. 계속할까요?")) return;
+        saveHistory();
+        rows = parseInt(document.getElementById('grid-rows').value); 
+        cols = parseInt(document.getElementById('grid-cols').value);
+        seatMapData = Array.from({length:rows}, ()=>Array.from({length:cols}, ()=>({type:0, label:""}))); 
+        drawEditGrid();
+    }
+
+    function modifyGrid(a) {
+        saveHistory(); // 변경 전 상태 기록
+        const i = parseInt(document.getElementById('target-index').value)-1;
+        if(i < 0) return;
+
+        if(a === 'insertRow') {
+            seatMapData.splice(i, 0, Array.from({length:cols}, ()=>({type:0, label:""})));
+            rows++;
+        } else if(a === 'deleteRow') {
+            if(rows <= 1) return;
+            seatMapData.splice(i, 1);
+            rows--;
+        } else if(a === 'insertCol') {
+            seatMapData.forEach(row => row.splice(i, 0, {type:0, label:""}));
+            cols++;
+        } else if(a === 'deleteCol') {
+            if(cols <= 1) return;
+            seatMapData.forEach(row => row.splice(i, 1));
+            cols--;
+        }
+        document.getElementById('grid-rows').value = rows;
+        document.getElementById('grid-cols').value = cols;
+        drawEditGrid();
+    }
+
+    function drawEditGrid() {
+        const g = document.getElementById('seat-grid'); g.innerHTML = ''; g.style.gridTemplateColumns = `repeat(${cols}, 42px)`;
+        seatMapData.forEach((row, r) => row.forEach((cell, c) => {
+            const d = document.createElement('div'); d.className = `seat-cell seat-${cell.type}`; d.innerText = cell.label;
+            d.onclick = () => { 
+                saveHistory(); // 칸을 클릭하여 수정하기 직전 상태 저장
+                if([1,2,5].includes(currentTool)) cell.label = prompt("라벨/좌석번호:", cell.label)||cell.label; 
+                cell.type = currentTool; 
+                drawEditGrid(); 
+            };
+            g.appendChild(d);
+        }));
+    }
+    async function saveSeatLayout() { await db.collection("settings").doc("seatLayout").set({rows, cols, grid:JSON.stringify(seatMapData)}); alert("도면 배포완료"); }
+
+    // --- [기타 설정 및 데이터 통합 로드] ---
     async function handleExcelUpload() {
         const file = document.getElementById('excel-input').files[0];
         if(!file) return;
@@ -241,39 +319,14 @@
         reader.readAsArrayBuffer(file);
     }
 
-    function selectTool(t, b) { currentTool = t; document.querySelectorAll('.tool-btn').forEach(x=>x.classList.remove('selected')); b.classList.add('selected'); }
-    function resizeGrid() {
-        rows = parseInt(document.getElementById('grid-rows').value); cols = parseInt(document.getElementById('grid-cols').value);
-        seatMapData = Array.from({length:rows}, ()=>Array.from({length:cols}, ()=>({type:0, label:""}))); drawEditGrid();
-    }
-    function modifyGrid(a) {
-        const i = parseInt(document.getElementById('target-index').value)-1;
-        if(a==='insertRow') { seatMapData.splice(i,0,Array.from({length:cols},()=>({type:0,label:""}))); rows++; }
-        else if(a==='deleteRow') { seatMapData.splice(i,1); rows--; }
-        document.getElementById('grid-rows').value = rows; drawEditGrid();
-    }
-    function drawEditGrid() {
-        const g = document.getElementById('seat-grid'); g.innerHTML = ''; g.style.gridTemplateColumns = `repeat(${cols}, 42px)`;
-        seatMapData.forEach((row, r) => row.forEach((cell, c) => {
-            const d = document.createElement('div'); d.className = `seat-cell seat-${cell.type}`; d.innerText = cell.label;
-            d.onclick = () => { if([1,2].includes(currentTool)) cell.label = prompt("라벨:", cell.label)||cell.label; cell.type = currentTool; drawEditGrid(); };
-            g.appendChild(d);
-        }));
-    }
-    async function saveSeatLayout() { await db.collection("settings").doc("seatLayout").set({rows, cols, grid:JSON.stringify(seatMapData)}); alert("도면 배포완료"); }
-
-    // --- [데이터 통합 로드] ---
     async function loadAllSettings() {
-        // 1. 달력 로드
         const cal = await db.collection("settings").doc("calendarSchedule").get();
         if(cal.exists) currentSchedule = JSON.parse(cal.data().data);
         renderCalendar();
 
-        // 2. 신청 기간
         const p = await db.collection("settings").doc("applyPeriod").get();
         if(p.exists) { document.getElementById('apply-start').value = p.data().start; document.getElementById('apply-end').value = p.data().end; }
 
-        // 3. 명단
         const r = await db.collection("settings").doc("roster").get();
         if(r.exists) {
             const list = JSON.parse(r.data().list);
@@ -281,7 +334,6 @@
             document.getElementById('roster-list').innerText = Object.entries(list).map(([id, n]) => `${id}(${n})`).join(', ');
         }
 
-        // 4. 도면
         const s = await db.collection("settings").doc("seatLayout").get();
         if(s.exists) {
             rows = s.data().rows; cols = s.data().cols;
@@ -290,7 +342,6 @@
             drawEditGrid();
         }
 
-        // 5. 운영 시간 로드 (기본값 설정 로직 포함)
         const t = await db.collection("settings").doc("schedule").get();
         if(t.exists) {
             const d = t.data();
@@ -298,18 +349,12 @@
             document.getElementById('t2-start').value = d.t2; document.getElementById('t2-end').value = d.t2_end;
             document.getElementById('t3-start').value = d.t3; document.getElementById('t3-end').value = d.t3_end;
         } else {
-            // 🌟 저장된 데이터가 없을 때의 초기 기본값 설정
-            document.getElementById('t1-start').value = "16:00"; 
-            document.getElementById('t1-end').value = "18:10";
-            document.getElementById('t2-start').value = "18:50"; 
-            document.getElementById('t2-end').value = "20:10";
-            document.getElementById('t3-start').value = "20:10"; 
-            document.getElementById('t3-end').value = "21:30";
+            document.getElementById('t1-start').value = "16:00"; document.getElementById('t1-end').value = "18:10";
+            document.getElementById('t2-start').value = "18:50"; document.getElementById('t2-end').value = "20:10";
+            document.getElementById('t3-start').value = "20:10"; document.getElementById('t3-end').value = "21:30";
         }
-        // 불러온 후 각 교시별 학습 시간(분) 자동 계산
         for(let i=1; i<=3; i++) calculateMinutes(i);
     }
-    
     async function saveApplyPeriod() { await db.collection("settings").doc("applyPeriod").set({start: document.getElementById('apply-start').value, end: document.getElementById('apply-end').value}); alert("기간 저장완료"); }
     async function saveTimeSettings() { await db.collection("settings").doc("schedule").set({t1: document.getElementById('t1-start').value, t1_end: document.getElementById('t1-end').value, t2: document.getElementById('t2-start').value, t2_end: document.getElementById('t2-end').value, t3: document.getElementById('t3-start').value, t3_end: document.getElementById('t3-end').value}); alert("시간 저장완료"); }
 </script>
