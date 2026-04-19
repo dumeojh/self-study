@@ -31,6 +31,8 @@
         .seat-grid { display: grid; gap: 4px; justify-content: start; overflow-x: auto; padding: 10px; background: #eee; border-radius: 10px; }
         .seat-cell { width: 55px; height: 55px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; border-radius: 5px; border: 1px solid #ccc; transition: 0.2s; text-align: center; line-height: 1.2; background: white; }
         .seat-0 { background: transparent; border: none; }
+        .seat-1 { background: #fff3cd; } /* 🌟 추가: 고정석 기본 노란색 */
+        .seat-2 { background: #d1e7dd; } /* 🌟 추가: 자율석 기본 초록색 */
         .seat-3 { background: #e2e3e5; color: #41464b; }
         .seat-4 { background: #cff4fc; color: #055160; }
         .seat-5 { background: #f8d7da; color: #842029; }
@@ -266,9 +268,10 @@ function renderDailySupervisorMap() {
             const target = cellEls[d.seatNum];
             const log = attendanceLogsData[String(d.stuId)];
             
-            // 자율석 학생은 연한 초록색 계열로 다르게 표시 (구분용)
+
+// 자율석 학생은 연한 초록색 계열로 다르게 표시 (구분용)
             target.innerHTML = `${d.seatNum}<br><span style="font-size:10px; color:#2e7d32;">${d.stuName}</span>`;
-            target.style.backgroundColor = "#e8f5e9"; // 자율석 발권 표시
+            target.style.backgroundColor = "#d1e7dd"; // 🌟 수정: 환경설정 자율석 색상과 완벽히 동일하게 맞춤
             target.style.borderColor = "#2e7d32";
 
             // 출결 상태 반영
