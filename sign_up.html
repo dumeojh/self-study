@@ -328,72 +328,69 @@ async function verifyStudent() {
         document.getElementById('submit-btn').disabled = !(selectedType !== null && ok);
     }
 
+
+    
 async function submitForm() {
-    const btn = document.getElementById('submit-btn'); 
-    btn.innerText = "저장 중..."; 
+    const btn = document.getElementById('submit-btn');
+    btn.innerText = "저장 중...";
     btn.disabled = true;
 
-    // 1. 검사에 필요한 값들을 먼저 변수에 담아둡니다.
     const targetMonthVal = document.getElementById('target-month').value;
     const typeVal = selectedType === 1 ? "고정석" : "자율석";
     const seatNumVal = selectedType === 1 ? selectedSeatId : "";
+    const stuIdVal = document.getElementById('stu-id').value;
+    const stuNameVal = document.getElementById('stu-name').value;
 
-    // 🌟 [추가된 핵심 로직] 학생이 고정석을 신청할 때 중복 검사
-    if (typeVal === "고정석" && seatNumVal !== "") {
-        // 파이어베이스에서 '같은 월', '고정석', '같은 자리'를 신청한 데이터가 있는지 검색합니다.
-        const snapshot = await db.collection("applications")
-            .where("targetMonth", "==", targetMonthVal)
-            .where("type", "==", "고정석")
-            .where("seatNum", "==", seatNumVal)
-            .get();
-
-        let isDuplicate = false;
-        
-        snapshot.forEach(doc => {
-            // 본인이 예전에 신청했던 내역(currentDocId)을 덮어쓰는 것은 중복이 아닙니다.
-            // 본인 문서가 아닌 다른 학생의 문서가 발견되었다면 중복입니다!
-            if (doc.id !== currentDocId) {
-                isDuplicate = true;
-            }
-        });
-
-        // 중복이 확인되면 경고창을 띄우고 저장을 즉시 중단합니다.
-        if (isDuplicate) {
-            alert(`⚠️ 한 발 늦었습니다! [ ${seatNumVal} ] 자리는 방금 다른 학생이 먼저 신청했습니다. 다른 자리를 선택해주세요.`);
-            btn.innerText = "신청하기"; // 버튼을 원래대로 되돌림
-            btn.disabled = false;     // 버튼을 다시 누를 수 있게 활성화
-            return; // ⛔ 여기서 함수를 끝내버려서 파이어베이스에 저장이 안 되게 막습니다.
-        }
-    }
-    // 🌟 [추가 로직 끝]
-
-    // --- 여기서부터는 기존과 동일하게 파이어베이스에 저장하는 과정입니다 ---
-    const p = { 
-        targetMonth: targetMonthVal, 
-        stuId: document.getElementById('stu-id').value, 
-        stuName: document.getElementById('stu-name').value, 
-        type: typeVal, 
-        seatNum: seatNumVal, 
-        timestamp: new Date() 
+    // 데이터 객체 생성
+    const p = {
+        targetMonth: targetMonthVal,
+        stuId: stuIdVal,
+        stuName: stuNameVal,
+        type: typeVal,
+        seatNum: seatNumVal,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp() // 서버 시간 사용 권장
     };
-
-    daysEng.forEach(d => { 
-        p[d] = Array.from(document.querySelectorAll(`[id^="${d}-"]:checked`)).map(el => el.value).join(','); 
+    daysEng.forEach(d => {
+        p[d] = Array.from(document.querySelectorAll(`[id^="${d}-"]:checked`)).map(el => el.value).join(',');
     });
 
     try {
-        if (currentDocId) {
-            await db.collection("applications").doc(currentDocId).update(p); 
-        } else {
-            await db.collection("applications").add(p);
-        }
-        alert("성공적으로 신청이 완료되었습니다."); 
-        location.reload(); // 성공 시 화면 새로고침
-    } catch(e) { 
-        // 인터넷 끊김 등 에러 발생 시 처리
-        alert("오류가 발생했습니다: " + e.message); 
-        btn.innerText = "신청하기"; 
-        btn.disabled = false; 
+        await db.runTransaction(async (transaction) => {
+            // 1. 고정석일 경우에만 중복 체크 수행
+            if (typeVal === "고정석") {
+                const duplicateQuery = db.collection("applications")
+                    .where("targetMonth", "==", targetMonthVal)
+                    .where("type", "==", "고정석")
+                    .where("seatNum", "==", seatNumVal);
+                
+                const snapshot = await transaction.get(duplicateQuery);
+                
+                let isAlreadyTaken = false;
+                snapshot.forEach(doc => {
+                    if (doc.id !== currentDocId) isAlreadyTaken = true;
+                });
+
+                if (isAlreadyTaken) {
+                    throw "이미 다른 학생이 선택한 좌석입니다. 다시 선택해주세요.";
+                }
+            }
+
+            // 2. 문서 저장 (기존 문서가 있으면 update, 없으면 add)
+            if (currentDocId) {
+                const docRef = db.collection("applications").doc(currentDocId);
+                transaction.update(docRef, p);
+            } else {
+                const newDocRef = db.collection("applications").doc(); // 새 문서 ID 생성
+                transaction.set(newDocRef, p);
+            }
+        });
+
+        alert("성공적으로 신청이 완료되었습니다.");
+        location.reload();
+    } catch (e) {
+        alert("신청 실패: " + e);
+        btn.innerText = "신청하기";
+        btn.disabled = false;
     }
 }
 </script>
