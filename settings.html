@@ -96,23 +96,33 @@
         <div id="roster-list" style="max-height:200px; overflow-y:auto; font-size:12px; border:1px solid #eee; padding:10px;"></div>
     </div>
 
-    <div id="tab-seats" class="card">
-        <h3>🪑 좌석 도면 설계기</h3>
-        <div style="margin-bottom:10px;">
-            가로 <input type="number" id="grid-cols" value="30" style="width:50px;"> X 세로 <input type="number" id="grid-rows" value="20" style="width:50px;">
-            <button class="btn" style="background:var(--gray); padding:5px 10px;" onclick="resizeGrid()">그리드 생성</button>
+<div id="tab-seats" class="card">
+    <h3>🪑 좌석 도면 설계기</h3>
+    <div style="background: #f1f3f5; padding: 15px; border-radius: 10px; margin-bottom: 15px; font-size: 14px;">
+        <div style="margin-bottom: 10px;">
+            <b>1. 기본 크기:</b> 가로 <input type="number" id="grid-cols" value="30" style="width:50px;"> X 세로 <input type="number" id="grid-rows" value="20" style="width:50px;">
+            <button class="btn" style="background:var(--gray); padding:5px 10px;" onclick="resizeGrid()">새 도화지 만들기</button>
         </div>
-        <div class="tool-bar">
-            <button class="tool-btn seat-0 selected" onclick="selectTool(0, this)">⬜ 통로</button>
-            <button class="tool-btn seat-1" onclick="selectTool(1, this)">🟨 고정석</button>
-            <button class="tool-btn seat-2" onclick="selectTool(2, this)">🟩 자율석</button>
-            <button class="tool-btn seat-3" onclick="selectTool(3, this)">⬛ 벽</button>
-            <button class="tool-btn seat-4" onclick="selectTool(4, this)">🟦 문</button>
-            <button class="tool-btn seat-5" onclick="selectTool(5, this)">🟥 특수</button>
+        <div style="border-top: 1px dashed #ccc; padding-top: 10px;">
+            <b>2. 줄 편집:</b> <input type="number" id="target-index" value="1" min="1" style="width: 50px;"> 번째 위치에 
+            <button class="btn" style="background:var(--primary); padding:5px 8px; font-size:12px;" onclick="modifyGrid('insertRow')">가로줄 삽입</button>
+            <button class="btn" style="background:var(--danger); padding:5px 8px; font-size:12px;" onclick="modifyGrid('deleteRow')">가로줄 삭제</button> | 
+            <button class="btn" style="background:var(--primary); padding:5px 8px; font-size:12px;" onclick="modifyGrid('insertCol')">세로줄 삽입</button>
+            <button class="btn" style="background:var(--danger); padding:5px 8px; font-size:12px;" onclick="modifyGrid('deleteCol')">세로줄 삭제</button>
         </div>
-        <div class="seat-grid-container"><div id="seat-grid" class="seat-grid"></div></div>
-        <button class="btn btn-save" onclick="saveSeatLayout()">🌐 도면 서버 배포</button>
     </div>
+
+    <div class="tool-bar">
+        <button class="tool-btn seat-0 selected" onclick="selectTool(0, this)">⬜ 통로</button>
+        <button class="tool-btn seat-1" onclick="selectTool(1, this)">🟨 고정석</button>
+        <button class="tool-btn seat-2" onclick="selectTool(2, this)">🟩 자율석</button>
+        <button class="tool-btn seat-3" onclick="selectTool(3, this)">⬛ 벽</button>
+        <button class="tool-btn seat-4" onclick="selectTool(4, this)">🟦 문</button>
+        <button class="tool-btn seat-5" onclick="selectTool(5, this)">🟥 특수</button>
+    </div>
+    <div class="seat-grid-container"><div id="seat-grid" class="seat-grid"></div></div>
+    <button class="btn btn-save" onclick="saveSeatLayout()">🌐 도면 서버 배포</button>
+</div>
 
     <div id="tab-time" class="card">
         <h3>⏰ 야자 교시별 운영 시간</h3>
