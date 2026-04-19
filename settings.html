@@ -12,34 +12,54 @@
         :root { --primary: #007bff; --danger: #dc3545; --success: #28a745; --gray: #6c757d; }
         body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f7f9; margin: 0; padding: 0; }
         
-        #auth-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; }
-        .auth-box { background: white; padding: 40px; border-radius: 15px; text-align: center; width: 90%; max-width: 350px; }
-        .auth-box input { width: 100%; padding: 12px; font-size: 24px; text-align: center; border: 2px solid #ddd; border-radius: 8px; margin: 20px 0; box-sizing: border-box; }
+        /* 🔐 보안 레이어 */
+        #auth-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; justify-content: center; align-items: center; }
+        .auth-box { background: white; padding: 40px; border-radius: 20px; text-align: center; width: 90%; max-width: 380px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); }
+        .auth-box input { width: 100%; padding: 15px; font-size: 24px; text-align: center; border: 2px solid #ddd; border-radius: 10px; margin: 20px 0; box-sizing: border-box; }
 
+        /* 메인 레이아웃 */
         #main-content { display: none; padding: 20px; max-width: 1100px; margin: 0 auto; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
 
+        /* 탭 메뉴 */
         .settings-menu { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-        .menu-btn { flex: 1; min-width: 110px; padding: 12px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.3s; }
+        .menu-btn { flex: 1; min-width: 120px; padding: 15px; font-weight: bold; border: none; border-radius: 10px; cursor: pointer; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.3s; }
         .menu-btn.active { background: var(--primary); color: white; }
 
-        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #eee; display: none; }
-        .card.active { display: block; }
-        h3 { margin-top: 0; border-left: 5px solid var(--primary); padding-left: 10px; }
+        /* 카드 및 가독성 */
+        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #eee; display: none; }
+        .card.active { display: block; animation: fadeIn 0.4s ease; }
+        h3 { margin-top: 0; border-left: 6px solid var(--primary); padding-left: 12px; margin-bottom: 20px; }
 
-        /* 요일 선택 스타일 */
-        .day-selector { display: flex; gap: 10px; margin: 15px 0; flex-wrap: wrap; }
-        .day-item { padding: 10px 15px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-        .day-item input { transform: scale(1.2); }
+        /* 📅 달력 스타일 */
+        .calendar-month-nav { margin-bottom: 15px; text-align: center; }
+        .calendar-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .calendar-table th { background: #f8f9fa; padding: 10px; border: 1px solid #ddd; font-size: 14px; }
+        .calendar-table td { height: 85px; border: 1px solid #ddd; vertical-align: top; padding: 8px; cursor: pointer; transition: 0.2s; position: relative; }
+        .calendar-table td:hover { background: #f0f7ff; }
+        .calendar-table td.is-active { background: #e7f1ff; box-shadow: inset 0 0 0 2px var(--primary); }
+        .day-num { font-weight: bold; font-size: 16px; }
+        .status-badge { font-size: 11px; margin-top: 8px; padding: 4px; border-radius: 4px; display: block; text-align: center; font-weight: bold; }
+        .status-on { background: var(--primary); color: white; }
+        .status-off { background: #eee; color: #999; }
 
-        .seat-grid-container { background: #e9ecef; padding: 20px; border-radius: 10px; overflow-x: auto; margin: 15px 0; }
+        /* 🪑 도면 설계 그리드 */
+        .seat-grid-container { background: #e9ecef; padding: 20px; border-radius: 10px; overflow-x: auto; margin: 15px 0; border: 1px solid #ccc; }
         .seat-grid { display: grid; gap: 3px; justify-content: start; }
-        .seat-cell { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 10px; border-radius: 4px; border: 1px solid #ccc; background: white; cursor: pointer; }
+        .seat-cell { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; font-size: 10px; border-radius: 4px; border: 1px solid #bbb; background: white; cursor: pointer; }
+        .tool-bar { display: flex; gap: 5px; margin-bottom: 15px; flex-wrap: wrap; padding: 10px; background: #fff; border-radius: 8px; border: 1px solid #ddd; }
+        .tool-btn { padding: 8px 12px; font-size: 13px; border-radius: 5px; border: 1px solid #ddd; cursor: pointer; font-weight: bold; background: #f8f9fa; }
+        .tool-btn.selected { border: 2px solid #000; background: #eee; box-shadow: 0 0 8px rgba(0,0,0,0.2); }
         
-        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; }
-        .btn-save { background: var(--primary); width: 100%; padding: 15px; margin-top: 10px; font-size: 16px; }
-        .btn-gray { background: var(--gray); }
-        input[type="time"], input[type="datetime-local"], input[type="number"] { padding: 8px; border: 1px solid #ddd; border-radius: 5px; }
+        .seat-0 { background: #fff; } .seat-1 { background: #fff3cd; } .seat-2 { background: #d1e7dd; } 
+        .seat-3 { background: #e2e3e5; } .seat-4 { background: #cff4fc; } .seat-5 { background: #f8d7da; }
+
+        /* 버튼 공통 */
+        .btn { padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; font-size: 15px; }
+        .btn-save { background: var(--primary); width: 100%; padding: 18px; margin-top: 15px; font-size: 18px; }
+        input { border: 1px solid #ddd; border-radius: 6px; padding: 10px; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -47,10 +67,11 @@
 <div id="auth-overlay">
     <div class="auth-box">
         <h2>🔒 관리자 인증</h2>
-        <input type="password" id="pass-input" placeholder="비밀번호 입력" autofocus>
-        <div style="display: flex; gap: 10px;">
-            <button class="btn" style="background:var(--primary); flex:2;" onclick="checkPass()">확인</button>
-            <button class="btn btn-gray" style="flex:1;" onclick="location.href='split_admin.html'">취소</button>
+        <p>환경설정 진입을 위해<br>비밀번호를 입력하세요.</p>
+        <input type="password" id="pass-input" placeholder="Password" autofocus>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button class="btn" style="background:var(--primary);" onclick="checkPass()">확인</button>
+            <button class="btn" style="background:var(--gray);" onclick="location.href='split_admin.html'">취소 및 돌아가기</button>
         </div>
     </div>
 </div>
@@ -58,67 +79,101 @@
 <div id="main-content">
     <div class="header">
         <h1>⚙️ 통합 환경설정</h1>
-        <button class="btn btn-gray" onclick="location.href='split_admin.html'">⬅️ 관리 화면</button>
+        <button class="btn" style="background:var(--gray);" onclick="location.href='split_admin.html'">⬅️ 관리 화면으로</button>
     </div>
 
     <div class="settings-menu">
-        <button class="menu-btn active" onclick="showTab('tab-period', this)">📅 신청기간</button>
-        <button class="menu-btn" onclick="showTab('tab-schedule', this)">📅 야자일정</button> <button class="menu-btn" onclick="showTab('tab-roster', this)">⚙️ 기초명단</button>
+        <button class="menu-btn active" onclick="showTab('tab-schedule', this)">📅 야자일정(달력)</button>
+        <button class="menu-btn" onclick="showTab('tab-period', this)">⏰ 신청기간</button>
+        <button class="menu-btn" onclick="showTab('tab-roster', this)">⚙️ 기초명단</button>
         <button class="menu-btn" onclick="showTab('tab-seats', this)">🪑 도면설계</button>
-        <button class="menu-btn" onclick="showTab('tab-time', this)">⏰ 야자시간</button>
+        <button class="menu-btn" onclick="showTab('tab-time', this)">⏱️ 교시시간</button>
     </div>
 
-    <div id="tab-period" class="card active">
-        <h3>📅 학생 신청 가능 기간 설정</h3>
-        <div style="margin: 20px 0;">
-            <label>시작 시간: </label> <input type="datetime-local" id="apply-start"> <br><br>
-            <label>종료 시간: </label> <input type="datetime-local" id="apply-end">
+    <div id="tab-schedule" class="card active">
+        <h3>📅 야자 운영 달력 설정</h3>
+        <p style="color: #666; font-size: 13px; margin-bottom: 20px;">* 날짜를 클릭하면 [운영/미운영] 상태가 변경됩니다. 평일은 기본 운영으로 설정됩니다.</p>
+        <div class="calendar-month-nav">
+            <input type="month" id="calendar-month-select" onchange="renderCalendar()" style="font-size: 18px; padding: 10px;">
         </div>
-        <button class="btn btn-save" onclick="saveApplyPeriod()">📅 신청 기간 서버 배포</button>
+        <div id="calendar-container"></div>
+        <button class="btn btn-save" onclick="saveCalendarSchedule()">💾 달력 운영 일정 서버 배포</button>
     </div>
 
-    <div id="tab-schedule" class="card">
-        <h3>📅 야자 운영 요일 설정 (월~일)</h3>
-        <p style="color: #666; font-size: 13px;">* 선택한 요일만 학생 신청 페이지에 노출됩니다.</p>
-        <div class="day-selector">
-            <label class="day-item"><input type="checkbox" id="check-mon" checked> 월요일</label>
-            <label class="day-item"><input type="checkbox" id="check-tue" checked> 화요일</label>
-            <label class="day-item"><input type="checkbox" id="check-wed" checked> 수요일</label>
-            <label class="day-item"><input type="checkbox" id="check-thu" checked> 목요일</label>
-            <label class="day-item"><input type="checkbox" id="check-fri" checked> 금요일</label>
-            <label class="day-item" style="color:blue;"><input type="checkbox" id="check-sat"> 토요일</label>
-            <label class="day-item" style="color:red;"><input type="checkbox" id="check-sun"> 일요일</label>
+    <div id="tab-period" class="card">
+        <h3>⏰ 학생 신청 가능 기간 설정</h3>
+        <div style="padding: 20px; background: #f8f9fa; border-radius: 10px;">
+            <div style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">신청 시작 일시:</label>
+                <input type="datetime-local" id="apply-start" style="width:100%; box-sizing:border-box;">
+            </div>
+            <div>
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">신청 종료 일시:</label>
+                <input type="datetime-local" id="apply-end" style="width:100%; box-sizing:border-box;">
+            </div>
         </div>
-        <button class="btn btn-save" onclick="saveOperatingDays()">📅 운영 일정 저장</button>
+        <button class="btn btn-save" onclick="saveApplyPeriod()">💾 신청 기간 데이터 저장</button>
     </div>
 
     <div id="tab-roster" class="card">
         <h3>⚙️ 기초 명단 업로드 (엑셀)</h3>
-        <input type="file" id="excel-input" accept=".xlsx, .xls">
-        <button class="btn" style="background:var(--success);" onclick="handleExcelUpload()">🚀 명단 서버 전송</button>
-        <hr>
-        <h4>현재 등록 명단 (<span id="roster-count">0</span>명)</h4>
-        <div id="roster-list" style="max-height:200px; overflow-y:auto; font-size:12px; border:1px solid #eee; padding:10px;"></div>
+        <div style="background:#eef6ff; padding:15px; border-radius:8px; font-size:13px; margin-bottom:15px; color:#0056b3;">
+            ※ 엑셀 파일 형식: <b>A열(학번), B열(이름)</b> / 첫 번째 시트 기준
+        </div>
+        <input type="file" id="excel-input" accept=".xlsx, .xls" style="margin-bottom: 15px;">
+        <button class="btn" style="background:var(--success); width:100%;" onclick="handleExcelUpload()">🚀 엑셀 데이터 서버로 전송</button>
+        <hr style="margin: 25px 0;">
+        <h4>현재 등록된 전체 명단 (<span id="roster-count">0</span>명)</h4>
+        <div id="roster-list" style="max-height:250px; overflow-y:auto; font-size:13px; border:1px solid #ddd; padding:15px; background:#fff; line-height:1.8;"></div>
     </div>
 
     <div id="tab-seats" class="card">
-        <h3>🪑 좌석 도면 설계기</h3>
+        <h3>🪑 자율학습실 좌석 도면 설계</h3>
+        <div style="background: #f1f3f5; padding: 15px; border-radius: 10px; margin-bottom: 15px; font-size: 14px;">
+            <div style="margin-bottom: 10px;">
+                <b>1. 도화지 크기:</b> 가로 <input type="number" id="grid-cols" value="30" style="width:50px;"> X 세로 <input type="number" id="grid-rows" value="20" style="width:50px;">
+                <button class="btn" style="background:var(--gray); padding:5px 10px; font-size:12px;" onclick="resizeGrid()">그리드 리셋</button>
+            </div>
+            <div style="border-top: 1px dashed #ccc; padding-top: 10px;">
+                <b>2. 줄 편집:</b> <input type="number" id="target-index" value="1" min="1" style="width: 45px;"> 번째 위치에 
+                <button class="btn" style="background:var(--primary); padding:5px 8px; font-size:12px;" onclick="modifyGrid('insertRow')">가로 삽입</button>
+                <button class="btn" style="background:var(--danger); padding:5px 8px; font-size:12px;" onclick="modifyGrid('deleteRow')">가로 삭제</button> | 
+                <button class="btn" style="background:var(--primary); padding:5px 8px; font-size:12px;" onclick="modifyGrid('insertCol')">세로 삽입</button>
+                <button class="btn" style="background:var(--danger); padding:5px 8px; font-size:12px;" onclick="modifyGrid('deleteCol')">세로 삭제</button>
+            </div>
+        </div>
+
+        <div class="tool-bar">
+            <button class="tool-btn seat-0 selected" onclick="selectTool(0, this)">⬜ 통로</button>
+            <button class="tool-btn seat-1" onclick="selectTool(1, this)">🟨 고정석</button>
+            <button class="tool-btn seat-2" onclick="selectTool(2, this)">🟩 자율석</button>
+            <button class="tool-btn seat-3" onclick="selectTool(3, this)">⬛ 벽/기둥</button>
+            <button class="tool-btn seat-4" onclick="selectTool(4, this)">🟦 출입문</button>
+            <button class="tool-btn seat-5" onclick="selectTool(5, this)">🟥 특수구역</button>
+        </div>
         <div class="seat-grid-container"><div id="seat-grid" class="seat-grid"></div></div>
-        <button class="btn btn-save" onclick="saveSeatLayout()">🌐 도면 서버 배포</button>
+        <button class="btn btn-save" onclick="saveSeatLayout()">🌐 설계 도면 서버 배포</button>
     </div>
 
     <div id="tab-time" class="card">
-        <h3>⏰ 야자 교시별 운영 시간</h3>
-        <div style="display:grid; gap:15px; margin: 20px 0;">
-            <div>1T: <input type="time" id="t1-start"> ~ <input type="time" id="t1-end"></div>
-            <div>2T: <input type="time" id="t2-start"> ~ <input type="time" id="t2-end"></div>
-            <div>3T: <input type="time" id="t3-start"> ~ <input type="time" id="t3-end"></div>
+        <h3>⏱️ 야간 자율학습 운영 시간 설정</h3>
+        <div style="display:grid; gap:20px; padding:20px; background:#f8f9fa; border-radius:12px;">
+            <div style="display:flex; align-items:center; gap:15px;">
+                <b style="width:60px;">1타임:</b> <input type="time" id="t1-start"> <span style="color:#999;">~</span> <input type="time" id="t1-end">
+            </div>
+            <div style="display:flex; align-items:center; gap:15px;">
+                <b style="width:60px;">2타임:</b> <input type="time" id="t2-start"> <span style="color:#999;">~</span> <input type="time" id="t2-end">
+            </div>
+            <div style="display:flex; align-items:center; gap:15px;">
+                <b style="width:60px;">3타임:</b> <input type="time" id="t3-start"> <span style="color:#999;">~</span> <input type="time" id="t3-end">
+            </div>
         </div>
-        <button class="btn btn-save" onclick="saveTimeSettings()">⏰ 운영 시간 저장</button>
+        <button class="btn btn-save" onclick="saveTimeSettings()">💾 운영 시간 설정 저장</button>
     </div>
 </div>
 
 <script>
+    // --- 파이어베이스 설정 ---
     const firebaseConfig = {
         apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
         authDomain: "self-study-project-82bdf.firebaseapp.com",
@@ -130,16 +185,25 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    let seatMapData = []; let rows = 20; let cols = 30;
+    let currentTool = 0; 
+    let seatMapData = []; 
+    let rows = 20, cols = 30;
+    let currentSchedule = {}; // { "2024-04-15": true }
 
+    // 🔐 보안 인증
     function checkPass() {
         if(document.getElementById('pass-input').value === "1234") {
             document.getElementById('auth-overlay').style.display = 'none';
             document.getElementById('main-content').style.display = 'block';
             loadAllSettings();
-        } else { alert("틀렸습니다."); }
+        } else {
+            alert("비밀번호가 올바르지 않습니다.");
+            document.getElementById('pass-input').value = "";
+        }
     }
+    document.getElementById('pass-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') checkPass(); });
 
+    // 탭 전환
     function showTab(tabId, btn) {
         document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
@@ -147,54 +211,174 @@
         btn.classList.add('active');
     }
 
-    // [신규] 운영 요일 저장 함수
-    async function saveOperatingDays() {
-        const days = {
-            mon: document.getElementById('check-mon').checked,
-            tue: document.getElementById('check-tue').checked,
-            wed: document.getElementById('check-wed').checked,
-            thu: document.getElementById('check-thu').checked,
-            fri: document.getElementById('check-fri').checked,
-            sat: document.getElementById('check-sat').checked,
-            sun: document.getElementById('check-sun').checked,
-            lastUpdated: new Date()
-        };
-        await db.collection("settings").doc("operatingDays").set(days);
-        alert("운영 요일 설정이 저장되었습니다.");
-    }
-
-    async function saveApplyPeriod() {
-        const start = document.getElementById('apply-start').value;
-        const end = document.getElementById('apply-end').value;
-        await db.collection("settings").doc("applyPeriod").set({ start, end });
-        alert("신청 기간이 배포되었습니다.");
-    }
-
-    async function loadAllSettings() {
-        // 운영 요일 불러오기
-        const d = await db.collection("settings").doc("operatingDays").get();
-        if(d.exists) {
-            const data = d.data();
-            document.getElementById('check-mon').checked = data.mon;
-            document.getElementById('check-tue').checked = data.tue;
-            document.getElementById('check-wed').checked = data.wed;
-            document.getElementById('check-thu').checked = data.thu;
-            document.getElementById('check-fri').checked = data.fri;
-            document.getElementById('check-sat').checked = data.sat;
-            document.getElementById('check-sun').checked = data.sun;
+    // --- [1. 달력 로직] ---
+    function renderCalendar() {
+        const monthInput = document.getElementById('calendar-month-select');
+        if(!monthInput.value) {
+            const now = new Date();
+            monthInput.value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2, '0')}`;
         }
+        const [year, month] = monthInput.value.split('-').map(Number);
+        const firstDay = new Date(year, month - 1, 1).getDay();
+        const lastDate = new Date(year, month, 0).getDate();
+        
+        let html = `<table class="calendar-table"><thead><tr>
+            <th style="color:red">일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th style="color:blue">토</th>
+        </tr></thead><tbody><tr>`;
 
+        for(let i=0; i<firstDay; i++) html += `<td></td>`;
+        for(let date=1; date<=lastDate; date++) {
+            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+            const dayOfWeek = new Date(year, month - 1, date).getDay();
+            if(currentSchedule[dateStr] === undefined) currentSchedule[dateStr] = (dayOfWeek !== 0 && dayOfWeek !== 6);
+
+            const isActive = currentSchedule[dateStr];
+            html += `
+                <td class="${isActive ? 'is-active' : ''}" onclick="toggleDate('${dateStr}')">
+                    <div class="day-num">${date}</div>
+                    <span class="status-badge ${isActive ? 'status-on' : 'status-off'}">${isActive ? '야자운영' : '야자없음'}</span>
+                </td>
+            `;
+            if((firstDay + date) % 7 === 0) html += `</tr><tr>`;
+        }
+        html += `</tr></tbody></table>`;
+        document.getElementById('calendar-container').innerHTML = html;
+    }
+
+    function toggleDate(dateStr) {
+        currentSchedule[dateStr] = !currentSchedule[dateStr];
+        renderCalendar();
+    }
+
+    async function saveCalendarSchedule() {
+        await db.collection("settings").doc("calendarSchedule").set({
+            data: JSON.stringify(currentSchedule), lastUpdated: new Date()
+        });
+        alert("달력 일정이 저장되었습니다.");
+    }
+
+    // --- [2. 도면 설계 로직] ---
+    function selectTool(type, btn) {
+        currentTool = type;
+        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+    }
+
+    function resizeGrid() {
+        rows = parseInt(document.getElementById('grid-rows').value);
+        cols = parseInt(document.getElementById('grid-cols').value);
+        seatMapData = Array.from({length: rows}, () => Array.from({length: cols}, () => ({ type: 0, label: "" })));
+        drawEditGrid();
+    }
+
+    function modifyGrid(action) {
+        const idx = parseInt(document.getElementById('target-index').value) - 1;
+        if(idx < 0) return;
+        if (action === 'insertRow') { seatMapData.splice(idx, 0, Array.from({length: cols}, () => ({ type: 0, label: "" }))); rows++; }
+        else if (action === 'deleteRow') { seatMapData.splice(idx, 1); rows--; }
+        else if (action === 'insertCol') { seatMapData.forEach(r => r.splice(idx, 0, { type: 0, label: "" })); cols++; }
+        else if (action === 'deleteCol') { seatMapData.forEach(r => r.splice(idx, 1)); cols--; }
+        document.getElementById('grid-rows').value = rows; document.getElementById('grid-cols').value = cols;
+        drawEditGrid();
+    }
+
+    function drawEditGrid() {
+        const grid = document.getElementById('seat-grid');
+        grid.innerHTML = ''; grid.style.gridTemplateColumns = `repeat(${cols}, 42px)`;
+        for(let r=0; r<rows; r++) {
+            for(let c=0; c<cols; c++) {
+                const cell = seatMapData[r][c];
+                const div = document.createElement('div');
+                div.className = `seat-cell seat-${cell.type}`;
+                div.innerText = cell.label || "";
+                div.onclick = () => {
+                    if([1, 2, 5].includes(currentTool)) {
+                        const lbl = prompt("라벨/좌석번호 입력:", cell.label);
+                        cell.label = lbl !== null ? lbl : cell.label;
+                    }
+                    cell.type = currentTool;
+                    drawEditGrid();
+                };
+                grid.appendChild(div);
+            }
+        }
+    }
+
+    async function saveSeatLayout() {
+        await db.collection("settings").doc("seatLayout").set({ rows, cols, grid: JSON.stringify(seatMapData) });
+        alert("도면 배포가 완료되었습니다!");
+    }
+
+    // --- [3. 기타 설정 저장 로직] ---
+    async function saveApplyPeriod() {
+        await db.collection("settings").doc("applyPeriod").set({
+            start: document.getElementById('apply-start').value,
+            end: document.getElementById('apply-end').value
+        });
+        alert("신청 기간이 저장되었습니다.");
+    }
+
+    async function handleExcelUpload() {
+        const file = document.getElementById('excel-input').files[0];
+        if(!file) return alert("파일을 선택하세요.");
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+            const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
+            let roster = {};
+            data.forEach(row => { if(row[0] && row[1]) roster[row[0]] = row[1]; });
+            await db.collection("settings").doc("roster").set({ list: JSON.stringify(roster) });
+            alert("명단이 서버에 업데이트 되었습니다.");
+            loadAllSettings();
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    async function saveTimeSettings() {
+        await db.collection("settings").doc("schedule").set({
+            t1: document.getElementById('t1-start').value, t1_end: document.getElementById('t1-end').value,
+            t2: document.getElementById('t2-start').value, t2_end: document.getElementById('t2-end').value,
+            t3: document.getElementById('t3-start').value, t3_end: document.getElementById('t3-end').value
+        });
+        alert("운영 시간이 저장되었습니다.");
+    }
+
+    // --- [데이터 통합 로드] ---
+    async function loadAllSettings() {
+        // 1. 달력 로드
+        const cal = await db.collection("settings").doc("calendarSchedule").get();
+        if(cal.exists) currentSchedule = JSON.parse(cal.data().data);
+        renderCalendar();
+
+        // 2. 신청 기간
         const p = await db.collection("settings").doc("applyPeriod").get();
         if(p.exists) { document.getElementById('apply-start').value = p.data().start; document.getElementById('apply-end').value = p.data().end; }
 
+        // 3. 명단
         const r = await db.collection("settings").doc("roster").get();
         if(r.exists) {
             const list = JSON.parse(r.data().list);
             document.getElementById('roster-count').innerText = Object.keys(list).length;
             document.getElementById('roster-list').innerText = Object.entries(list).map(([id, name]) => `${id}(${name})`).join(', ');
         }
-        
-        // (기존 도면/시간 로딩 생략 - 기존 로직 유지됨)
+
+        // 4. 도면
+        const s = await db.collection("settings").doc("seatLayout").get();
+        if(s.exists) {
+            rows = s.data().rows; cols = s.data().cols;
+            seatMapData = JSON.parse(s.data().grid).map(row => row.map(c => typeof c === 'number' ? {type:c, label:""} : c));
+            document.getElementById('grid-rows').value = rows; document.getElementById('grid-cols').value = cols;
+            drawEditGrid();
+        }
+
+        // 5. 운영 시간
+        const t = await db.collection("settings").doc("schedule").get();
+        if(t.exists) {
+            const d = t.data();
+            document.getElementById('t1-start').value = d.t1; document.getElementById('t1-end').value = d.t1_end;
+            document.getElementById('t2-start').value = d.t2; document.getElementById('t2-end').value = d.t2_end;
+            document.getElementById('t3-start').value = d.t3; document.getElementById('t3-end').value = d.t3_end;
+        }
     }
 </script>
 </body>
