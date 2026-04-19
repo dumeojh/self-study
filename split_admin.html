@@ -242,8 +242,9 @@ function renderDailySupervisorMap() {
         });
     });
 
-    // 2. 고정석 학생 배치 (applications 컬렉션 기준)
-    Object.values(applicationData).forEach(d => {
+    // 2. 고정석 학생 배치 
+    // 🌟 수정: Object.entries를 사용하여 클릭 이벤트에 필요한 docId를 가져옵니다.
+    Object.entries(applicationData).forEach(([docId, d]) => {
         if(d.type === "고정석" && d[targetDay] && d[targetDay].includes(timeStr) && cellEls[d.seatNum]) {
             const target = cellEls[d.seatNum]; 
             const log = attendanceLogsData[String(d.stuId)];
@@ -251,10 +252,14 @@ function renderDailySupervisorMap() {
             
             if(log && log.status !== "귀가") target.classList.add('status-present-fixed'); 
             else target.classList.add('status-absent');
+
+            // 🌟 [복구됨] 클릭 시 상담 리포트 팝업 연결
+            target.style.cursor = "pointer";
+            target.onclick = () => openCounsel(docId);
         }
     });
 
-    // 3. 🌟 [추가] 자율석 발권 학생 배치 (daily_reservations 컬렉션 기준)
+    // 3. 자율석 발권 학생 배치
     dailyReservationsData.forEach(d => {
         // 해당 학생이 발권한 타임에 현재 교시가 포함되어 있는지 확인
         if(d.times && d.times.includes(timeStr) && cellEls[d.seatNum]) {
@@ -272,10 +277,17 @@ function renderDailySupervisorMap() {
             } else {
                 target.classList.add('status-absent');
             }
+
+            // 🌟 [추가] 자율석 학생도 클릭 시 상담 리포트 연결
+            // 자율석 데이터(daily_reservations)에는 docId가 없으므로, applicationData에서 학번으로 신청 원본을 찾아 연결합니다.
+            const appEntry = Object.entries(applicationData).find(([id, app]) => String(app.stuId) === String(d.stuId));
+            if (appEntry) {
+                target.style.cursor = "pointer";
+                target.onclick = () => openCounsel(appEntry[0]);
+            }
         }
     });
 }
-
 
 
     
