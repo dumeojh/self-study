@@ -8,6 +8,7 @@
     <style>
         :root {
             --primary: #2c3e50;
+            --secondary: #34495e;
             --accent: #007bff;
             --bg: #f4f7f9;
         }
@@ -18,265 +19,260 @@
             margin: 0;
             padding: 20px;
             color: #333;
+            line-height: 1.6;
         }
 
         .container {
             max-width: 900px;
             margin: 0 auto;
             background: white;
-            padding: 40px 20px;
-            border-radius: 20px;
+            padding: 40px;
+            border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.05);
         }
 
         header {
             text-align: center;
             margin-bottom: 40px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 20px;
         }
 
         header h1 {
             color: var(--primary);
-            font-size: 1.8rem;
-            margin-bottom: 10px;
+            font-weight: 900;
+            font-size: 2rem;
+            margin: 0 0 10px 0;
         }
 
-        /* 메뉴 박스 그리드 설정 */
-        .menu-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
-        /* 클릭 가능한 박스(버튼) 스타일 */
-        .menu-box {
-            background: #fff;
-            border: 2px solid #eee;
-            border-radius: 15px;
+        .flow-container {
+            background: #e9ecef;
             padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 40px;
             text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
+        }
+
+        .flow-title {
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .flow-steps {
             display: flex;
-            flex-direction: column;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-        }
-
-        .menu-box:hover {
-            border-color: var(--accent);
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0,123,255,0.1);
-        }
-
-        .menu-box.active {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: white;
-        }
-
-        .menu-box .icon { font-size: 2.5rem; margin-bottom: 10px; }
-        .menu-box .title { font-weight: bold; font-size: 1.1rem; }
-
-        /* 상세 설명 영역 (처음에는 숨김) */
-        .content-section {
-            display: none;
-            background: #f8f9fa;
-            padding: 30px;
-            border-radius: 15px;
-            border-left: 5px solid var(--accent);
-            margin-top: 20px;
-            animation: fadeIn 0.4s ease;
-        }
-
-        .content-section.active { display: block; }
-
-        .content-section h2 { margin-top: 0; color: var(--primary); }
-        .content-section ul { padding-left: 20px; }
-        .content-section li { margin-bottom: 10px; }
-
-        /* 전체 흐름도 단계 스타일 */
-        .flow-step-container {
-            display: flex;
-            flex-direction: column;
+            flex-wrap: wrap;
             gap: 10px;
-            margin-top: 15px;
         }
-        .flow-step {
+
+        .step {
             background: white;
             padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #ddd;
-            display: flex;
-            align-items: center;
-            gap: 15px;
+            border-radius: 8px;
+            flex: 1;
+            min-width: 120px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-        .step-num {
-            background: var(--accent);
-            color: white;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
+
+        .arrow {
+            color: #adb5bd;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .section-title {
+            color: var(--secondary);
+            border-left: 5px solid var(--accent);
+            padding-left: 15px;
+            margin-top: 40px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            background: #fff;
+            transition: 0.3s;
+        }
+
+        .card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border-color: #c5d6e8;
+        }
+
+        .card-icon {
+            font-size: 2.5rem;
+            background: #f8f9fa;
+            width: 70px;
+            height: 70px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
+            border-radius: 15px;
             flex-shrink: 0;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .card-content h3 {
+            margin: 0 0 10px 0;
+            color: var(--primary);
+            font-size: 1.2rem;
         }
+
+        .card-content p {
+            margin: 0 0 8px 0;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        .tag-admin { background: #ffeeba; color: #856404; }
+        .tag-student { background: #d1e7dd; color: #0f5132; }
+        .tag-kiosk { background: #cff4fc; color: #055160; }
 
         .btn-home {
-            display: inline-block;
-            margin-top: 30px;
+            display: block;
+            width: 100%;
+            text-align: center;
+            background: var(--primary);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
             text-decoration: none;
-            color: #7f8c8d;
-            font-size: 0.9rem;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-top: 40px;
+            transition: 0.3s;
         }
 
-        /* 전체 흐름 박스만 강조색 */
-        #box-flow { border: 2px solid #ffeeba; background: #fffcf0; }
-        #box-flow.active { background: #f1c40f; border-color: #f1c40f; color: white; }
+        .btn-home:hover {
+            background: #1a252f;
+        }
+
+        @media (max-width: 600px) {
+            .card { flex-direction: column; align-items: center; text-align: center; }
+            .flow-steps { flex-direction: column; }
+            .arrow { transform: rotate(90deg); margin: 5px 0; }
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <header>
-        <h1>🏫 야간 자율학습 시스템 매뉴얼</h1>
-        <p>궁금한 메뉴를 클릭하면 상세 설명이 나타납니다.</p>
-    </header>
+    <div class="container">
+        <header>
+            <h1>안성여고 야간 자율학습 시스템</h1>
+            <p>전체 프로그램 구성 및 이용 가이드</p>
+        </header>
 
-    <div class="menu-grid">
-        <div class="menu-box" id="box-flow" onclick="showContent('flow')">
-            <div class="icon">🔄</div>
-            <div class="title">전체 시스템 흐름</div>
+        <div class="flow-container">
+            <div class="flow-title">🔄 전체 시스템 운영 흐름 (5단계)</div>
+            <div class="flow-steps">
+                <div class="step">1. 환경설정<br><span style="font-size:0.8rem; font-weight:normal;">(관리자 셋팅)</span></div>
+                <div class="arrow">➔</div>
+                <div class="step">2. 야자 신청<br><span style="font-size:0.8rem; font-weight:normal;">(학생 온라인 신청)</span></div>
+                <div class="arrow">➔</div>
+                <div class="step">3. 일일 발권<br><span style="font-size:0.8rem; font-weight:normal;">(자율석 당일 발권)</span></div>
+                <div class="arrow">➔</div>
+                <div class="step">4. 키오스크<br><span style="font-size:0.8rem; font-weight:normal;">(바코드 입/퇴실)</span></div>
+                <div class="arrow">➔</div>
+                <div class="step">5. 통합 관리<br><span style="font-size:0.8rem; font-weight:normal;">(감독교사 출결확인)</span></div>
+            </div>
         </div>
-        <div class="menu-box" onclick="showContent('settings')">
-            <div class="icon">⚙️</div>
-            <div class="title">환경설정</div>
+
+        <h2 class="section-title">📌 1단계: 사전 준비 (관리자용)</h2>
+
+        <div class="card">
+            <div class="card-icon">⚙️</div>
+            <div class="card-content">
+                <h3>환경설정 (settings.html)</h3>
+                <span class="tag tag-admin">관리자 전용</span>
+                <p>시스템 운영을 위한 기초 공사를 하는 곳입니다. (비밀번호: 1234)</p>
+                <ul>
+                    <li><b>야자일정 & 신청기간:</b> 운영 달력을 설정하고 학생들이 신청할 수 있는 기간을 엽니다.</li>
+                    <li><b>기초명단:</b> 엑셀로 전체 학생 명단을 업로드합니다.</li>
+                    <li><b>도면설계:</b> 자습실의 좌석(고정/자율/통로 등)을 시각적으로 배치합니다.</li>
+                </ul>
+            </div>
         </div>
-        <div class="menu-box" onclick="showContent('signup')">
-            <div class="icon">📝</div>
-            <div class="title">야자 신청</div>
+
+        <h2 class="section-title">📌 2단계: 자율학습 신청 (학생용)</h2>
+
+        <div class="card">
+            <div class="card-icon">📝</div>
+            <div class="card-content">
+                <h3>야간 자율학습 신청 (sign_up.html)</h3>
+                <span class="tag tag-student">학생 전용</span>
+                <p>학생들이 스마트폰이나 PC로 다음 달 자율학습을 직접 신청하는 페이지입니다.</p>
+                <ul>
+                    <li><b>고정석 신청:</b> 희망 요일을 선택하고 도면에서 자신의 고정 자리를 클릭하여 선점합니다. (중복 불가)</li>
+                    <li><b>자율석 신청:</b> 자리는 매일 선택하므로, 여기서는 희망 요일과 타임만 신청합니다.</li>
+                </ul>
+            </div>
         </div>
-        <div class="menu-box" onclick="showContent('ticket')">
-            <div class="icon">🎟️</div>
-            <div class="title">일일 발권기</div>
+
+        <h2 class="section-title">📌 3단계: 매일 좌석 선택 (학생용)</h2>
+
+        <div class="card">
+            <div class="card-icon">🎟️</div>
+            <div class="card-content">
+                <h3>일일 자율석 발권기 (daily_ticket.html)</h3>
+                <span class="tag tag-student">자율석 학생 전용</span>
+                <p>자율석을 신청한 학생이 <b>야자 시작 전</b>에 그날 하루 동안 앉을 자리를 고르는 발권기입니다.</p>
+                <ul>
+                    <li>학번을 조회하면 다른 학생과 타임이 겹치지 않는 빈자리만 초록색으로 표시됩니다.</li>
+                    <li>자리를 확정하면 그날은 해당 좌석이 본인의 자리로 고정됩니다.</li>
+                </ul>
+            </div>
         </div>
-        <div class="menu-box" onclick="showContent('kiosk')">
-            <div class="icon">🔍</div>
-            <div class="title">키오스크</div>
+
+        <h2 class="section-title">📌 4단계: 실시간 출결 스캔 (공용 기기)</h2>
+
+        <div class="card">
+            <div class="card-icon">🔍</div>
+            <div class="card-content">
+                <h3>통합관리 키오스크 (kiosk.html)</h3>
+                <span class="tag tag-kiosk">입구 공용 기기</span>
+                <p>자습실 입구에 태블릿이나 노트북과 바코드 스캐너를 연결해 두는 출결 화면입니다.</p>
+                <ul>
+                    <li>학생이 학생증을 스캔하면 자동으로 <b>'입실'</b> 처리됩니다.</li>
+                    <li>이미 입실한 학생이 한 번 더 스캔하면 화면에 <b>[잠시 외출] / [최종 귀가]</b>를 선택할 수 있는 버튼이 나타납니다.</li>
+                </ul>
+            </div>
         </div>
-        <div class="menu-box" onclick="showContent('admin')">
-            <div class="icon">📊</div>
-            <div class="title">통합 관리자</div>
+
+        <h2 class="section-title">📌 5단계: 실시간 감독 및 관리 (선생님용)</h2>
+
+        <div class="card">
+            <div class="card-icon">📊</div>
+            <div class="card-content">
+                <h3>야간 자율학습 통합 관리 (split_admin.html)</h3>
+                <span class="tag tag-admin">감독/관리자 전용</span>
+                <p>매일 밤 감독 선생님이 전체 출결 상황을 한눈에 파악하는 현황판입니다.</p>
+                <ul>
+                    <li><b>오늘 감독용 좌석표:</b> 실제 좌석표 위에 학생 이름이 뜨며, 키오스크 출결에 따라 색상이 실시간으로 변합니다. (미입실은 빨간 점선)</li>
+                    <li><b>상담 리포트:</b> 학생 이름을 클릭하면 해당 학생의 이번 달 출석률(%)과 출석 내역 달력이 팝업으로 뜹니다.</li>
+                    <li><b>수기 관리:</b> 학생이 직접 신청을 못 했거나 자리를 바꿔야 할 때 선생님이 직접 데이터를 수정할 수 있습니다.</li>
+                </ul>
+            </div>
         </div>
+
+        <a href="index.html" class="btn-home">🏠 메인 화면(index.html)으로 돌아가기</a>
     </div>
-
-    <div id="content-flow" class="content-section">
-        <h2>🔄 전체 운영 프로세스</h2>
-        <p>안성여고 야자 시스템은 아래의 순서로 운영됩니다.</p>
-        <div class="flow-step-container">
-            <div class="flow-step"><div class="step-num">1</div><div><b>사전 준비:</b> 관리자가 명단 업로드 및 도면 설계를 완료합니다.</div></div>
-            <div class="flow-step"><div class="step-num">2</div><div><b>학생 신청:</b> 정해진 기간에 학생들이 온라인으로 요일과 좌석을 신청합니다.</div></div>
-            <div class="flow-step"><div class="step-num">3</div><div><b>일일 발권:</b> 자율석 학생은 매일 야자 전 그날 앉을 자리를 뽑습니다.</div></div>
-            <div class="flow-step"><div class="step-num">4</div><div><b>출결 체크:</b> 입구에서 학생증 바코드를 찍고 입장합니다.</div></div>
-            <div class="flow-step"><div class="step-num">5</div><div><b>감독 확인:</b> 선생님은 실시간 좌석표를 보며 출결을 최종 확인합니다.</div></div>
-        </div>
-    </div>
-
-    <div id="content-settings" class="content-section">
-        <h2>⚙️ 환경설정 (settings.html)</h2>
-        <p>관리자(선생님)가 시스템의 기초 데이터를 설정하는 공간입니다. (암호: 1234)</p>
-        <ul>
-            <li><b>야자 운영 달력:</b> 특정 날짜를 클릭해 '야자 없음' 처리 및 사유를 입력할 수 있습니다.</li>
-            <li><b>신청 기간 설정:</b> 학생들이 홈페이지에서 신청 가능한 시작/종료 시간을 정합니다.</li>
-            <li><b>기초 명단 업로드:</b> 엑셀 파일을 올려 학생들의 학번과 이름을 등록합니다.</li>
-            <li><b>도면 설계:</b> 자습실의 고정석, 자율석 위치를 마우스 클릭으로 배치합니다.</li>
-        </ul>
-    </div>
-
-    <div id="content-signup" class="content-section">
-        <h2>📝 야간 자율학습 신청 (sign_up.html)</h2>
-        <p>학생들이 스마트폰을 이용해 한 달 치 야자 일정을 신청하는 페이지입니다.</p>
-        <ul>
-            <li><b>고정석 학생:</b> 자신이 앉을 지정석을 도면에서 직접 골라 예약합니다.</li>
-            <li><b>자율석 학생:</b> 요일과 타임만 정하고, 자리는 매일 발권기에서 정합니다.</li>
-            <li><b>기간 제약:</b> 관리자가 설정한 신청 기간에만 버튼이 활성화됩니다.</li>
-        </ul>
-    </div>
-
-    <div id="content-ticket" class="content-section">
-        <h2>🎟️ 일일 자율석 발권기 (daily_ticket.html)</h2>
-        <p>자율석 학생이 매일 자습실 입장 전에 자리를 결정하는 화면입니다.</p>
-        <ul>
-            <li><b>본인 확인:</b> 학번과 이름을 입력하여 오늘 신청 여부를 확인합니다.</li>
-            <li><b>자리 선택:</b> 다른 학생이 이미 선점한 자리를 제외한 빈자리 중 하나를 고릅니다.</li>
-            <li><b>한 번 선택 시:</b> 해당 날짜 동안은 좌석 변경이 불가능합니다.</li>
-        </ul>
-    </div>
-
-    <div id="content-kiosk" class="content-section">
-        <h2>🔍 통합 출결 키오스크 (kiosk.html)</h2>
-        <p>자습실 입구에 설치되어 학생증 바코드를 인식하는 장치입니다.</p>
-        <ul>
-            <li><b>자동 입실:</b> 바코드를 찍으면 즉시 '입실' 상태로 변경됩니다.</li>
-            <li><b>스마트 선택:</b> 이미 입실한 학생이 다시 찍으면 [외출/귀가] 선택창이 10초간 나타납니다.</li>
-            <li><b>실시간 연동:</b> 여기서 찍은 데이터는 즉시 관리자 화면의 색상으로 반영됩니다.</li>
-        </ul>
-    </div>
-
-    <div id="content-admin" class="content-section">
-        <h2>📊 통합 관리자 (split_admin.html)</h2>
-        <p>감독 선생님이 실시간으로 학생들을 관리하는 메인 대시보드입니다.</p>
-        <ul>
-            <li><b>오늘 감독용 좌석표:</b> 날짜와 타임을 선택하면 좌석 위에 학생 이름이 표시됩니다.</li>
-            <li><b>출결 색상:</b> 입실 완료는 <b>노란색/초록색</b>, 미입실은 <b>빨간 점선</b>으로 표시됩니다.</li>
-            <li><b>상담 리포트:</b> 학생 이름을 클릭하면 해당 학생의 참여율(%)과 월간 출결 달력이 뜹니다.</li>
-        </ul>
-    </div>
-
-    <div style="text-align: center;">
-        <a href="index.html" class="btn-home">🏠 메인 화면으로 돌아가기</a>
-    </div>
-</div>
-
-<script>
-    /**
-     * 특정 섹션을 보여주고 나머지 섹션은 숨기는 함수
-     * @param {string} sectionId - 보여줄 섹션의 아이디 (예: 'flow', 'settings' 등)
-     */
-    function showContent(sectionId) {
-        // 1. 모든 상세 설명 섹션을 숨깁니다.
-        const sections = document.querySelectorAll('.content-section');
-        sections.forEach(sec => sec.classList.remove('active'));
-
-        // 2. 모든 박스의 활성화 효과(파란색 배경)를 제거합니다.
-        const boxes = document.querySelectorAll('.menu-box');
-        boxes.forEach(box => box.classList.remove('active'));
-
-        // 3. 선택한 섹션만 보여줍니다.
-        const targetSection = document.getElementById('content-' + sectionId);
-        targetSection.classList.add('active');
-
-        // 4. 클릭한 박스에 활성화 효과를 줍니다.
-        // 이벤트가 발생한 대상을 찾기 위해 클릭된 요소를 확인합니다.
-        event.currentTarget.classList.add('active');
-
-        // 5. 화면을 상세 설명 쪽으로 부드럽게 스크롤합니다.
-        targetSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-
-    // 처음 페이지를 열었을 때 '전체 시스템 흐름'이 보이도록 설정
-    window.onload = function() {
-        showContent('flow');
-        document.getElementById('box-flow').classList.add('active');
-    };
-</script>
 
 </body>
 </html>
