@@ -281,7 +281,16 @@ let currentTool = 0, seatMapData = [], rows = 20, cols = 30, currentSchedule = {
     function drawEditGrid() { const g = document.getElementById('seat-grid'); g.innerHTML = ''; g.style.gridTemplateColumns = `repeat(${cols}, 42px)`; seatMapData.forEach(row => row.forEach(cell => { const d = document.createElement('div'); d.className = `seat-cell seat-${cell.type}`; d.innerText = cell.label; d.onclick = () => { saveHistory(); if([1,2,5].includes(currentTool)) cell.label = prompt("라벨:", cell.label)||cell.label; cell.type = currentTool; drawEditGrid(); }; g.appendChild(d); })); }
 
     // --- [데이터 저장 및 로드] ---
-    async function saveCalendarSchedule() { await db.collection("settings").doc("calendarSchedule").set({data: JSON.stringify(currentSchedule)}); alert("달력 저장완료"); }
+// --- [데이터 저장 및 로드] ---
+    async function saveCalendarSchedule() { 
+        updateDefaultDays(); // 저장 전 최신 체크박스 상태 가져오기
+        await db.collection("settings").doc("calendarSchedule").set({
+            data: JSON.stringify(currentSchedule),
+            defaultDays: defaultOperatingDays // 🌟 설정한 요일 배열도 함께 저장!
+        }); 
+        alert("달력 및 요일 설정 저장완료"); 
+    }
+    
     async function saveApplyPeriod() { await db.collection("settings").doc("applyPeriod").set({start: document.getElementById('apply-start').value, end: document.getElementById('apply-end').value}); alert("기간 저장완료"); }
     async function saveSeatLayout() { await db.collection("settings").doc("seatLayout").set({rows, cols, grid: JSON.stringify(seatMapData)}); alert("도면 배포완료"); }
 // settings.html 하단 스크립트 수정
@@ -299,9 +308,19 @@ async function saveTimeSettings() {
 
     
 async function loadAllSettings() {
-        // 1. 달력 일정 불러오기
+        // 1. 달력 일정 및 요일 불러오기
         const cal = await db.collection("settings").doc("calendarSchedule").get(); 
-        if(cal.exists) currentSchedule = JSON.parse(cal.data().data); 
+        if(cal.exists) {
+            const calData = cal.data();
+            if (calData.data) currentSchedule = JSON.parse(calData.data); 
+            // 🌟 저장된 요일 설정이 있으면 화면 체크박스에 반영
+            if (calData.defaultDays) {
+                defaultOperatingDays = calData.defaultDays;
+                document.querySelectorAll('.day-toggle').forEach(cb => {
+                    cb.checked = defaultOperatingDays.includes(parseInt(cb.value));
+                });
+            }
+        }
         renderCalendar();
 
         // 2. 신청 기간 불러오기
