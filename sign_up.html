@@ -113,7 +113,7 @@
 
 <script>
 // =========================================================
-// 1. Firebase 초기화를 스크립트 가장 위로 올렸습니다. (db 에러 해결)
+// 1. Firebase 초기화
 // =========================================================
 const firebaseConfig = {
     apiKey: "AIzaSyBP6oveXbGlNn_0XqttHbU2ZDUYhH2nf4c",
@@ -136,13 +136,8 @@ let takenSeats = [];
 
 const daysEng = ['mon','tue','wed','thu','fri','sat','sun'];
 
-const tbody = document.getElementById('schedule-body');
-['월','화','수','목','금','토','일'].forEach((day, idx) => {
-    tbody.innerHTML += `<tr><td><strong>${day}</strong></td>${[1,2,3].map(t => `<td><input type="checkbox" class="time-chk" id="${daysEng[idx]}-${t}" value="${t}" onchange="validateForm()"><label class="time-label" for="${daysEng[idx]}-${t}">${t}T</label></td>`).join('')}</tr>`;
-});
-
 // =========================================================
-// 3. 신청 기간 확인 함수 (db가 생성된 이후이므로 정상 작동함)
+// 3. 신청 기간 확인 함수
 // =========================================================
 async function checkApplyPeriod() {
     const searchBtn = document.getElementById('search-btn');
@@ -157,7 +152,6 @@ async function checkApplyPeriod() {
             const endTime = new Date(data.end);
 
             if (now < startTime || now > endTime) {
-                // 기간이 아닐 때
                 searchBtn.disabled = true;
                 searchBtn.style.background = "#ccc";
                 searchBtn.innerText = "현재는 신청 기간이 아닙니다";
@@ -171,12 +165,10 @@ async function checkApplyPeriod() {
         }
     } catch(e) { console.error("기간 확인 중 오류 발생:", e); }
 }
-
-// 페이지 로드 시 기간 확인 함수 실행
 checkApplyPeriod();
 
 // =========================================================
-// 4. 나머지 데이터 불러오기 및 폼 관련 함수들
+// 4. 데이터 불러오기 및 요일 표 생성 (🌟수정된 부분🌟)
 // =========================================================
 async function fetchInitialData() {
     try {
@@ -187,13 +179,43 @@ async function fetchInitialData() {
         if (layoutDoc.exists) {
             const data = layoutDoc.data();
             layoutRows = data.rows; layoutCols = data.cols;
-            
             const rawGrid = JSON.parse(data.grid);
             seatMapData = rawGrid.map(row => row.map(c => typeof c === 'number' ? {type: c, label: ""} : c));
         }
+
+        // 🌟 새로 추가됨: 환경설정에서 '기본 운영 요일'을 가져와서 표를 만듭니다!
+        const calDoc = await db.collection("settings").doc("calendarSchedule").get();
+        let activeDays = [1, 2, 3, 4, 5]; // DB에 값이 없으면 기본으로 월~금 세팅 (0:일, 1:월... 6:토)
+        if (calDoc.exists && calDoc.data().defaultDays) {
+            activeDays = calDoc.data().defaultDays;
+        }
+
+        const daysMap = [
+            { eng: 'sun', kor: '일', idx: 0 }, { eng: 'mon', kor: '월', idx: 1 },
+            { eng: 'tue', kor: '화', idx: 2 }, { eng: 'wed', kor: '수', idx: 3 },
+            { eng: 'thu', kor: '목', idx: 4 }, { eng: 'fri', kor: '금', idx: 5 },
+            { eng: 'sat', kor: '토', idx: 6 }
+        ];
+
+        const tbody = document.getElementById('schedule-body');
+        tbody.innerHTML = ''; 
+        
+        // 표에 보여줄 순서: 월(1) -> 화(2) -> 수(3) -> 목(4) -> 금(5) -> 토(6) -> 일(0)
+        const displayOrder = [1, 2, 3, 4, 5, 6, 0];
+        
+        displayOrder.forEach(dayIdx => {
+            // 관리자가 체크한 요일(activeDays)에만 해당 요일의 행(tr)을 화면에 그립니다.
+            if (activeDays.includes(dayIdx)) {
+                const dayInfo = daysMap.find(d => d.idx === dayIdx);
+                tbody.innerHTML += `<tr><td><strong>${dayInfo.kor}</strong></td>${[1,2,3].map(t => `<td><input type="checkbox" class="time-chk" id="${dayInfo.eng}-${t}" value="${t}" onchange="validateForm()"><label class="time-label" for="${dayInfo.eng}-${t}">${t}T</label></td>`).join('')}</tr>`;
+            }
+        });
+
     } catch(e) { console.error(e); }
 }
 fetchInitialData();
+
+// (이 밑으로는 기존의 function buildSeatGrid() 등 코드가 이어집니다.)
 
 function buildSeatGrid() {
     const container = document.getElementById('student-seat-grid');
