@@ -187,7 +187,10 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    let currentTool = 0, seatMapData = [], rows = 20, cols = 30, currentSchedule = {}, historyStack = [];
+let currentTool = 0, seatMapData = [], rows = 20, cols = 30, currentSchedule = {}, historyStack = [];
+    
+    // 🌟 추가: 기본 운영 요일 배열 (기본값: 월~금 / 0:일, 1:월... 6:토)
+    let defaultOperatingDays = [1, 2, 3, 4, 5]; 
 
     function checkPass() {
         if(document.getElementById('pass-input').value === "1234") {
@@ -201,10 +204,22 @@
         document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
-        btn.classList.add('active');
+        if(btn) btn.classList.add('active');
     }
 
-    // --- [1. 달력 로직: 사유 기능 추가] ---
+    // --- [1. 요일 및 달력 로직] ---
+    function updateDefaultDays() {
+        defaultOperatingDays = Array.from(document.querySelectorAll('.day-toggle:checked')).map(cb => parseInt(cb.value));
+    }
+
+    function applyDefaultToCurrentMonth() {
+        if(!confirm("현재 달력의 개별 설정(공휴일 등)이 초기화되고, 위에서 설정한 요일에 맞춰 다시 그려집니다.\n진행하시겠습니까?")) return;
+        const monthInput = document.getElementById('calendar-month-select').value;
+        // 현재 선택된 달의 기존 데이터를 지워서 새 요일 규칙이 적용되게 함
+        Object.keys(currentSchedule).forEach(k => { if(k.startsWith(monthInput)) delete currentSchedule[k]; });
+        renderCalendar();
+    }
+
     function renderCalendar() {
         const monthInput = document.getElementById('calendar-month-select');
         if(!monthInput.value) {
@@ -219,10 +234,13 @@
         for(let date=1; date<=lastDate; date++) {
             const dStr = `${year}-${String(month).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
             const dayIdx = new Date(year, month-1, date).getDay();
+            
+            // 🌟 핵심: 설정한 '기본 운영 요일'에 포함되는지 확인하여 기본값 세팅
             if(currentSchedule[dStr] === undefined) {
-                const isWeekend = (dayIdx === 0 || dayIdx === 6);
-                currentSchedule[dStr] = { active: !isWeekend, reason: isWeekend ? "주말" : "" };
+                const isOperating = defaultOperatingDays.includes(dayIdx);
+                currentSchedule[dStr] = { active: isOperating, reason: isOperating ? "" : "정규휴무" };
             }
+            
             const data = currentSchedule[dStr];
             html += `<td class="${data.active?'is-active':''}" onclick="toggleDate('${dStr}')">
                 <b>${date}</b>
@@ -245,6 +263,11 @@
         renderCalendar();
     }
 
+    
+
+
+
+    
     // --- [도면 및 기타 로직] ---
     function saveHistory() { if (historyStack.length >= 20) historyStack.shift(); historyStack.push(JSON.stringify({rows, cols, grid: seatMapData})); }
     function undo() { if (historyStack.length === 0) return; const p = JSON.parse(historyStack.pop()); rows = p.rows; cols = p.cols; seatMapData = p.grid; drawEditGrid(); }
