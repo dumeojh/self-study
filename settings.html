@@ -241,16 +241,70 @@ async function saveTimeSettings() {
     }); 
     alert("설정이 저장되었습니다."); 
 }
-    async function loadAllSettings() {
-        const cal = await db.collection("settings").doc("calendarSchedule").get(); if(cal.exists) currentSchedule = JSON.parse(cal.data().data); renderCalendar();
-        const p = await db.collection("settings").doc("applyPeriod").get(); if(p.exists) { document.getElementById('apply-start').value = p.data().start; document.getElementById('apply-end').value = p.data().end; }
-        const r = await db.collection("settings").doc("roster").get(); if(r.exists) { const list = JSON.parse(r.data().list); document.getElementById('roster-count').innerText = Object.keys(list).length; document.getElementById('roster-list').innerText = Object.entries(list).map(([id, n]) => `${id}(${n})`).join(', '); }
-        const s = await db.collection("settings").doc("seatLayout").get(); if(s.exists) { rows = s.data().rows; cols = s.data().cols; seatMapData = JSON.parse(s.data().grid).map(row => row.map(c => typeof c === 'number' ? {type:c, label:""} : c)); drawEditGrid(); }
-        const t = await db.collection("settings").doc("schedule").get(); if(t.exists) { const d = t.data(); document.getElementById('t1-start').value = d.t1; document.getElementById('t1-end').value = d.t1_end; document.getElementById('t2-start').value = d.t2; document.getElementById('t2-end').value = d.t2_end; document.getElementById('t3-start').value = d.t3; document.getElementById('t3-end').value = d.t3_end; }
-        else { document.getElementById('t1-start').value = "16:00"; document.getElementById('t1-end').value = "18:10"; document.getElementById('t2-start').value = "18:50"; document.getElementById('t2-end').value = "20:10"; document.getElementById('t3-start').value = "20:10"; document.getElementById('t3-end').value = "21:30"; }
+
+    
+async function loadAllSettings() {
+        // 1. 달력 일정 불러오기
+        const cal = await db.collection("settings").doc("calendarSchedule").get(); 
+        if(cal.exists) currentSchedule = JSON.parse(cal.data().data); 
+        renderCalendar();
+
+        // 2. 신청 기간 불러오기
+        const p = await db.collection("settings").doc("applyPeriod").get(); 
+        if(p.exists) { 
+            document.getElementById('apply-start').value = p.data().start; 
+            document.getElementById('apply-end').value = p.data().end; 
+        }
+
+        // 3. 학생 명단 불러오기
+        const r = await db.collection("settings").doc("roster").get(); 
+        if(r.exists) { 
+            const list = JSON.parse(r.data().list); 
+            document.getElementById('roster-count').innerText = Object.keys(list).length; 
+            document.getElementById('roster-list').innerText = Object.entries(list).map(([id, n]) => `${id}(${n})`).join(', '); 
+        }
+
+        // 4. 좌석 도면 불러오기
+        const s = await db.collection("settings").doc("seatLayout").get(); 
+        if(s.exists) { 
+            rows = s.data().rows; 
+            cols = s.data().cols; 
+            seatMapData = JSON.parse(s.data().grid).map(row => row.map(c => typeof c === 'number' ? {type:c, label:""} : c)); 
+            drawEditGrid(); 
+        }
+
+        // 5. 🌟 핵심 수정: 운영 시간 및 발권 설정 불러오기
+        const t = await db.collection("settings").doc("schedule").get(); 
+        if(t.exists) { 
+            const d = t.data(); 
+            // 새로 추가한 '몇 분 전'과 '공지사항'을 화면에 채워줍니다.
+            document.getElementById('ticket-lead-time').value = d.ticket_lead_time || "30";
+            document.getElementById('ticket-notice').value = d.ticket_notice || "자율석 신청 학생만 이용 가능합니다.";
+
+            // 기존 타임별 시간 설정
+            document.getElementById('t1-start').value = d.t1; 
+            document.getElementById('t1-end').value = d.t1_end; 
+            document.getElementById('t2-start').value = d.t2; 
+            document.getElementById('t2-end').value = d.t2_end; 
+            document.getElementById('t3-start').value = d.t3; 
+            document.getElementById('t3-end').value = d.t3_end; 
+        } else { 
+            // 데이터가 아예 없을 때의 기본값 설정
+            document.getElementById('ticket-lead-time').value = "30";
+            document.getElementById('ticket-notice').value = "자율석 신청 학생만 이용할 수 있습니다.";
+            document.getElementById('t1-start').value = "16:00"; 
+            document.getElementById('t1-end').value = "18:10"; 
+            document.getElementById('t2-start').value = "18:50"; 
+            document.getElementById('t2-end').value = "20:10"; 
+            document.getElementById('t3-start').value = "20:10"; 
+            document.getElementById('t3-end').value = "21:30"; 
+        }
+
+        // 마지막으로 화면에 있는 '0분' 표시들을 다시 계산해서 보여줍니다.
         for(let i=1; i<=3; i++) calculateMinutes(i);
     }
 
+    
     async function handleExcelUpload() {
         const file = document.getElementById('excel-input').files[0]; if(!file) return;
         const reader = new FileReader(); reader.onload = async (e) => {
