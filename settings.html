@@ -271,12 +271,20 @@ async function loadAllSettings() {
             document.getElementById('apply-end').value = p.data().end; 
         }
 
-        // 3. 학생 명단 불러오기
+// 3. 학생 명단 불러오기
         const r = await db.collection("settings").doc("roster").get(); 
         if(r.exists) { 
-            const list = JSON.parse(r.data().list); 
+            const data = r.data();
+            const list = JSON.parse(data.list); 
             document.getElementById('roster-count').innerText = Object.keys(list).length; 
             document.getElementById('roster-list').innerText = Object.entries(list).map(([id, n]) => `${id}(${n})`).join(', '); 
+            
+            // 새로 추가: 저장된 학번 자릿수 세팅 불러오기
+            if(data.idLength === "5") {
+                document.getElementById('len-5').checked = true;
+            } else {
+                document.getElementById('len-4').checked = true;
+            }
         }
 
         // 4. 좌석 도면 불러오기
