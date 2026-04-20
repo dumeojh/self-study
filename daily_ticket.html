@@ -177,21 +177,35 @@ async function verifyForTicket() {
         return;
     }
 
-    // 3. [운영 시간 제약 확인]
+// 3. [운영 시간 제약 확인 - 환경설정 연동]
     if (schoolSchedule) {
         const now = new Date();
+        // 현재 시간을 '분(minute)' 단위로 변환합니다. (예: 오후 4시 30분 -> 16*60 + 30 = 990분)
         const currentMin = now.getHours() * 60 + now.getMinutes();
 
-        // 필드명 t3_end를 정확히 참조해야 합니다.
-        const [startH, startM] = schoolSchedule.t1.split(':').map(Number);
+        // 환경설정에서 저장한 1타임 시작 시간과 3타임 종료 시간을 가져옵니다.
+        const [t1H, t1M] = schoolSchedule.t1.split(':').map(Number);
         const [endH, endM] = schoolSchedule.t3_end.split(':').map(Number); 
         
-        const startMin = startH * 60 + startM;
+        // 🌟 [핵심 변경] 환경설정에서 설정한 '발권 시작 전 리드타임(분)'을 가져옵니다. (없으면 기본값 30)
+        const leadTime = parseInt(schoolSchedule.ticket_lead_time || "30");
+        
+        // 1타임 시작 시간에서 리드타임(분)을 빼서 실제 '발권 시작 시간'을 계산합니다.
+        const startMin = (t1H * 60 + t1M) - leadTime; 
+        // 발권 마감 시간은 3타임 종료 시간과 동일합니다.
         const endMin = endH * 60 + endM;
 
-        if (currentMin < startMin - 30 || currentMin > endMin) {
-            alert(`지금은 발권 가능 시간이 아닙니다.\n발권 가능 시간: ${schoolSchedule.t1} ~ ${schoolSchedule.t3_end}`);
-            return; 
+        // 현재 시간이 발권 시작 시간보다 전이거나, 종료 시간보다 후라면 차단합니다.
+        if (currentMin < startMin || currentMin > endMin) {
+            // 학생에게 보여줄 알림창을 위해, 분 단위로 된 시간을 다시 "16:30" 형식의 문자로 바꿉니다.
+            const startH = Math.floor(startMin / 60);
+            const startM = startMin % 60;
+            // padStart(2, '0')은 숫자가 한 자리일 때 앞에 '0'을 붙여줍니다. (예: 9분 -> 09분)
+            const startTimeStr = `${String(startH).padStart(2,'0')}:${String(startM).padStart(2,'0')}`;
+            
+            // 학생 화면에 띄울 경고창입니다.
+            alert(`지금은 발권 가능 시간이 아닙니다.\n오늘 발권 가능 시간: ${startTimeStr} ~ ${schoolSchedule.t3_end}`);
+            return; // 여기서 함수를 종료하여 뒤의 명단 확인 단계로 넘어가지 못하게 막습니다.
         }
     }
 
