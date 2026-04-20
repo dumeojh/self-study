@@ -351,33 +351,40 @@ async function submitForm() {
     });
 
     try {
-        await db.runTransaction(async (transaction) => {
-            if (typeVal === "고정석") {
-                const dupQuery = db.collection("applications")
-                    .where("targetMonth", "==", targetMonthVal)
-                    .where("type", "==", "고정석")
-                    .where("seatNum", "==", seatNumVal);
-                
-                const snapshot = await transaction.get(dupQuery);
-                let isTaken = false;
-                snapshot.forEach(doc => {
-                    if (doc.id !== currentDocId) isTaken = true;
-                });
+        // 🌟 [수정된 부분] 트랜잭션 밖에서 먼저 중복 좌석을 검사합니다.
+        if (typeVal === "고정석") {
+            const dupQuery = await db.collection("applications")
+                .where("targetMonth", "==", targetMonthVal)
+                .where("type", "==", "고정석")
+                .where("seatNum", "==", seatNumVal)
+                .get();
+            
+            let isTaken = false;
+            dupQuery.forEach(doc => {
+                // 내 기존 신청서가 아니라면 남이 선점한 자리임
+                if (doc.id !== currentDocId) isTaken = true;
+            });
 
-                if (isTaken) throw "이미 다른 학생이 선택한 좌석입니다.";
+            if (isTaken) {
+                // 에러를 발생시켜 아래 저장 코드가 실행되지 않게 막음
+                throw "이미 다른 학생이 먼저 선택한 좌석입니다.\n새로고침 후 다른 자리를 선택해주세요.";
             }
+        }
 
-            if (currentDocId) {
-                transaction.update(db.collection("applications").doc(currentDocId), p);
-            } else {
-                transaction.set(db.collection("applications").doc(), p);
-            }
-        });
+        // 🌟 중복 검사 통과 후 안전하게 저장
+        if (currentDocId) {
+            await db.collection("applications").doc(currentDocId).update(p);
+        } else {
+            await db.collection("applications").add(p);
+        }
+
         alert("신청이 완료되었습니다."); 
         location.reload();
     } catch(e) { 
-        alert("오류: " + e); 
-        btn.innerText = "신청하기"; btn.disabled = false; 
+        // 에러 메시지 출력 방식 수정
+        alert("오류: " + (typeof e === 'string' ? e : e.message)); 
+        btn.innerText = "신청하기"; 
+        btn.disabled = false; 
     }
 }
 </script>
