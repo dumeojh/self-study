@@ -229,8 +229,18 @@
     async function saveCalendarSchedule() { await db.collection("settings").doc("calendarSchedule").set({data: JSON.stringify(currentSchedule)}); alert("달력 저장완료"); }
     async function saveApplyPeriod() { await db.collection("settings").doc("applyPeriod").set({start: document.getElementById('apply-start').value, end: document.getElementById('apply-end').value}); alert("기간 저장완료"); }
     async function saveSeatLayout() { await db.collection("settings").doc("seatLayout").set({rows, cols, grid: JSON.stringify(seatMapData)}); alert("도면 배포완료"); }
-    async function saveTimeSettings() { await db.collection("settings").doc("schedule").set({t1: document.getElementById('t1-start').value, t1_end: document.getElementById('t1-end').value, t2: document.getElementById('t2-start').value, t2_end: document.getElementById('t2-end').value, t3: document.getElementById('t3-start').value, t3_end: document.getElementById('t3-end').value}); alert("시간 저장완료"); }
-
+// settings.html 하단 스크립트 수정
+async function saveTimeSettings() { 
+    await db.collection("settings").doc("schedule").set({
+        ticket_lead_time: document.getElementById('ticket-lead-time').value, // 분 단위
+        ticket_notice: document.getElementById('ticket-notice').value,       // 공지 문구
+        ticket_end: document.getElementById('t3-end').value,               // 발권 마감은 3T 종료로 자동 설정
+        t1: document.getElementById('t1-start').value, t1_end: document.getElementById('t1-end').value, 
+        t2: document.getElementById('t2-start').value, t2_end: document.getElementById('t2-end').value, 
+        t3: document.getElementById('t3-start').value, t3_end: document.getElementById('t3-end').value
+    }); 
+    alert("설정이 저장되었습니다."); 
+}
     async function loadAllSettings() {
         const cal = await db.collection("settings").doc("calendarSchedule").get(); if(cal.exists) currentSchedule = JSON.parse(cal.data().data); renderCalendar();
         const p = await db.collection("settings").doc("applyPeriod").get(); if(p.exists) { document.getElementById('apply-start').value = p.data().start; document.getElementById('apply-end').value = p.data().end; }
