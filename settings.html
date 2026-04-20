@@ -320,12 +320,23 @@ async function loadAllSettings() {
     }
 
     
-    async function handleExcelUpload() {
+async function handleExcelUpload() {
         const file = document.getElementById('excel-input').files[0]; if(!file) return;
+        
+        // 새로 추가: 선택한 학번 자릿수 가져오기
+        const idLength = document.querySelector('input[name="id-length"]:checked').value; 
+
         const reader = new FileReader(); reader.onload = async (e) => {
             const data = XLSX.utils.sheet_to_json(XLSX.read(new Uint8Array(e.target.result), {type:'array'}).Sheets[XLSX.read(new Uint8Array(e.target.result), {type:'array'}).SheetNames[0]], {header:1});
             let roster = {}; data.forEach(r => { if(r[0]&&r[1]) roster[r[0]] = r[1]; });
-            await db.collection("settings").doc("roster").set({list: JSON.stringify(roster)}); alert("명단 업데이트 완료"); loadAllSettings();
+            
+            // 새로 추가: 명단(list)과 함께 학번 자릿수(idLength)도 DB에 저장
+            await db.collection("settings").doc("roster").set({
+                list: JSON.stringify(roster),
+                idLength: idLength
+            }); 
+            alert(`명단 업데이트 완료 (학번 ${idLength}자리 설정 적용)`); 
+            loadAllSettings();
         }; reader.readAsArrayBuffer(file);
     }
 </script>
