@@ -331,19 +331,44 @@ async function loadAllSettings() {
 async function handleExcelUpload() {
         const file = document.getElementById('excel-input').files[0]; if(!file) return;
         
-        // 새로 추가: 선택한 학번 자릿수 가져오기
+        // 선택한 학번 자릿수 (4 또는 5)
         const idLength = document.querySelector('input[name="id-length"]:checked').value; 
 
         const reader = new FileReader(); reader.onload = async (e) => {
             const data = XLSX.utils.sheet_to_json(XLSX.read(new Uint8Array(e.target.result), {type:'array'}).Sheets[XLSX.read(new Uint8Array(e.target.result), {type:'array'}).SheetNames[0]], {header:1});
-            let roster = {}; data.forEach(r => { if(r[0]&&r[1]) roster[r[0]] = r[1]; });
             
-            // 새로 추가: 명단(list)과 함께 학번 자릿수(idLength)도 DB에 저장
+            let roster = {}; 
+            
+            data.forEach((r, index) => {
+                // 빈 줄이거나 첫 줄이 제목(문자열)인 경우 건너뜀
+                if (!r[0] || !r[1] || !r[2] || !r[3]) return; 
+                if (index === 0 && isNaN(parseInt(r[0]))) return; 
+
+                // 엑셀 열 데이터 가져오기 (공백 제거)
+                let grade = String(r[0]).trim(); // 1열: 학년
+                let ban = String(r[1]).trim();   // 2열: 반
+                let num = String(r[2]).trim().padStart(2, '0'); // 3열: 번호 (무조건 2자리로 맞춤, 예: 2 -> 02)
+                let name = String(r[3]).trim();  // 4열: 성명
+
+                let stuId = "";
+                if (idLength === "5") {
+                    // 5자리 선택 시: 학년(1) + 반(2자리로 0채움) + 번호(2) -> 예: 30102
+                    stuId = grade + ban.padStart(2, '0') + num;
+                } else {
+                    // 4자리 선택 시: 학년(1) + 반(1) + 번호(2) -> 예: 3102
+                    stuId = grade + ban + num;
+                }
+
+                // 학번을 키값으로, 이름을 값으로 저장
+                roster[stuId] = name; 
+            });
+            
+            // 완성된 명단(list)과 학번 자릿수(idLength)를 DB에 저장
             await db.collection("settings").doc("roster").set({
                 list: JSON.stringify(roster),
                 idLength: idLength
             }); 
-            alert(`명단 업데이트 완료 (학번 ${idLength}자리 설정 적용)`); 
+            alert(`명단 업데이트 완료 (학번 ${idLength}자리 포맷 자동 생성 완료)`); 
             loadAllSettings();
         }; reader.readAsArrayBuffer(file);
     }
