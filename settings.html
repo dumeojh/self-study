@@ -398,24 +398,32 @@ async function handleExcelUpload() {
             
             let roster = {}; 
             
+            // 🌟 엑셀 병합 셀 처리를 위해 이전 학년/반을 기억할 변수 (이게 빠져있었습니다!)
+            let lastGrade = ""; 
+            let lastBan = "";   
+            
             data.forEach((r, index) => {
-                // 빈 줄이거나 첫 줄이 제목(문자열)인 경우 건너뜀
-                if (!r[0] || !r[1] || !r[2] || !r[3]) return; 
+                // 첫 줄이 제목(문자열)인 경우 건너뜀
                 if (index === 0 && isNaN(parseInt(r[0]))) return; 
 
+                // 🌟 셀 병합 해결: 현재 줄에 값이 있으면 갱신하고, 빈칸이면 이전 학생의 값을 그대로 씁니다.
+                if (r[0] !== undefined && String(r[0]).trim() !== "") lastGrade = String(r[0]).trim();
+                if (r[1] !== undefined && String(r[1]).trim() !== "") lastBan = String(r[1]).trim();
+
+                // 번호나 이름이 아예 없는 진짜 빈 줄은 건너뜀
+                if (!r[2] || !r[3]) return;
+
                 // 엑셀 열 데이터 가져오기 (공백 제거)
-                let grade = String(r[0]).trim(); // 1열: 학년
-                let ban = String(r[1]).trim();   // 2열: 반
-                let num = String(r[2]).trim().padStart(2, '0'); // 3열: 번호 (무조건 2자리로 맞춤, 예: 2 -> 02)
+                let num = String(r[2]).trim().padStart(2, '0'); // 3열: 번호 (무조건 2자리로 맞춤)
                 let name = String(r[3]).trim();  // 4열: 성명
 
                 let stuId = "";
                 if (idLength === "5") {
                     // 5자리 선택 시: 학년(1) + 반(2자리로 0채움) + 번호(2) -> 예: 30102
-                    stuId = grade + ban.padStart(2, '0') + num;
+                    stuId = lastGrade + lastBan.padStart(2, '0') + num;
                 } else {
                     // 4자리 선택 시: 학년(1) + 반(1) + 번호(2) -> 예: 3102
-                    stuId = grade + ban + num;
+                    stuId = lastGrade + lastBan + num;
                 }
 
                 // 학번을 키값으로, 이름을 값으로 저장
@@ -427,7 +435,8 @@ async function handleExcelUpload() {
                 list: JSON.stringify(roster),
                 idLength: idLength
             }); 
-            alert(`명단 업데이트 완료 (학번 ${idLength}자리 포맷 자동 생성 완료)`); 
+            // 🌟 등록 인원수를 보여주도록 알림창 수정
+            alert(`명단 업데이트 완료 (총 ${Object.keys(roster).length}명 / 학번 ${idLength}자리 적용)`); 
             loadAllSettings();
         }; reader.readAsArrayBuffer(file);
     }
