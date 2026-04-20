@@ -88,8 +88,20 @@
         <button class="btn btn-save" onclick="saveApplyPeriod()">💾 신청 기간 저장</button>
     </div>
 
-    <div id="tab-roster" class="card">
+<div id="tab-roster" class="card">
         <h3>⚙️ 기초 명단 업로드 (엑셀)</h3>
+        
+        <div style="background: #eef6ff; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #b6d4fe;">
+            <strong style="color: #052c65;">📌 학교 학번 체계 선택</strong>
+            <p style="font-size: 12px; color: #666; margin: 5px 0 10px 0;">학교 규모에 맞는 학번 자릿수를 선택한 후 명단을 업로드하세요.</p>
+            <label style="margin-right: 15px; cursor: pointer;">
+                <input type="radio" name="id-length" id="len-4" value="4" checked> 4자리 (예: 2101 / 소규모 학교)
+            </label>
+            <label style="cursor: pointer;">
+                <input type="radio" name="id-length" id="len-5" value="5"> 5자리 (예: 20101 / 10학급 이상)
+            </label>
+        </div>
+
         <input type="file" id="excel-input" accept=".xlsx, .xls">
         <button class="btn" style="background:var(--success); margin-top:10px;" onclick="handleExcelUpload()">🚀 명단 서버 전송</button>
         <hr>
@@ -97,6 +109,9 @@
         <div id="roster-list" style="max-height:200px; overflow-y:auto; font-size:12px; border:1px solid #ddd; padding:10px;"></div>
     </div>
 
+
+
+    
     <div id="tab-seats" class="card">
         <h3>🪑 자율학습실 좌석 도면 설계</h3>
         <div style="background: #f1f3f5; padding: 15px; border-radius: 10px; margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
