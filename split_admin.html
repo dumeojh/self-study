@@ -523,16 +523,29 @@ function openDailyStatus(stuId, stuName, seatNum, phone) {
     document.getElementById('ds-name').innerText = stuName;
     document.getElementById('ds-info').innerText = `학번: ${stuId} | 좌석: ${seatNum}`;
     
-    // 전화번호 처리 (추후 명단이나 신청서에 phone 필드가 추가될 경우를 대비)
+ 
+    
+// 🌟 전화번호 처리 및 문자 보내기 버튼 추가 (공용 기기 맞춤형)
     const phoneBox = document.getElementById('ds-phone');
     if (phone) {
-        phoneBox.innerHTML = `📞 <b>${phone}</b>`;
+        // 공용 기기용 메시지로 수정: 발신자가 누군지 명확히 밝힙니다.
+        const defaultMessage = encodeURIComponent(`[안성여고 자율학습실]\n${stuName} 학생, 지정된 입실 시간이 지났습니다. 신속히 입실해주세요.\n\n(※ 본 문자는 야간자율학습 관리를 위한 공용 기기에서 발송되었습니다.)`);
+        
+        phoneBox.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>📞 <b>${phone}</b></span>
+                <a href="sms:${phone}?body=${defaultMessage}" style="background: #198754; color: white; padding: 5px 12px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">💬 미입실 알림 문자</a>
+            </div>
+        `;
         phoneBox.style.background = "#d1e7dd"; // 번호가 있으면 초록색 배경
     } else {
         phoneBox.innerHTML = `📞 등록된 연락처 없음`;
         phoneBox.style.background = "#eef6ff";
     }
 
+
+
+    
     // 타임라인(history) 가져오기
     const log = attendanceLogsData[String(stuId)];
     const timelineUl = document.getElementById('ds-timeline');
