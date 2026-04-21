@@ -96,8 +96,9 @@
         <button class="btn btn-gray" onclick="location.href='settings.html'">⚙️ 환경설정</button>
     </div>
     
-    <div class="tab-menu">
+<div class="tab-menu">
         <button class="tab-btn active" onclick="switchTab('tab-daily', this)">🧑‍🏫 오늘 감독용 좌석표</button>
+        <button class="tab-btn" onclick="switchTab('tab-daily-list', this)">📋 오늘 일일 현황</button>
         <button class="tab-btn" onclick="switchTab('tab-status', this)">📊 월별 신청 현황</button>
         <button class="tab-btn" onclick="switchTab('tab-manual', this)">📝 개별 수정/추가</button>
         <button class="tab-btn" onclick="switchTab('tab-stats', this)">📈 통계 분석</button>
@@ -113,7 +114,7 @@
 
 
         
-<div style="display:flex; justify-content:center; gap:15px; margin-bottom:15px; font-size:12px; flex-wrap:wrap;">
+        <div style="display:flex; justify-content:center; gap:15px; margin-bottom:15px; font-size:12px; flex-wrap:wrap;">
             <span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#fff3cd; border:2px solid #ffc107;"></div> 고정석(입실)</span>
             <span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#d1e7dd; border:2px solid #2e7d32;"></div> 자율석(입실)</span>
             <span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#e0d4f7; border:2px solid #6f42c1;"></div> 외출 중</span>
@@ -122,10 +123,44 @@
         </div>
 
 
+        <div id="tab-daily-list" class="tab-content">
+        <div class="form-card" style="margin-bottom: 15px; padding: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <b style="color: #555;">조회 정렬:</b>
+                <select id="sort-daily-list" onchange="renderDailyList()" style="padding: 6px; border-radius: 5px; border: 1px solid #ccc; margin-left: 5px;">
+                    <option value="id">학번순 보기</option>
+                    <option value="seat">좌석순 보기</option>
+                </select>
+            </div>
+            <div id="daily-list-summary" style="font-size: 15px; font-weight: bold; background: white; padding: 8px 15px; border-radius: 20px; border: 1px solid #ddd;">
+                </div>
+        </div>
+
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>학번</th>
+                        <th>이름</th>
+                        <th>좌석 정보</th>
+                        <th>신청 교시</th>
+                        <th>현재 상태</th>
+                        <th>최근 스캔 시간</th>
+                    </tr>
+                </thead>
+                <tbody id="daily-list-body"></tbody>
+            </table>
+        </div>
+    </div>
+
 
         
         <div id="supervisor-grid" class="seat-grid"></div>
     </div>
+
+
+
+    
 
     <div id="tab-status" class="tab-content">
         <select id="filter-month" onchange="renderStatusTable()" style="padding:8px; margin-bottom:10px; border-radius:5px; border:1px solid #ddd;">
@@ -247,6 +282,7 @@ let dailyReservationsData = []; // 당일 자율석 발권 데이터 저장용
         if(btn) btn.classList.add('active');
         if(tabId === 'tab-status') renderStatusTable();
         if(tabId === 'tab-stats') renderSimpleStats();
+        if(tabId === 'tab-daily-list') renderDailyList(); // 🌟 이 줄을 추가하세요! (탭 누를 때 렌더링)
     }
 
     // --- [지도 및 출결 로직] ---
@@ -268,6 +304,7 @@ function loadDailyDataAndRender() {
         attendanceLogsData = {}; 
         snap.forEach(doc => attendanceLogsData[String(doc.data().stuId)] = doc.data());
         renderDailySupervisorMap();
+        renderDailyList(); // 🌟 이 줄을 추가하세요! (출결 찍힐 때마다 리스트도 새로고침)
     });
 
     // 2. 🌟 [추가] 당일 자율석 예약 내역 감시
@@ -275,6 +312,7 @@ function loadDailyDataAndRender() {
         dailyReservationsData = [];
         snap.forEach(doc => dailyReservationsData.push(doc.data()));
         renderDailySupervisorMap();
+        renderDailyList(); // 🌟 이 줄을 추가하세요! (출결 찍힐 때마다 리스트도 새로고침)
     });
 }
 
@@ -474,6 +512,99 @@ function openDailyStatus(stuId, stuName, seatNum, phone) {
             tbody.appendChild(tr);
         });
     }
+
+// 🌟 [추가] 오늘 일일 현황 리스트 렌더링 함수
+function renderDailyList() {
+    const tbody = document.getElementById('daily-list-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    
+    const targetDateStr = document.getElementById('daily-date').value;
+    const targetDay = ['sun','mon','tue','wed','thu','fri','sat'][new Date(targetDateStr).getDay()];
+    const sortBy = document.getElementById('sort-daily-list').value;
+    
+    let targetStudents = [];
+
+    // 1. 고정석: 오늘 해당 요일에 야자를 신청한 학생 추출
+    Object.values(applicationData).forEach(app => {
+        if (app.type === "고정석" && app[targetDay]) {
+            targetStudents.push({
+                stuId: app.stuId, stuName: app.stuName, seatNum: app.seatNum, 
+                appliedTimes: app[targetDay] + "타임", type: "고정석", phone: app.phone
+            });
+        }
+    });
+
+    // 2. 자율석: 오늘 당일 좌석을 발권한 학생 추출
+    dailyReservationsData.forEach(res => {
+        targetStudents.push({
+            stuId: res.stuId, stuName: res.stuName, seatNum: res.seatNum, 
+            appliedTimes: (res.times || "-") + "타임", type: "자율석", phone: res.phone
+        });
+    });
+
+    // 3. 정렬 로직 (학번순 or 좌석순)
+    if (sortBy === "id") {
+        targetStudents.sort((a, b) => String(a.stuId).localeCompare(String(b.stuId)));
+    } else if (sortBy === "seat") {
+        targetStudents.sort((a, b) => String(a.seatNum).localeCompare(String(b.seatNum)));
+    }
+
+    // 4. 통계 변수
+    let stat = { total: targetStudents.length, present: 0, out: 0, absent: 0 };
+
+    // 5. 화면에 행(tr) 추가
+    targetStudents.forEach(st => {
+        const log = attendanceLogsData[String(st.stuId)];
+        let status = "미입실";
+        let tagTime = "-";
+        let statusColor = "var(--danger)"; // 기본 빨강
+
+        if (log) {
+            status = log.status;
+            if (log.lastUpdateTime) {
+                const dt = log.lastUpdateTime.toDate ? log.lastUpdateTime.toDate() : new Date(log.lastUpdateTime);
+                tagTime = dt.toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit' });
+            }
+        }
+
+        // 상태별 텍스트 색상 및 통계 집계
+        if (status === "미입실" || status === "귀가(누락)") {
+            statusColor = "var(--danger)"; stat.absent++;
+        } else if (status === "입실" || status === "복귀") {
+            statusColor = "var(--primary)"; stat.present++;
+        } else if (status === "외출") {
+            statusColor = "#fd7e14"; stat.out++;
+        } else if (status === "귀가") {
+            statusColor = "var(--gray)"; // 귀가는 회색 처리
+        }
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${st.stuId}</td>
+            <td style="font-weight:bold; cursor:pointer; color:var(--primary); text-decoration:underline;" 
+                onclick="openDailyStatus('${st.stuId}', '${st.stuName}', '${st.seatNum}', '${st.phone || ''}')">
+                ${st.stuName} 👆
+            </td>
+            <td><span style="font-size:12px; color:#666;">[${st.type}]</span> ${st.seatNum || '-'}</td>
+            <td>${st.appliedTimes}</td>
+            <td style="font-weight:900; color:${statusColor};">${status}</td>
+            <td style="color:#555;">${tagTime}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // 6. 상단 요약 통계 업데이트
+    document.getElementById('daily-list-summary').innerHTML = `
+        대상: ${stat.total}명 | 
+        <span style="color:var(--primary);">입실: ${stat.present}명</span> | 
+        <span style="color:#fd7e14;">외출: ${stat.out}명</span> | 
+        <span style="color:var(--danger);">미입실: ${stat.absent}명</span>
+    `;
+}
+
+
+    
 
     function fillEditForm(id) {
         const d = applicationData[id]; document.getElementById('edit-doc-id').value = id;
