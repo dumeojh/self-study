@@ -73,6 +73,14 @@
         /* 월화수목금토일 font-size: 16px; 로 수정 */
         .time-item label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 16px; }
         .time-item input { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 16px; font-weight: bold; }
+/* 태그 누락자 표시: 눈에 띄는 주황색 계열 */
+.status-missing-tag { 
+    background: #fff3cd !important; 
+    border: 3px solid #fd7e14 !important; 
+    color: #fd7e14 !important; 
+    text-decoration: underline;
+}
+
         
     </style>
 </head>
@@ -81,6 +89,9 @@
 <div class="container">
     <div class="header-area">
         <h2 style="flex-grow: 1;">안성여고 야간 자율학습 통합 관리</h2>
+        <button class="btn btn-primary" style="background:#dc3545;" onclick="closeMissingTags()">
+    🚨 일일 출결 강제 마감 (태그 누락자 색출)
+</button>
         <button class="btn btn-gray" onclick="location.href='settings.html'">⚙️ 환경설정</button>
     </div>
     
@@ -265,9 +276,20 @@ function renderDailySupervisorMap() {
             const log = attendanceLogsData[String(d.stuId)];
             target.innerHTML = `${d.seatNum}<br><span style="font-size:10px; color:#1565c0;">${d.stuName}</span>`;
             
-            if(log && log.status !== "귀가") target.classList.add('status-present-fixed'); 
-            else target.classList.add('status-absent');
+if (log) {
+    if (log.status === "귀가(누락)") {
+        target.classList.add('status-missing-tag'); // 태그 누락자 전용 디자인
+    } else if (log.status !== "귀가") {
+        target.classList.add('status-present-fixed'); // 정상 입실
+    } else {
+        target.classList.add('status-absent'); // 정상 귀가 완료
+    }
+} else {
+    target.classList.add('status-absent'); // 기록 없음(결석)
+}
 
+
+            
             // 🌟 [복구됨] 클릭 시 상담 리포트 팝업 연결
             target.style.cursor = "pointer";
             target.onclick = () => openCounsel(docId);
@@ -393,6 +415,66 @@ dailyReservationsData.forEach(d => {
         } catch(e) { alert("오류: " + e.message); }
     }
 
+// 일일 출결 마감 (태그 누락자 강제 처리)
+async function closeMissingTags() {
+    const targetDate = document.getElementById('daily-date').value; // 현재 보고 있는 날짜
+    
+    if (!confirm(`${targetDate} 일자의 출결을 마감하시겠습니까?\n아직 귀가하지 않은 학생은 '태그 누락'으로 처리됩니다.`)) {
+        return;
+    }
+
+    try {
+        // 1. 해당 날짜의 출결 로그 몽땅 가져오기
+        const snapshot = await db.collection("attendance_logs").where("date", "==", targetDate).get();
+        
+        let missingCount = 0;
+        const now = new Date();
+
+        // 2. 환경설정에서 야자 공식 종료 시간 가져오기 (예: 21:30)
+        const schedDoc = await db.collection("settings").doc("schedule").get();
+        const endTimeStr = schedDoc.exists ? (schedDoc.data().t3_end || "21:30") : "21:30";
+
+        // 데이터베이스 업데이트를 한 번에 처리하기 위한 Batch 준비
+        const batch = db.batch();
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            
+            // 3. 상태가 '귀가'가 아니면 태그 누락으로 간주 ('입실', '복귀', '외출' 상태로 방치된 경우)
+            if (data.status !== "귀가" && data.status !== "귀가(누락)") {
+                missingCount++;
+                const docRef = db.collection("attendance_logs").doc(doc.id);
+                
+                // 4. 어떻게 기록할지 정의
+                // (선택 사항) 태그를 안 찍고 갔으므로, 시스템 공식 종료 시간을 기준으로 강제 계산하거나 0분 처리할 수 있습니다. 
+                // 여기서는 '태그 누락'이라는 명확한 꼬리표를 달아줍니다.
+                const updateData = {
+                    status: "귀가(누락)", // 상태를 누락으로 변경
+                    lastUpdateTime: now,
+                    // 히스토리에 빨간색 글씨로 누락 사실을 기록
+                    history: firebase.firestore.FieldValue.arrayUnion(`🚨 태그 누락 강제 마감`) 
+                };
+                
+                batch.update(docRef, updateData);
+            }
+        });
+
+        // 5. 변경된 내역을 DB에 일괄 반영
+        if (missingCount > 0) {
+            await batch.commit();
+            alert(`총 ${missingCount}명의 태그 누락자를 강제 마감 처리했습니다.`);
+            loadDailyDataAndRender(); // 화면 새로고침
+        } else {
+            alert("태그 누락자가 없습니다. 완벽한 하루네요!");
+        }
+
+    } catch (e) {
+        console.error("마감 처리 중 오류:", e);
+        alert("오류가 발생했습니다: " + e.message);
+    }
+}
+
+    
     function resetManualForm() { document.getElementById('edit-doc-id').value = ""; document.querySelectorAll('#tab-manual input').forEach(i => i.value = ""); }
     function renderSimpleStats() { document.getElementById('stats-container').innerHTML = `<p>총 신청 인원: <b>${Object.keys(applicationData).length}명</b></p>`; }
 
