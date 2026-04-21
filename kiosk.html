@@ -27,6 +27,18 @@
         .receipt { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 2px dashed #ccc; width: 80%; }
         .r-name { font-size: 28px; font-weight: 900; margin-bottom: 10px; } .r-status { font-size: 35px; font-weight: 900; margin-bottom: 15px; }
         .r-time { font-size: 18px; color: #666; margin-bottom: 15px; } .r-msg { font-size: 16px; font-weight: bold; background: #eee; padding: 10px; border-radius: 8px; }
+/* 🌟 경고용 깜빡임 애니메이션 추가 */
+@keyframes urgentBlink {
+    0%, 100% { background-color: white; border-color: #dc3545; }
+    50% { background-color: #ffe6e6; border-color: #dc3545; transform: scale(1.05); box-shadow: 0 0 30px rgba(220,53,69,0.5); }
+}
+.receipt.blink-warning {
+    animation: urgentBlink 0.4s infinite;
+    border-width: 5px;
+    border-style: solid;
+}
+    
+    
     </style>
 </head>
 <body>
@@ -89,6 +101,33 @@
     }
     fetchRoster();
 
+// 🌟 [추가] 에러 발생 시 삐-삐-삐 소리를 내는 기계음 함수
+function playErrorBeep() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function beep(time, freq) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.value = freq;
+            osc.type = 'square'; // 경고음에 어울리는 기계음 소리
+            gain.gain.setValueAtTime(0.15, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+            osc.start(time);
+            osc.stop(time + 0.15);
+        }
+        // 0.2초 간격으로 3번 연속 빠르고 크게 울림
+        beep(audioCtx.currentTime, 600);
+        beep(audioCtx.currentTime + 0.2, 600);
+        beep(audioCtx.currentTime + 0.4, 600);
+    } catch(e) { 
+        console.error("오디오 재생 에러:", e); 
+    }
+}
+
+
+    
     function selectStatus(status, btnElement) {
         currentStatus = status;
         document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('selected'));
@@ -154,19 +193,22 @@ async function processCheckInOut() {
              return; // 여기서 로직 종료
         }
 
-        // 3. 자율석 학생일 경우 -> 오늘 '일일 발권'을 했는지 검사
-        if (appData.type === "자율석") {
-            const ticketQuery = await db.collection("daily_reservations")
-                .where("date", "==", todayStr)
-                .where("stuId", "==", id)
-                .get();
+// 3. 자율석 학생일 경우 -> 오늘 '일일 발권'을 했는지 검사
+if (appData.type === "자율석") {
+    const ticketQuery = await db.collection("daily_reservations")
+        .where("date", "==", todayStr)
+        .where("stuId", "==", id)
+        .get();
 
-            if (ticketQuery.empty) {
-                // 발권을 안 한 상태로 키오스크를 찍은 경우 (입실 차단!)
-                showReceipt(studentName, "발권 필요 ⚠️", "자리를 배정받지 않음", "일일 발권기에서 먼저 자리를 선택하고 오세요!", "#b38200");
-                return; // 여기서 로직 종료
-            }
-        }
+    if (ticketQuery.empty) {
+        // 발권을 안 한 상태로 키오스크를 찍은 경우 (입실 차단!)
+        playErrorBeep(); // 🔊 삐-삐-삐 경고음 발생!
+        
+        // 🌟 색상을 #dc3545(빨강)로 변경하고, 마지막 인자로 true(깜빡임 켜기) 전달
+        showReceipt(studentName, "발권 필요 ⚠️", "자리를 배정받지 않음", "일일 발권기에서 먼저 자리를 선택하고 오세요!", "#dc3545", true);
+        return; // 여기서 로직 종료
+    }
+}
         // ========================================================
 
         // 아래부터는 기존의 정상 출결 처리 로직입니다.
@@ -268,9 +310,9 @@ async function saveAttendance(id, name, status, timeObj) {
 
     
 /**
- * 출결 처리 결과(영수증)를 화면에 표시하고 시각적 피드백을 제공하는 함수
- */
-function showReceipt(name, status, timeInfo, msg, color) {
+// 🌟 1) 매개변수 맨 끝에 isUrgent = false 를 추가합니다.
+function showReceipt(name, status, timeInfo, msg, color, isUrgent = false) { 
+    
     // 1. 시각적 알림 강화: 상태에 따라 키오스크 배경색 변경
     const container = document.querySelector('.kiosk-box');
     const originalBg = "#ffffff"; // 기본 하얀색
@@ -280,6 +322,14 @@ function showReceipt(name, status, timeInfo, msg, color) {
         container.style.backgroundColor = "#fff5f5"; // 귀가 경고색
     } else if (status.includes("입실") || status.includes("복귀")) {
         container.style.backgroundColor = "#f0f9ff"; // 입실 확인색
+    }
+
+    // 🌟 2) 새로 추가되는 깜빡임 제어 로직! (영수증 박스 선택)
+    const receiptBox = document.querySelector('.receipt');
+    if (isUrgent) {
+        receiptBox.classList.add('blink-warning'); // 클래스 붙여서 깜빡이게
+    } else {
+        receiptBox.classList.remove('blink-warning'); // 평소엔 제거
     }
 
     // 2. 결과 데이터 표시
@@ -295,23 +345,17 @@ function showReceipt(name, status, timeInfo, msg, color) {
 
     // 4. 초기화 로직 (2.5초 후 실행)
     setTimeout(() => {
-        // 결과창 닫기
         overlay.style.display = 'none';
-        
-        // 배경색 원래대로 복구
         container.style.backgroundColor = originalBg;
         
-        // [중요] 다음 학생을 위해 무조건 '입실' 모드로 강제 초기화
-        // 버튼 선택 시각 효과를 입실 버튼(btn-in)으로 돌려놓습니다.
         selectStatus('입실', document.querySelector('.btn-in')); 
         
-        // 입력창 비우고 포커스 (바코드 스캐너 대기)
         const scannerInput = document.getElementById('scanner-input');
         scannerInput.value = "";
         focusScanner();
         
         console.log("시스템이 다음 학생을 위해 [입실] 모드로 자동 초기화되었습니다.");
-    }, 2500); // 2.5초간 결과 유지
+    }, 2500); 
 }
 </script>
 </body>
