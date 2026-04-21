@@ -80,7 +80,8 @@
     color: #fd7e14 !important; 
     text-decoration: underline;
 }
-
+/* 외출 중: 연한 보라색 바탕 + 보라 실선 테두리 */
+.status-out { background: #e0d4f7 !important; border: 2px solid #6f42c1 !important; color: #4a2785 !important; }
         
     </style>
 </head>
@@ -109,6 +110,20 @@
                 <option value="1">1타임</option><option value="2">2타임</option><option value="3">3타임</option>
             </select>
         </div>
+
+
+        
+<div style="display:flex; justify-content:center; gap:15px; margin-bottom:15px; font-size:12px; flex-wrap:wrap;">
+            <span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#fff3cd; border:2px solid #ffc107;"></div> 고정석(입실)</span>
+            <span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#d1e7dd; border:2px solid #2e7d32;"></div> 자율석(입실)</span>
+            <span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#e0d4f7; border:2px solid #6f42c1;"></div> 외출 중</span>
+            <span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#fff0f0; border:2px dashed #dc3545;"></div> 미입실/귀가</span>
+            <span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#fff3cd; border:3px solid #fd7e14;"></div> 태그 누락</span>
+        </div>
+
+
+
+        
         <div id="supervisor-grid" class="seat-grid"></div>
     </div>
 
