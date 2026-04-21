@@ -266,6 +266,7 @@ async function saveAttendance(id, name, status, timeObj) {
     showReceipt(name, status + " 완료", `처리시간: ${timeStr}`, "정상 처리되었습니다.", color);
 }
 
+/////////////////////////////////////////////////////////////////////////////    
 // 🌟 [추가함수 2] 입실한 학생에게 "외출/귀가"를 묻는 선택창
 function showSelectionModal(id, name) {
     // 기존 영수증 화면을 빌려 쓰거나, 간단한 confirm 창보다 예쁜 커스텀 창을 띄웁니다.
