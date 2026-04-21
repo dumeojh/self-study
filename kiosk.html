@@ -266,24 +266,6 @@ async function saveAttendance(id, name, status, timeObj) {
     showReceipt(name, status + " 완료", `처리시간: ${timeStr}`, "정상 처리되었습니다.", color);
 }
 
-/////////////////////////////////////////////////////////////////////////////    
-// 🌟 [추가함수 2] 입실한 학생에게 "외출/귀가"를 묻는 선택창
-function showSelectionModal(id, name) {
-    // 기존 영수증 화면을 빌려 쓰거나, 간단한 confirm 창보다 예쁜 커스텀 창을 띄웁니다.
-    // 여기서는 구현 편의를 위해 자바스크립트 기본 선택창을 쓰거나 전용 UI를 띄울 수 있습니다.
-    
-    const msg = `[${name}] 학생, 이미 입실 상태입니다.\n어떤 처리를 원하시나요?`;
-    
-    // 이 부분은 나중에 HTML로 예쁜 버튼 모달을 만드셔도 좋습니다. 
-    // 우선 로직 확인을 위해 동작만 구현합니다.
-    if (confirm(`${name} 학생!\n지금 [잠시 외출] 하시나요?\n(취소를 누르면 [최종 귀가] 선택창으로 이동)`)) {
-        saveAttendance(id, name, "외출", new Date());
-    } else {
-        if (confirm("정말 [최종 귀가] 하시겠습니까?\n귀가 후에는 다시 입실할 수 없습니다.")) {
-            saveAttendance(id, name, "귀가", new Date());
-        }
-    }
-}
     
 /**
  * 출결 처리 결과(영수증)를 화면에 표시하고 시각적 피드백을 제공하는 함수
