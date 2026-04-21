@@ -122,8 +122,24 @@
             <span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#fff3cd; border:3px solid #fd7e14;"></div> 태그 누락</span>
         </div>
 
+<div id="tab-daily" class="tab-content active">
+        <div style="text-align:center; background:#e3f2fd; padding:15px; border-radius:10px; margin-bottom:15px;">
+            날짜: <input type="date" id="daily-date" onchange="loadDailyDataAndRender()">
+            교시: <select id="daily-time" onchange="renderDailySupervisorMap()">
+                <option value="1">1타임</option><option value="2">2타임</option><option value="3">3타임</option>
+            </select>
+        </div>
 
-        <div id="tab-daily-list" class="tab-content">
+        <div style="display:flex; justify-content:center; gap:15px; margin-bottom:15px; font-size:12px; flex-wrap:wrap;">
+            <span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#fff3cd; border:2px solid #ffc107;"></div> 고정석(입실)</span>
+            <span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#d1e7dd; border:2px solid #2e7d32;"></div> 자율석(입실)</span>
+            <span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#e0d4f7; border:2px solid #6f42c1;"></div> 외출 중</span>
+            <span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#fff0f0; border:2px dashed #dc3545;"></div> 미입실/귀가</span>
+            <span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#fff3cd; border:3px solid #fd7e14;"></div> 태그 누락</span>
+        </div>
+
+        <div id="supervisor-grid" class="seat-grid"></div>
+    </div> <div id="tab-daily-list" class="tab-content">
         <div class="form-card" style="margin-bottom: 15px; padding: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
             <div>
                 <b style="color: #555;">조회 정렬:</b>
@@ -153,6 +169,8 @@
         </div>
     </div>
 
+
+        
 
         
         <div id="supervisor-grid" class="seat-grid"></div>
