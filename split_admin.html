@@ -373,98 +373,73 @@ function loadDailyDataAndRender() {
     });
 }
 
-// --- [지도 렌더링 함수 수정] ---
 function renderDailySupervisorMap() {
     if(seatMapData.length === 0) return;
     const container = document.getElementById('supervisor-grid');
     container.innerHTML = ''; 
     container.style.gridTemplateColumns = `repeat(${cols}, 55px)`;
     
-    const timeStr = document.getElementById('daily-time').value; // 현재 선택된 교시 (1, 2, 3)
+    const timeStr = document.getElementById('daily-time').value; 
     const targetDay = ['sun','mon','tue','wed','thu','fri','sat'][new Date(document.getElementById('daily-date').value).getDay()];
     
     const cellEls = {};
 
-    // 1. 기본 도면 그리기
     seatMapData.forEach((rowCells) => {
         rowCells.forEach((d) => {
             const cell = typeof d === 'number' ? {type: d, label: ""} : d;
             const div = document.createElement('div');
             div.className = `seat-cell seat-${cell.type}`; 
             div.innerText = cell.label || "";
-            // 좌석 라벨이 있는 경우 매핑용 객체에 저장
             if ((cell.type === 1 || cell.type === 2) && cell.label) cellEls[cell.label] = div;
             container.appendChild(div);
         });
     });
 
-    // 2. 고정석 학생 배치 
-    // 🌟 수정: Object.entries를 사용하여 클릭 이벤트에 필요한 docId를 가져옵니다.
     Object.entries(applicationData).forEach(([docId, d]) => {
         if(d.type === "고정석" && d[targetDay] && d[targetDay].includes(timeStr) && cellEls[d.seatNum]) {
             const target = cellEls[d.seatNum]; 
             const log = attendanceLogsData[String(d.stuId)];
             target.innerHTML = `${d.seatNum}<br><span style="font-size:10px; color:#1565c0;">${d.stuName}</span>`;
             
-if (log) {
-    if (log.status === "귀가(누락)") {
-        target.classList.add('status-missing-tag'); // 태그 누락
-    } else if (log.status === "외출") {
-        target.classList.add('status-out'); // 🌟 외출 상태 추가!
-    } else if (log.status !== "귀가") {
-        target.classList.add('status-present-fixed'); // 정상 입실 (고정석)
-    } else {
-        target.classList.add('status-absent'); // 정상 귀가 완료
-    }
-} else {
-    target.classList.add('status-absent'); // 기록 없음(결석)
-}
-  
-
+            if (log) {
+                if (log.status === "귀가(누락)") target.classList.add('status-missing-tag'); 
+                else if (log.status === "외출") target.classList.add('status-out'); 
+                else if (log.status !== "귀가") target.classList.add('status-present-fixed'); 
+                else target.classList.add('status-absent'); 
+            } else {
+                target.classList.add('status-absent'); 
+            }
             
-            // 🌟 [복구됨] 클릭 시 상담 리포트 팝업 연결
             target.style.cursor = "pointer";
-// ✨ 변경 코드:
-            target.onclick = () => openDailyStatus(d.stuId, d.stuName, d.seatNum, d.phone);
+            // 🌟 수정됨: 빈 값이 아닌 서버에서 가져온 전화번호부를 검색해서 넘겨줌
+            target.onclick = () => openDailyStatus(d.stuId, d.stuName, d.seatNum, rosterPhones[String(d.stuId)]);
         }
     });
 
-// 3. 자율석 발권 학생 배치
-dailyReservationsData.forEach(d => {
-    // 해당 학생이 발권한 타임에 현재 교시가 포함되어 있는지 확인
-    if(d.times && d.times.includes(timeStr) && cellEls[d.seatNum]) {
-        const target = cellEls[d.seatNum];
-        const log = attendanceLogsData[String(d.stuId)];
-        
-        target.innerHTML = `${d.seatNum}<br><span style="font-size:10px; color:#2e7d32;">${d.stuName}</span>`;
+    dailyReservationsData.forEach(d => {
+        if(d.times && d.times.includes(timeStr) && cellEls[d.seatNum]) {
+            const target = cellEls[d.seatNum];
+            const log = attendanceLogsData[String(d.stuId)];
+            
+            target.innerHTML = `${d.seatNum}<br><span style="font-size:10px; color:#2e7d32;">${d.stuName}</span>`;
 
-        // (기존에 있던 target.style.backgroundColor 등 강제 색상 지정 코드 삭제)
+            if (log) {
+                if (log.status === "귀가(누락)") target.classList.add('status-missing-tag'); 
+                else if (log.status === "외출") target.classList.add('status-out'); 
+                else if (log.status !== "귀가") target.classList.add('status-present-auto'); 
+                else target.classList.add('status-absent'); 
+            } else {
+                target.classList.add('status-absent'); 
+            }
 
-// 출결 상태에 따라 미리 만들어둔 CSS 클래스만 부여하여 디자인 적용
-if (log) {
-    if (log.status === "귀가(누락)") {
-        target.classList.add('status-missing-tag'); // 태그 누락
-    } else if (log.status === "외출") {
-        target.classList.add('status-out'); // 🌟 외출 상태 추가!
-    } else if (log.status !== "귀가") {
-        target.classList.add('status-present-auto'); // 정상 입실 (자율석)
-    } else {
-        target.classList.add('status-absent'); // 정상 귀가 완료
-    }
-} else {
-    target.classList.add('status-absent'); // 기록 없음(결석)
-}
-
-        
-
-        const appEntry = Object.entries(applicationData).find(([id, app]) => String(app.stuId) === String(d.stuId));
-        if (appEntry) {
-            target.style.cursor = "pointer";
-// ✨ 변경 코드:
-            target.onclick = () => openDailyStatus(appEntry[1].stuId, appEntry[1].stuName, d.seatNum, appEntry[1].phone);
+            const appEntry = Object.entries(applicationData).find(([id, app]) => String(app.stuId) === String(d.stuId));
+            if (appEntry) {
+                target.style.cursor = "pointer";
+                // 🌟 수정됨: 빈 값이 아닌 서버에서 가져온 전화번호부를 검색해서 넘겨줌
+                target.onclick = () => openDailyStatus(appEntry[1].stuId, appEntry[1].stuName, d.seatNum, rosterPhones[String(appEntry[1].stuId)]);
+            }
         }
-    }
-});
+    });
 }
 
 
@@ -583,7 +558,6 @@ function openDailyStatus(stuId, stuName, seatNum, phone) {
         });
     }
 
-// 🌟 [추가] 오늘 일일 현황 리스트 렌더링 함수
 function renderDailyList() {
     const tbody = document.getElementById('daily-list-body');
     if (!tbody) return;
@@ -595,45 +569,32 @@ function renderDailyList() {
     
     let targetStudents = [];
 
-    // 1. 고정석: 오늘 해당 요일에 야자를 신청한 학생 추출
     Object.values(applicationData).forEach(app => {
         if (app.type === "고정석" && app[targetDay]) {
             targetStudents.push({
                 stuId: app.stuId, stuName: app.stuName, seatNum: app.seatNum, 
-                appliedTimes: app[targetDay] + "타임", type: "고정석", phone: app.phone
+                appliedTimes: app[targetDay] + "타임", type: "고정석", 
+                phone: rosterPhones[String(app.stuId)] // 🌟 수정됨
             });
         }
     });
 
-    // 2. 자율석: 오늘 당일 좌석을 발권한 학생 추출
     dailyReservationsData.forEach(res => {
         targetStudents.push({
             stuId: res.stuId, stuName: res.stuName, seatNum: res.seatNum, 
-            appliedTimes: (res.times || "-") + "타임", type: "자율석", phone: res.phone
+            appliedTimes: (res.times || "-") + "타임", type: "자율석", 
+            phone: rosterPhones[String(res.stuId)] // 🌟 수정됨
         });
     });
 
-    // 3. 정렬 로직 (학번순 or 좌석순)
-    if (sortBy === "id") {
-        targetStudents.sort((a, b) => String(a.stuId).localeCompare(String(b.stuId)));
-    } else if (sortBy === "seat") {
-        targetStudents.sort((a, b) => String(a.seatNum).localeCompare(String(b.seatNum)));
-    }
+    if (sortBy === "id") targetStudents.sort((a, b) => String(a.stuId).localeCompare(String(b.stuId)));
+    else if (sortBy === "seat") targetStudents.sort((a, b) => String(a.seatNum).localeCompare(String(b.seatNum)));
 
-    // 4. 통계 변수
     let stat = { total: targetStudents.length, present: 0, out: 0, absent: 0 };
 
-
-
-    
-// 5. 화면에 행(tr) 추가
     targetStudents.forEach(st => {
         const log = attendanceLogsData[String(st.stuId)];
-        let status = "미입실";
-        let tagTime = "-";
-        let statusColor = "var(--danger)"; // 기본 빨강
-
-        // 🌟 [추가] 미니 타임라인(흐름) 생성용 변수
+        let status = "미입실"; let tagTime = "-"; let statusColor = "var(--danger)"; 
         let historyHtml = `<span style="color:#aaa; font-size:11px;">스캔 기록 없음</span>`;
 
         if (log) {
@@ -642,32 +603,22 @@ function renderDailyList() {
                 const dt = log.lastUpdateTime.toDate ? log.lastUpdateTime.toDate() : new Date(log.lastUpdateTime);
                 tagTime = dt.toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit' });
             }
-
-            // 🌟 [추가] 출결 기록(history)이 있으면 캡슐 배지로 변환
             if (log.history && log.history.length > 0) {
                 historyHtml = log.history.map(h => {
-                    let tagClass = "tag-in"; // 기본 파란색 (입실/복귀)
-                    if (h.includes("외출")) tagClass = "tag-out"; // 노란색
-                    else if (h.includes("귀가")) tagClass = "tag-home"; // 빨간색
+                    let tagClass = "tag-in"; 
+                    if (h.includes("외출")) tagClass = "tag-out"; 
+                    else if (h.includes("귀가")) tagClass = "tag-home"; 
                     return `<span class="mini-tag ${tagClass}">${h}</span>`;
                 }).join('<span style="color:#ccc; font-size:10px; margin:0 3px;">➔</span>');
             }
         }
 
-        // 상태별 텍스트 색상 및 통계 집계
-        if (status === "미입실" || status === "귀가(누락)") {
-            statusColor = "var(--danger)"; stat.absent++;
-        } else if (status === "입실" || status === "복귀") {
-            statusColor = "var(--primary)"; stat.present++;
-        } else if (status === "외출") {
-            statusColor = "#fd7e14"; stat.out++;
-        } else if (status === "귀가") {
-            statusColor = "var(--gray)"; // 귀가는 회색 처리
-        }
+        if (status === "미입실" || status === "귀가(누락)") { statusColor = "var(--danger)"; stat.absent++; } 
+        else if (status === "입실" || status === "복귀") { statusColor = "var(--primary)"; stat.present++; } 
+        else if (status === "외출") { statusColor = "#fd7e14"; stat.out++; } 
+        else if (status === "귀가") { statusColor = "var(--gray)"; }
 
         const tr = document.createElement('tr');
-        
-        // 🌟 [수정] 4번째 <td> 안에 신청 교시와 미니 타임라인을 위아래로 배치
         tr.innerHTML = `
             <td>${st.stuId}</td>
             <td style="font-weight:bold; cursor:pointer; color:var(--primary); text-decoration:underline;" 
@@ -684,15 +635,9 @@ function renderDailyList() {
         `;
         tbody.appendChild(tr);
     });
-    // 6. 상단 요약 통계 업데이트
-    document.getElementById('daily-list-summary').innerHTML = `
-        대상: ${stat.total}명 | 
-        <span style="color:var(--primary);">입실: ${stat.present}명</span> | 
-        <span style="color:#fd7e14;">외출: ${stat.out}명</span> | 
-        <span style="color:var(--danger);">미입실: ${stat.absent}명</span>
-    `;
+    
+    document.getElementById('daily-list-summary').innerHTML = `대상: ${stat.total}명 | <span style="color:var(--primary);">입실: ${stat.present}명</span> | <span style="color:#fd7e14;">외출: ${stat.out}명</span> | <span style="color:var(--danger);">미입실: ${stat.absent}명</span>`;
 }
-
 
     
 
