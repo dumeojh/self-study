@@ -829,14 +829,16 @@ async function calculateAndRenderStats() {
             if (student.sat) dayStats[6].apply++;
             if (student.sun) dayStats[0].apply++;
 
-// 🌟 [수정 1] 학번 자릿수(4자리/5자리)에 상관없이 '반'을 유연하게 추출하는 로직
-            const stuIdStr = String(student.stuId).trim(); // 공백 혹시 모를 오타 방지
+// 🌟 [수정 1] 학번 자릿수(4자리/5자리)에 상관없이 '학년'과 '반'을 정확히 추출
+            const stuIdStr = String(student.stuId).trim();
             let classNum = "기타";
             
-            if (stuIdStr.length >= 3) {
-                // 맨 뒤 2자리(번호)를 잘라내고 남은 앞부분이 '학년+반'이 됩니다.
-                // 예: 1215 -> 12반 / 10215 -> 102반
-                classNum = stuIdStr.substring(0, stuIdStr.length - 2) + "반";
+            if (stuIdStr.length >= 4) {
+                const grade = stuIdStr.charAt(0); // 맨 앞 1자리는 무조건 학년
+                const banStr = stuIdStr.substring(1, stuIdStr.length - 2); // 맨 앞과 맨 뒤 2자리를 뺀 중간 부분
+                
+                // '02' 같은 글자를 숫자 2로 깔끔하게 바꿔주고 학년과 합칩니다. (예: 1학년 2반)
+                classNum = grade + "학년 " + parseInt(banStr, 10) + "반";
             }
             
             if (!classStats[classNum]) classStats[classNum] = { apply: 0, attend: 0 };
@@ -849,12 +851,14 @@ async function calculateAndRenderStats() {
             const dayIndex = logDate.getDay();
             if (dayStats[dayIndex]) dayStats[dayIndex].attend++;
 
-// 🌟 [수정 2] 출결 로그에서도 동일하게 유연한 반 추출 적용
+// 🌟 [수정 2] 출결 로그에서도 동일하게 유연한 학년/반 추출 적용
             const stuIdStr = String(log.stuId).trim();
             let classNum = "기타";
             
-            if (stuIdStr.length >= 3) {
-                classNum = stuIdStr.substring(0, stuIdStr.length - 2) + "반";
+            if (stuIdStr.length >= 4) {
+                const grade = stuIdStr.charAt(0);
+                const banStr = stuIdStr.substring(1, stuIdStr.length - 2);
+                classNum = grade + "학년 " + parseInt(banStr, 10) + "반";
             }
             
             if (classStats[classNum]) classStats[classNum].attend++;
