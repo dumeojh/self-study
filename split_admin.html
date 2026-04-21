@@ -313,9 +313,11 @@ function renderDailySupervisorMap() {
             
 if (log) {
     if (log.status === "귀가(누락)") {
-        target.classList.add('status-missing-tag'); // 태그 누락자 전용 디자인
+        target.classList.add('status-missing-tag'); // 태그 누락
+    } else if (log.status === "외출") {
+        target.classList.add('status-out'); // 🌟 외출 상태 추가!
     } else if (log.status !== "귀가") {
-        target.classList.add('status-present-fixed'); // 정상 입실
+        target.classList.add('status-present-fixed'); // 정상 입실 (고정석)
     } else {
         target.classList.add('status-absent'); // 정상 귀가 완료
     }
@@ -344,18 +346,19 @@ dailyReservationsData.forEach(d => {
         // (기존에 있던 target.style.backgroundColor 등 강제 색상 지정 코드 삭제)
 
 // 출결 상태에 따라 미리 만들어둔 CSS 클래스만 부여하여 디자인 적용
-        if (log) {
-            if (log.status === "귀가(누락)") {
-                target.classList.add('status-missing-tag'); // 태그 누락자 전용 주황색 테마
-            } else if (log.status !== "귀가") {
-                target.classList.add('status-present-auto'); // 입실 완료: 자율석 전용 초록색 테마
-            } else {
-                target.classList.add('status-absent'); // 정상 귀가 완료
-            }
-        } else {
-            target.classList.add('status-absent'); // 기록 없음(결석)
-        }
-
+if (log) {
+    if (log.status === "귀가(누락)") {
+        target.classList.add('status-missing-tag'); // 태그 누락
+    } else if (log.status === "외출") {
+        target.classList.add('status-out'); // 🌟 외출 상태 추가!
+    } else if (log.status !== "귀가") {
+        target.classList.add('status-present-auto'); // 정상 입실 (자율석)
+    } else {
+        target.classList.add('status-absent'); // 정상 귀가 완료
+    }
+} else {
+    target.classList.add('status-absent'); // 기록 없음(결석)
+}
 
         
 
