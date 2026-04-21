@@ -913,6 +913,16 @@ async function calculateAndRenderStats() {
         renderStatusTable(); renderDailySupervisorMap();
     });
 
+    // 🌟👇👇 여기부터 추가 👇👇🌟
+    let rosterPhones = {}; 
+    async function loadRosterPhones() {
+        const doc = await db.collection("settings").doc("roster").get();
+        if (doc.exists && doc.data().phoneList) {
+            rosterPhones = JSON.parse(doc.data().phoneList);
+        }
+    }
+    loadRosterPhones();
+    // 🌟👆👆 여기까지 추가 👆👆🌟
     loadSeatLayout(); loadDailyDataAndRender();
 </script>
 </body>
