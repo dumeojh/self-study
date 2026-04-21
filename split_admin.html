@@ -312,7 +312,8 @@ if (log) {
             
             // 🌟 [복구됨] 클릭 시 상담 리포트 팝업 연결
             target.style.cursor = "pointer";
-            target.onclick = () => openCounsel(docId);
+// ✨ 변경 코드:
+            target.onclick = () => openDailyStatus(d.stuId, d.stuName, d.seatNum, d.phone);
         }
     });
 
@@ -346,7 +347,8 @@ dailyReservationsData.forEach(d => {
         const appEntry = Object.entries(applicationData).find(([id, app]) => String(app.stuId) === String(d.stuId));
         if (appEntry) {
             target.style.cursor = "pointer";
-            target.onclick = () => openCounsel(appEntry[0]);
+// ✨ 변경 코드:
+            target.onclick = () => openDailyStatus(appEntry[1].stuId, appEntry[1].stuName, d.seatNum, appEntry[1].phone);
         }
     }
 });
