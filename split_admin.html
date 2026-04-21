@@ -829,8 +829,16 @@ async function calculateAndRenderStats() {
             if (student.sat) dayStats[6].apply++;
             if (student.sun) dayStats[0].apply++;
 
-            const stuIdStr = String(student.stuId);
-            const classNum = stuIdStr.length > 2 ? stuIdStr.substring(0, stuIdStr.length - 2) + "반" : "기타";
+// 🌟 [수정 1] 학번 자릿수(4자리/5자리)에 상관없이 '반'을 유연하게 추출하는 로직
+            const stuIdStr = String(student.stuId).trim(); // 공백 혹시 모를 오타 방지
+            let classNum = "기타";
+            
+            if (stuIdStr.length >= 3) {
+                // 맨 뒤 2자리(번호)를 잘라내고 남은 앞부분이 '학년+반'이 됩니다.
+                // 예: 1215 -> 12반 / 10215 -> 102반
+                classNum = stuIdStr.substring(0, stuIdStr.length - 2) + "반";
+            }
+            
             if (!classStats[classNum]) classStats[classNum] = { apply: 0, attend: 0 };
             classStats[classNum].apply++;
         });
@@ -841,8 +849,14 @@ async function calculateAndRenderStats() {
             const dayIndex = logDate.getDay();
             if (dayStats[dayIndex]) dayStats[dayIndex].attend++;
 
-            const stuIdStr = String(log.stuId);
-            const classNum = stuIdStr.length > 2 ? stuIdStr.substring(0, stuIdStr.length - 2) + "반" : "기타";
+// 🌟 [수정 2] 출결 로그에서도 동일하게 유연한 반 추출 적용
+            const stuIdStr = String(log.stuId).trim();
+            let classNum = "기타";
+            
+            if (stuIdStr.length >= 3) {
+                classNum = stuIdStr.substring(0, stuIdStr.length - 2) + "반";
+            }
+            
             if (classStats[classNum]) classStats[classNum].attend++;
         });
 
