@@ -108,7 +108,9 @@
         if (e.key === 'Enter') { e.preventDefault(); processCheckInOut(); }
     });
 
-
+// ========================================================
+// 🌟 스마트 선택창 (외출/귀가) 관련 변수 및 함수 모음
+// ========================================================
 // [기존 변수 선언부 아래에 추가]
 let selectionTimer = null; // 자동 취소용 타이머
 
@@ -124,9 +126,51 @@ async function processCheckInOut() {
     }
 
     const now = new Date();
-    const logId = `${todayStr}_${id}`;
+    // 🌟 현재 월과 요일 계산 (DB 대조용)
+    const currentMonthStr = (now.getMonth() + 1) + "월";
+    const todayDayEng = ['sun','mon','tue','wed','thu','fri','sat'][now.getDay()];
 
     try {
+        // ========================================================
+        // 🌟 [새로 추가된 검증 로직] 신청 내역 및 발권 여부 확인
+        // ========================================================
+        
+        // 1. 이번 달 야자 신청 내역이 있는지 확인
+        const appQuery = await db.collection("applications")
+            .where("stuId", "==", id)
+            .where("targetMonth", "==", currentMonthStr)
+            .get();
+
+        if (appQuery.empty) {
+            showReceipt(studentName, "입실 불가", "신청 내역 없음", `이번 달(${currentMonthStr}) 야자 신청자가 아닙니다.`, "#dc3545");
+            return; // 여기서 로직 종료
+        }
+
+        const appData = appQuery.docs[0].data();
+
+        // 2. 오늘이 학생이 신청한 요일인지 확인
+        if (!appData[todayDayEng]) {
+             showReceipt(studentName, "입실 불가", "오늘 신청 아님", "오늘은 야자를 신청한 요일이 아닙니다.", "#dc3545");
+             return; // 여기서 로직 종료
+        }
+
+        // 3. 자율석 학생일 경우 -> 오늘 '일일 발권'을 했는지 검사
+        if (appData.type === "자율석") {
+            const ticketQuery = await db.collection("daily_reservations")
+                .where("date", "==", todayStr)
+                .where("stuId", "==", id)
+                .get();
+
+            if (ticketQuery.empty) {
+                // 발권을 안 한 상태로 키오스크를 찍은 경우 (입실 차단!)
+                showReceipt(studentName, "발권 필요 ⚠️", "자리를 배정받지 않음", "일일 발권기에서 먼저 자리를 선택하고 오세요!", "#b38200");
+                return; // 여기서 로직 종료
+            }
+        }
+        // ========================================================
+
+        // 아래부터는 기존의 정상 출결 처리 로직입니다.
+        const logId = `${todayStr}_${id}`;
         const logDoc = await db.collection("attendance_logs").doc(logId).get();
         const logData = logDoc.exists ? logDoc.data() : null;
         const lastStatus = logData ? logData.status : "미입실";
