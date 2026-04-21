@@ -108,14 +108,16 @@
 <div id="tab-roster" class="card">
         <h3>⚙️ 기초 명단 업로드 (엑셀)</h3>
         
-        <div style="background: #eef6ff; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #b6d4fe;">
+<div style="background: #eef6ff; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #b6d4fe;">
             <strong style="color: #052c65;">📌 학교 학번 체계 선택</strong>
-            <p style="font-size: 12px; color: #666; margin: 5px 0 10px 0;">학교 규모에 맞는 학번 자릿수를 선택한 후 명단을 업로드하세요.</p>
+            <p style="font-size: 12px; color: #666; margin: 5px 0 10px 0;">현재 시스템 안정성을 위해 4자리 학번으로 고정 운영 중입니다.</p>
+            
             <label style="margin-right: 15px; cursor: pointer;">
-                <input type="radio" name="id-length" id="len-4" value="4" checked> 4자리 (예: 2101 / 소규모 학교)
+                <input type="radio" name="id-length" id="len-4" value="4" checked> 4자리 (예: 2101)
             </label>
-            <label style="cursor: pointer;">
-                <input type="radio" name="id-length" id="len-5" value="5" disabled> 5자리 (예: 20101 / 10학급 이상)
+            
+            <label style="cursor: not-allowed; color: #888; opacity: 0.5; display: inline-flex; align-items: center;">
+                <input type="radio" name="id-length" id="len-5" value="5" disabled style="cursor: not-allowed; margin-right: 5px;"> 5자리 (🔒 기능 잠금)
             </label>
         </div>
 
