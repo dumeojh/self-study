@@ -160,6 +160,26 @@
         </div>
     </div>
 
+<div id="daily-status-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 350px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--primary); padding-bottom:10px;">
+            <h3 style="margin:0; font-size:18px;">🕒 오늘의 출결 현황</h3>
+            <button class="btn btn-gray" style="padding: 5px 10px;" onclick="document.getElementById('daily-status-modal').style.display='none'">닫기</button>
+        </div>
+        <div style="text-align: center; margin-top: 15px;">
+            <h2 id="ds-name" style="margin: 0; color: var(--primary);">이름</h2>
+            <p id="ds-info" style="color: #555; margin: 8px 0; font-weight: bold;">학번: - | 좌석: -</p>
+            <p id="ds-phone" style="background: #eef6ff; padding: 8px; border-radius: 5px; font-size: 13px; margin: 5px 0;">📞 연락처 정보 없음</p>
+        </div>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-top: 15px; border: 1px solid #eee;">
+            <h4 style="margin: 0 0 10px 0; color: #333; font-size: 14px;">타임라인</h4>
+            <ul id="ds-timeline" style="list-style: none; padding: 0; margin: 0; font-size: 14px; line-height: 2;">
+                </ul>
+        </div>
+    </div>
+</div>
+    
+
     <div id="tab-stats" class="tab-content">
         <div class="form-card">
             <h3>📊 전체 신청 통계 현황</h3>
@@ -378,6 +398,50 @@ dailyReservationsData.forEach(d => {
         document.getElementById('c-total-min').innerText = tPresent * 80;
         document.getElementById('c-comment').innerText = rate >= 80 ? "✨ 매우 성실한 학생입니다." : "⚠️ 정기적인 참여가 필요합니다.";
     }
+
+
+    // 오늘의 실시간 출결 현황 열기
+function openDailyStatus(stuId, stuName, seatNum, phone) {
+    document.getElementById('daily-status-modal').style.display = 'flex';
+    
+    // 학생 기본 정보 채우기
+    document.getElementById('ds-name').innerText = stuName;
+    document.getElementById('ds-info').innerText = `학번: ${stuId} | 좌석: ${seatNum}`;
+    
+    // 전화번호 처리 (추후 명단이나 신청서에 phone 필드가 추가될 경우를 대비)
+    const phoneBox = document.getElementById('ds-phone');
+    if (phone) {
+        phoneBox.innerHTML = `📞 <b>${phone}</b>`;
+        phoneBox.style.background = "#d1e7dd"; // 번호가 있으면 초록색 배경
+    } else {
+        phoneBox.innerHTML = `📞 등록된 연락처 없음`;
+        phoneBox.style.background = "#eef6ff";
+    }
+
+    // 타임라인(history) 가져오기
+    const log = attendanceLogsData[String(stuId)];
+    const timelineUl = document.getElementById('ds-timeline');
+    timelineUl.innerHTML = '';
+
+    if (log && log.history && log.history.length > 0) {
+        log.history.forEach(record => {
+            // 상태에 따라 타임라인 점의 색상 변경
+            let color = "#6c757d"; // 기본 회색
+            if (record.includes("입실") || record.includes("복귀")) color = "var(--primary)";
+            else if (record.includes("외출")) color = "var(--warning)";
+            else if (record.includes("귀가")) color = "var(--danger)";
+            
+            // 리스트 아이템 추가
+            timelineUl.innerHTML += `
+                <li style="position: relative; padding-left: 15px; margin-bottom: 5px;">
+                    <span style="position: absolute; left: 0; top: 8px; width: 6px; height: 6px; border-radius: 50%; background: ${color};"></span>
+                    ${record}
+                </li>`;
+        });
+    } else {
+        timelineUl.innerHTML = `<li style="text-align: center; color: #999; font-size: 13px;">오늘 스캔된 기록이 없습니다.</li>`;
+    }
+}
 
     // --- [데이터 관리] ---
     function renderStatusTable() {
