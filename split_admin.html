@@ -338,7 +338,7 @@ let dailyReservationsData = []; // 당일 자율석 발권 데이터 저장용
         document.getElementById(tabId).classList.add('active'); 
         if(btn) btn.classList.add('active');
         if(tabId === 'tab-status') renderStatusTable();
-        if(tabId === 'tab-stats') renderSimpleStats();
+        if(tabId === 'tab-stats') calculateAndRenderStats(); // 통계 탭을 누르면 바로 새 통계 함수가 실행되도록 변경
         if(tabId === 'tab-daily-list') renderDailyList(); // 🌟 이 줄을 추가하세요! (탭 누를 때 렌더링)
     }
 
@@ -876,8 +876,7 @@ async function calculateAndRenderStats() {
     
     
     function resetManualForm() { document.getElementById('edit-doc-id').value = ""; document.querySelectorAll('#tab-manual input').forEach(i => i.value = ""); }
-    function renderSimpleStats() { document.getElementById('stats-container').innerHTML = `<p>총 신청 인원: <b>${Object.keys(applicationData).length}명</b></p>`; }
-
+   
     db.collection("applications").onSnapshot(snap => {
         applicationData = {}; snap.forEach(doc => applicationData[doc.id] = doc.data());
         renderStatusTable(); renderDailySupervisorMap();
