@@ -629,9 +629,12 @@ function renderDailyList() {
     const targetDay = ['sun','mon','tue','wed','thu','fri','sat'][new Date(targetDateStr).getDay()];
     const sortBy = document.getElementById('sort-daily-list').value;
     
-    // 🌟 [추가] 선택된 상태 필터 값 가져오기 (없으면 all)
+    // 선택된 상태 필터 값 
     const filterStatusElement = document.getElementById('filter-daily-status');
     const statusFilter = filterStatusElement ? filterStatusElement.value : 'all';
+    
+    // 🌟 현재 상단에서 선택된 교시(1, 2, 3)를 가져옵니다.
+    const currentSlot = parseInt(document.getElementById('daily-time').value) || 1;
     
     let targetStudents = [];
 
@@ -640,7 +643,8 @@ function renderDailyList() {
             targetStudents.push({
                 stuId: app.stuId, stuName: app.stuName, seatNum: app.seatNum, 
                 appliedTimes: app[targetDay] + "타임", type: "고정석", 
-                phone: rosterPhones[String(app.stuId)] 
+                phone: rosterPhones[String(app.stuId)],
+                rawTimes: app[targetDay] // 🌟 추가: "1,2,3" 같은 원본 데이터
             });
         }
     });
@@ -649,7 +653,8 @@ function renderDailyList() {
         targetStudents.push({
             stuId: res.stuId, stuName: res.stuName, seatNum: res.seatNum, 
             appliedTimes: (res.times || "-") + "타임", type: "자율석", 
-            phone: rosterPhones[String(res.stuId)] 
+            phone: rosterPhones[String(res.stuId)],
+            rawTimes: res.times || "" // 🌟 추가
         });
     });
 
@@ -679,23 +684,61 @@ function renderDailyList() {
             }
         }
 
-        // 전체 통계를 위한 카운트 누적
         if (status === "미입실" || status === "귀가(누락)") { statusColor = "var(--danger)"; stat.absent++; } 
         else if (status === "입실" || status === "복귀") { statusColor = "var(--primary)"; stat.present++; } 
         else if (status === "외출") { statusColor = "#fd7e14"; stat.out++; } 
         else if (status === "귀가") { statusColor = "var(--gray)"; stat.finish++; }
 
-        // 🌟 [추가] 화면에 표시하기 전 필터 검사
-        // 귀가(누락)은 미입실로, 복귀는 입실로 묶어서 필터링합니다.
         let mappedGroup = "미입실";
         if (status === "입실" || status === "복귀") mappedGroup = "입실";
         else if (status === "외출") mappedGroup = "외출";
         else if (status === "귀가") mappedGroup = "귀가";
 
-        // '전체 보기'가 아니고, 학생의 상태가 선택한 필터와 다르면 화면에 안 그리고 건너뜀!
-        if (statusFilter !== "all" && mappedGroup !== statusFilter) {
-            return; 
-        }
+        if (statusFilter !== "all" && mappedGroup !== statusFilter) return; 
+
+        // =======================================================
+        // 🌟 [핵심 변경] 타임 박스 시각화 로직
+        // =======================================================
+        let timeBoxHtml = `<div style="display: flex; gap: 5px; margin-bottom: 6px;">`;
+        
+        // 0, 1, 2, 3타임 박스를 각각 그립니다.
+        [0, 1, 2, 3].forEach(t => {
+            const isApplied = st.rawTimes.includes(String(t));
+            
+            if (!isApplied) {
+                // 신청 안 한 타임: 연한 회색으로 비활성화 느낌 표시
+                timeBoxHtml += `<div style="width: 26px; height: 22px; line-height: 22px; text-align: center; font-size: 11px; border-radius: 4px; background: #f8f9fa; color: #dee2e6; border: 1px solid #e9ecef;">${t}T</div>`;
+            } else {
+                // 신청한 타임: 상태에 따라 색상과 테두리를 바꿉니다.
+                let boxBg = "white";
+                let boxColor = "#0d6efd"; 
+                let boxBorder = "2px dotted #0d6efd"; // 기본: 파란 점선 (대기 중)
+
+                if (status === "입실" || status === "복귀") {
+                    if (t < currentSlot) {
+                        // 과거 타임 + 아직 안 나감 = 야자 완료 (녹색 실선)
+                        boxBg = "#198754"; boxColor = "white"; boxBorder = "2px solid #198754";
+                    } else if (t === currentSlot) {
+                        // 현재 타임 + 안 나감 = 현재 야자 중 (파란 실선)
+                        boxBg = "#0d6efd"; boxColor = "white"; boxBorder = "2px solid #0d6efd";
+                    } 
+                    // 미래 타임은 기본값(파란 점선) 유지
+                } else if (status === "외출") {
+                    // 외출 중일 때는 보라색 점선
+                    boxBg = "white"; boxColor = "#6f42c1"; boxBorder = "2px dotted #6f42c1";
+                } else if (status === "귀가" || status === "귀가(누락)") {
+                    // 완전히 귀가했으면 회색
+                    boxBg = "#f8f9fa"; boxColor = "#6c757d"; boxBorder = "2px solid #ced4da";
+                } else {
+                    // 아직 오지 않음(미입실)
+                    boxBg = "white"; boxColor = "#dc3545"; boxBorder = "2px dotted #dc3545";
+                }
+
+                timeBoxHtml += `<div style="width: 26px; height: 22px; line-height: 22px; text-align: center; font-size: 11px; font-weight: bold; border-radius: 4px; background: ${boxBg}; color: ${boxColor}; border: ${boxBorder};">${t}T</div>`;
+            }
+        });
+        timeBoxHtml += `</div>`;
+        // =======================================================
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -706,7 +749,7 @@ function renderDailyList() {
             </td>
             <td><span style="font-size:12px; color:#666;">[${st.type}]</span> ${st.seatNum || '-'}</td>
             <td>
-                <div style="margin-bottom: 6px; font-weight: bold; color: #444; font-size: 13px;">📝 신청: <span style="color:var(--primary);">${st.appliedTimes}</span></div>
+                ${timeBoxHtml}
                 <div style="display: flex; align-items: center; flex-wrap: wrap;">${historyHtml}</div>
             </td>
             <td style="font-weight:900; color:${statusColor};">${status}</td>
@@ -715,7 +758,6 @@ function renderDailyList() {
         tbody.appendChild(tr);
     });
     
-    // 🌟 요약 통계는 필터와 무관하게 '전체 인원' 상황을 보여주도록 유지합니다.
     document.getElementById('daily-list-summary').innerHTML = `전체 대상: ${stat.total}명 | <span style="color:var(--primary);">입실: ${stat.present}명</span> | <span style="color:#fd7e14;">외출: ${stat.out}명</span> | <span style="color:var(--gray);">귀가: ${stat.finish}명</span> | <span style="color:var(--danger);">미입실: ${stat.absent}명</span>`;
 }
     
