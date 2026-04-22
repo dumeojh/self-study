@@ -41,6 +41,10 @@
 /* 🌟 상태별 디자인 클래스 명확화 */
 /* 미입실(결석): 연한 빨간색 바탕 + 빨간색 점선 테두리 */
 .status-absent { background: #fff0f0 !important; border: 2px dashed #dc3545 !important; color: #dc3545 !important; }
+/* 🌟 귀가 완료(추가): 연한 회색 바탕 + 회색 실선 테두리 (일과 끝) */
+.status-finish { background: #f8f9fa !important; border: 2px solid #ced4da !important; color: #6c757d !important; }
+
+/* 입실 완료(고정석): 연한 노란색 바탕 + 노란 실선 테두리 */
 
 /* 입실 완료(고정석): 연한 노란색 바탕 + 노란 실선 테두리 */
 .status-present-fixed { background: #fff3cd !important; border: 2px solid #ffc107 !important; color: #856404 !important; }
@@ -127,9 +131,8 @@
             <span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#fff3cd; border:2px solid #ffc107;"></div> 고정석(입실)</span>
             <span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#d1e7dd; border:2px solid #2e7d32;"></div> 자율석(입실)</span>
             <span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#e0d4f7; border:2px dashed #6f42c1;"></div> 외출 중</span>
-            
-<span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#fff0f0; border:2px dashed #dc3545;"></div> 미입실/귀가</span>
-           
+   <span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#fff0f0; border:2px dashed #dc3545;"></div> 미입실</span>
+<span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#f8f9fa; border:2px solid #ced4da;"></div> 귀가완료</span>      
             <span style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#fff3cd; border:3px solid #fd7e14;"></div> 태그 누락</span>
         </div>
 
@@ -404,13 +407,13 @@ function renderDailySupervisorMap() {
             const log = attendanceLogsData[String(d.stuId)];
             target.innerHTML = `${d.seatNum}<br><span style="font-size:10px; color:#1565c0;">${d.stuName}</span>`;
             
-            if (log) {
+if (log) {
                 if (log.status === "귀가(누락)") target.classList.add('status-missing-tag'); 
                 else if (log.status === "외출") target.classList.add('status-out'); 
-                else if (log.status !== "귀가") target.classList.add('status-present-fixed'); 
-                else target.classList.add('status-absent'); 
+                else if (log.status === "귀가") target.classList.add('status-finish'); // 🌟 귀가는 회색으로!
+                else target.classList.add('status-present-fixed'); 
             } else {
-                target.classList.add('status-absent'); 
+                target.classList.add('status-absent'); // 아무 기록 없으면 빨간 미입실
             }
             
             target.style.cursor = "pointer";
@@ -426,11 +429,11 @@ function renderDailySupervisorMap() {
             
             target.innerHTML = `${d.seatNum}<br><span style="font-size:10px; color:#2e7d32;">${d.stuName}</span>`;
 
-            if (log) {
+if (log) {
                 if (log.status === "귀가(누락)") target.classList.add('status-missing-tag'); 
                 else if (log.status === "외출") target.classList.add('status-out'); 
-                else if (log.status !== "귀가") target.classList.add('status-present-auto'); 
-                else target.classList.add('status-absent'); 
+                else if (log.status === "귀가") target.classList.add('status-finish'); // 🌟 귀가는 회색으로!
+                else target.classList.add('status-present-auto'); 
             } else {
                 target.classList.add('status-absent'); 
             }
