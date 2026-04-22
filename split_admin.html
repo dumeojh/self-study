@@ -673,7 +673,6 @@ function openDailyStatus(stuId, stuName, seatNum, phone) {
         });
     }
 
-
 function renderDailyList() {
     const tbody = document.getElementById('daily-list-body');
     if (!tbody) return;
@@ -763,16 +762,18 @@ function renderDailyList() {
                         const slotLabel = t === 0 ? "0T" : `${t}T`;
                         const slotBg = t === 0 ? "#6c757d" : "var(--primary)";
                         
+                        // 🌟 여기를 변경했습니다: display: inline-flex 로 가로로 묶고 여백을 조정했습니다.
                         historyHtmlArr.push(`
-                            <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
-                                <span style="background:${slotBg}; color:white; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; min-width:20px; text-align:center;">${slotLabel}</span>
-                                <div style="display:flex; flex-wrap:wrap; align-items:center;">${tags}</div>
+                            <div style="display:inline-flex; align-items:center; gap:6px; margin-right:12px; margin-bottom:4px;">
+                                <span style="background:${slotBg}; color:white; font-size:10px; padding:2px 5px; border-radius:4px; font-weight:bold;">${slotLabel}</span>
+                                <div style="display:flex; align-items:center; flex-wrap:wrap;">${tags}</div>
                             </div>
                         `);
                     }
                 });
                 
-                historyHtml = `<div style="display:flex; flex-direction:column; padding-top:4px;">${historyHtmlArr.join('')}</div>`;
+                // 🌟 전체 컨테이너도 flex-wrap: wrap 으로 설정하여 넘치면 자연스럽게 다음 줄로 넘어가게 했습니다.
+                historyHtml = `<div style="display:flex; flex-wrap:wrap; align-items:center; margin-top:4px;">${historyHtmlArr.join('')}</div>`;
             }
         }
 
@@ -788,7 +789,6 @@ function renderDailyList() {
 
         if (statusFilter !== "all" && mappedGroup !== statusFilter) return; 
 
-        // 🌟 타임 박스 (0T~3T) 렌더링 (좌석 정보 칸에 맞게 여백과 정렬 수정)
         let timeBoxHtml = `<div style="display: flex; gap: 4px; justify-content: center; margin-top: 6px;">`;
         
         [0, 1, 2, 3].forEach(t => {
@@ -819,7 +819,6 @@ function renderDailyList() {
         });
         timeBoxHtml += `</div>`;
 
-        // 🌟 테이블 행(Row) 조립 부분 변경 (좌석 정보 칸에 timeBoxHtml 합치기)
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td style="vertical-align: middle;">${st.stuId}</td>
@@ -829,9 +828,11 @@ function renderDailyList() {
             </td>
             <td style="text-align: center; vertical-align: middle;">
                 <div><span style="font-size:12px; color:#666;">[${st.type}]</span> <strong>${st.seatNum || '-'}</strong></div>
-                ${timeBoxHtml} </td>
+                ${timeBoxHtml}
+            </td>
             <td style="text-align: left; padding-left: 15px; vertical-align: middle;">
-                ${historyHtml} </td>
+                ${historyHtml}
+            </td>
             <td style="font-weight:900; color:${statusColor}; vertical-align: middle;">${status}</td>
             <td style="color:#555; vertical-align: middle;">${tagTime}</td>
         `;
@@ -840,7 +841,6 @@ function renderDailyList() {
     
     document.getElementById('daily-list-summary').innerHTML = `전체 대상: ${stat.total}명 | <span style="color:var(--primary);">입실: ${stat.present}명</span> | <span style="color:#fd7e14;">외출: ${stat.out}명</span> | <span style="color:var(--gray);">귀가: ${stat.finish}명</span> | <span style="color:var(--danger);">미입실: ${stat.absent}명</span>`;
 }
-
 
     
     function fillEditForm(id) {
