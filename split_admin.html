@@ -1624,17 +1624,12 @@ function renderDailyList() {
         let appliedBadges = "";
         [0, 1, 2, 3].forEach(t => {
             const isApplied = st.rawTimes.includes(String(t));
-            // 0타임은 별도 신청 없이 스캔만으로 찍히는 경우가 있으므로 예외 처리
-            const is0TimeActive = (t === 0 && log !== undefined && !isApplied);
             
             if (isApplied) {
                 // 🟢 신청한 타임: 진한 회색 바탕에 흰 글씨
                 appliedBadges += `<span style="background:#6c757d; color:white; padding:2px 6px; border-radius:4px; font-size:10px; margin-right:3px; display:inline-block; text-align:center; min-width:14px; font-weight:bold;">${t}T</span>`;
-            } else if (is0TimeActive) {
-                // 🔵 0타임 자동 입실: 파란색 바탕
-                appliedBadges += `<span style="background:#0d6efd; color:white; padding:2px 6px; border-radius:4px; font-size:10px; margin-right:3px; display:inline-block; text-align:center; font-weight:bold;">0T(자동)</span>`;
             } else {
-                // ⚪ 신청 안 한 타임: 회색 점선 테두리에 투명 바탕
+                // ⚪ 신청 안 한 타임 (0T 포함): 회색 점선 테두리에 투명 바탕
                 appliedBadges += `<span style="border:1px dashed #adb5bd; color:#adb5bd; background:transparent; padding:1px 5px; border-radius:4px; font-size:10px; margin-right:3px; display:inline-block; text-align:center; min-width:14px;">${t}T</span>`;
             }
         });
