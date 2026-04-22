@@ -804,8 +804,11 @@ function renderDailyList() {
 
         
         
+
+
+
         
-// 🌟 1. 신청 현황 (배지 모양으로 깔끔하게 표시)
+// 🌟 1. 신청 현황 (0T~3T 모두 표시, 미신청은 회색 점선)
         let appliedBadges = "";
         [0, 1, 2, 3].forEach(t => {
             const isApplied = st.rawTimes.includes(String(t));
@@ -813,12 +816,55 @@ function renderDailyList() {
             const is0TimeActive = (t === 0 && log !== undefined && !isApplied);
             
             if (isApplied) {
-                appliedBadges += `<span style="background:#6c757d; color:white; padding:2px 5px; border-radius:4px; font-size:10px; margin-right:3px;">${t}T</span>`;
+                // 🟢 신청한 타임: 진한 회색 바탕에 흰 글씨
+                appliedBadges += `<span style="background:#6c757d; color:white; padding:2px 6px; border-radius:4px; font-size:10px; margin-right:3px; display:inline-block; text-align:center; min-width:14px; font-weight:bold;">${t}T</span>`;
             } else if (is0TimeActive) {
-                appliedBadges += `<span style="background:#0d6efd; color:white; padding:2px 5px; border-radius:4px; font-size:10px; margin-right:3px;">0T(자동)</span>`;
+                // 🔵 0타임 자동 입실: 파란색 바탕
+                appliedBadges += `<span style="background:#0d6efd; color:white; padding:2px 6px; border-radius:4px; font-size:10px; margin-right:3px; display:inline-block; text-align:center; font-weight:bold;">0T(자동)</span>`;
+            } else {
+                // ⚪ 신청 안 한 타임: 회색 점선 테두리에 투명 바탕
+                appliedBadges += `<span style="border:1px dashed #adb5bd; color:#adb5bd; background:transparent; padding:1px 5px; border-radius:4px; font-size:10px; margin-right:3px; display:inline-block; text-align:center; min-width:14px;">${t}T</span>`;
             }
         });
-        if (!appliedBadges) appliedBadges = `<span style="color:#aaa; font-size:11px;">신청 없음</span>`;
+
+        // 🌟 2. 현재 상태 (위에서 미리 계산된 statusColor를 그대로 활용)
+        let currentStatusBadge = `<span style="color:${statusColor}; font-weight:bold;">${status}</span>`;
+
+        // 🌟 3. 마지막 결과 판단 로직
+        let resultText = "진행 중 🏃";
+        let resultColor = "#b38200"; 
+        
+        if (status === "귀가") { 
+            resultText = "귀가 완료 🏠"; 
+            resultColor = "var(--gray)"; 
+        } else if (status === "귀가(누락)") { 
+            resultText = "태그 누락 🚨"; 
+            resultColor = "var(--danger)"; 
+        } else if (status === "미입실") { 
+            resultText = "결석/미입실 ❌"; 
+            resultColor = "var(--danger)"; 
+        }
+
+        // 🌟 3줄 텍스트 뼈대 만들기
+        let timeBoxHtml = `
+            <div style="text-align: left; margin-top: 8px; font-size: 11px; background: #f8f9fa; padding: 6px; border-radius: 6px; border: 1px solid #e9ecef; width: max-content; margin-left: auto; margin-right: auto;">
+                <div style="margin-bottom: 5px;">
+                    <span style="color: #555; font-weight: bold; display: inline-block; width: 35px;">신청:</span>
+                    ${appliedBadges}
+                </div>
+                <div style="margin-bottom: 5px;">
+                    <span style="color: #555; font-weight: bold; display: inline-block; width: 35px;">현재:</span>
+                    ${currentStatusBadge}
+                </div>
+                <div>
+                    <span style="color: #555; font-weight: bold; display: inline-block; width: 35px;">결과:</span>
+                    <span style="color: ${resultColor}; font-weight: bold;">${resultText}</span>
+                </div>
+            </div>
+        `;
+
+
+        
 
         // 🌟 2. 현재 상태 (위에서 미리 계산된 statusColor를 그대로 활용)
         let currentStatusBadge = `<span style="color:${statusColor}; font-weight:bold;">${status}</span>`;
