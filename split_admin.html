@@ -801,35 +801,63 @@ function renderDailyList() {
 
         if (statusFilter !== "all" && mappedGroup !== statusFilter) return; 
 
-        let timeBoxHtml = `<div style="display: flex; gap: 4px; justify-content: center; margin-top: 6px;">`;
+
         
+        
+        
+// 🌟 1. 신청 현황 (배지 모양으로 깔끔하게 표시)
+        let appliedBadges = "";
         [0, 1, 2, 3].forEach(t => {
             const isApplied = st.rawTimes.includes(String(t));
-            const is0TimeActive = (t === 0 && log !== undefined); 
-            const isActiveBox = isApplied || is0TimeActive;
-
-            if (!isActiveBox) {
-                timeBoxHtml += `<div style="width: 24px; height: 20px; line-height: 20px; text-align: center; font-size: 10px; border-radius: 4px; background: #f8f9fa; color: #dee2e6; border: 1px solid #e9ecef;">${t}T</div>`;
-            } else {
-                let boxBg = "white"; let boxColor = "#0d6efd"; let boxBorder = "2px dotted #0d6efd"; 
-
-                if (status === "입실" || status === "복귀") {
-                    if (t < currentSlot) { boxBg = "#198754"; boxColor = "white"; boxBorder = "2px solid #198754"; } 
-                    else if (t === currentSlot) { boxBg = "#0d6efd"; boxColor = "white"; boxBorder = "2px solid #0d6efd"; }
-                } else if (status === "외출") {
-                    if (t < currentSlot) { boxBg = "#198754"; boxColor = "white"; boxBorder = "2px solid #198754"; } 
-                    else if (t === currentSlot) { boxBg = "white"; boxColor = "#6f42c1"; boxBorder = "2px dotted #6f42c1"; }
-                } else if (status === "귀가" || status === "귀가(누락)") {
-                    if (t < currentSlot) { boxBg = "#198754"; boxColor = "white"; boxBorder = "2px solid #198754"; }
-                    if (t >= currentSlot) { boxBg = "#f8f9fa"; boxColor = "#6c757d"; boxBorder = "2px solid #ced4da"; }
-                } else {
-                    boxBg = "white"; boxColor = "#dc3545"; boxBorder = "2px dotted #dc3545"; 
-                }
-
-                timeBoxHtml += `<div style="width: 24px; height: 20px; line-height: 20px; text-align: center; font-size: 10px; font-weight: bold; border-radius: 4px; background: ${boxBg}; color: ${boxColor}; border: ${boxBorder};">${t}T</div>`;
+            // 0타임은 별도 신청 없이 스캔만으로 찍히는 경우가 있으므로 예외 처리
+            const is0TimeActive = (t === 0 && log !== undefined && !isApplied);
+            
+            if (isApplied) {
+                appliedBadges += `<span style="background:#6c757d; color:white; padding:2px 5px; border-radius:4px; font-size:10px; margin-right:3px;">${t}T</span>`;
+            } else if (is0TimeActive) {
+                appliedBadges += `<span style="background:#0d6efd; color:white; padding:2px 5px; border-radius:4px; font-size:10px; margin-right:3px;">0T(자동)</span>`;
             }
         });
-        timeBoxHtml += `</div>`;
+        if (!appliedBadges) appliedBadges = `<span style="color:#aaa; font-size:11px;">신청 없음</span>`;
+
+        // 🌟 2. 현재 상태 (위에서 미리 계산된 statusColor를 그대로 활용)
+        let currentStatusBadge = `<span style="color:${statusColor}; font-weight:bold;">${status}</span>`;
+
+        // 🌟 3. 마지막 결과 판단 로직
+        let resultText = "진행 중 🏃";
+        let resultColor = "#b38200"; // 기본 노란색(진행 중)
+        
+        if (status === "귀가") { 
+            resultText = "귀가 완료 🏠"; 
+            resultColor = "var(--gray)"; 
+        } else if (status === "귀가(누락)") { 
+            resultText = "태그 누락 🚨"; 
+            resultColor = "var(--danger)"; 
+        } else if (status === "미입실") { 
+            resultText = "결석/미입실 ❌"; 
+            resultColor = "var(--danger)"; 
+        }
+
+        // 🌟 3줄 텍스트 뼈대 만들기 (좌석 번호 아래에 예쁘게 정렬되도록 CSS 적용)
+        let timeBoxHtml = `
+            <div style="text-align: left; margin-top: 8px; font-size: 11px; background: #f8f9fa; padding: 6px; border-radius: 6px; border: 1px solid #e9ecef; width: max-content; margin-left: auto; margin-right: auto;">
+                <div style="margin-bottom: 4px;">
+                    <span style="color: #555; font-weight: bold; display: inline-block; width: 35px;">신청:</span>
+                    ${appliedBadges}
+                </div>
+                <div style="margin-bottom: 4px;">
+                    <span style="color: #555; font-weight: bold; display: inline-block; width: 35px;">현재:</span>
+                    ${currentStatusBadge}
+                </div>
+                <div>
+                    <span style="color: #555; font-weight: bold; display: inline-block; width: 35px;">결과:</span>
+                    <span style="color: ${resultColor}; font-weight: bold;">${resultText}</span>
+                </div>
+            </div>
+        `;
+
+
+        
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
