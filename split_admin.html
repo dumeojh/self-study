@@ -444,7 +444,7 @@ function renderDailySupervisorMap() {
 
 
     
-    // --- [상담 리포트] ---
+// --- [상담 리포트] ---
     async function openCounsel(docId) {
         const student = applicationData[docId]; if(!student) return;
         document.getElementById('counsel-modal').style.display = 'flex';
@@ -454,8 +454,19 @@ function renderDailySupervisorMap() {
         const mIdx = monthMap[student.targetMonth];
         const year = 2026;
 
+        // 1. 출결 로그 가져오기
         const logsSnap = await db.collection("attendance_logs").where("stuId", "==", String(student.stuId)).get();
         let logs = {}; logsSnap.forEach(doc => logs[doc.data().date] = doc.data());
+
+        // 🌟 2. [추가] 환경설정에서 '달력 일정(calendarSchedule)' 데이터 가져오기
+        const calDoc = await db.collection("settings").doc("calendarSchedule").get();
+        let globalSchedule = {};
+        let defaultDays = [1, 2, 3, 4, 5]; // 기본값: 월~금 운영
+        if (calDoc.exists) {
+            const cData = calDoc.data();
+            if (cData.data) globalSchedule = JSON.parse(cData.data);
+            if (cData.defaultDays) defaultDays = cData.defaultDays; // 관리자가 설정한 기본 요일
+        }
 
         const firstDay = new Date(year, mIdx, 1).getDay();
         const lastDate = new Date(year, mIdx + 1, 0).getDate();
@@ -463,23 +474,55 @@ function renderDailySupervisorMap() {
         
         let tApply = 0, tPresent = 0;
         for(let i=0; i<firstDay; i++) html += `<td></td>`;
+        
         for(let d=1; d<=lastDate; d++) {
             const dStr = `${year}-${String(mIdx+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-            const dayKey = ['sun','mon','tue','wed','thu','fri','sat'][new Date(year, mIdx, d).getDay()];
-            const appliedTimes = (student[dayKey] || "").split(',').filter(v => v);
-            const history = logs[dStr] ? logs[dStr].history.join(',') : "";
+            const dayIdx = new Date(year, mIdx, d).getDay();
+            const dayKey = ['sun','mon','tue','wed','thu','fri','sat'][dayIdx];
+            
+            // 🌟 3. [추가] 오늘이 '야자 운영일'인지 판별
+            let isOperating = defaultDays.includes(dayIdx); // 1차 확인: 기본 운영 요일인가?
+            let reason = "";
+            if (globalSchedule[dStr] !== undefined) {
+                isOperating = globalSchedule[dStr].active; // 2차 확인: 달력에서 개별적으로 껐는가?
+                reason = globalSchedule[dStr].reason;
+            }
+
             let slotHtml = `<div class="time-slot-container">`;
-            [1, 2, 3].forEach(t => {
-                const isApplied = appliedTimes.includes(String(t));
-                const isPresent = history.includes(`${t}타임 입실`);
-                let cls = "time-slot";
-                if(isApplied) { tApply++; cls += " slot-applied"; if(isPresent) { cls += " slot-present"; tPresent++; } else { cls += " slot-absent"; } }
-                slotHtml += `<div class="${cls}">${t}T</div>`;
-            });
+
+            // 🌟 4. [수정] 운영하는 날에만 출결 계산, 안 하는 날은 사유 표시
+            if (!isOperating) {
+                // 야자 안 하는 날 (휴무, 모의고사 등) -> 통계에 안 들어감!
+                slotHtml += `<div style="font-size:10px; color:#dc3545; font-weight:bold; margin-top:15px;">${reason || "운영 안함"}</div>`;
+            } else {
+                // 정상 운영하는 날 -> 기존처럼 출결 계산
+                const appliedTimes = (student[dayKey] || "").split(',').filter(v => v);
+                const history = logs[dStr] ? logs[dStr].history.join(',') : "";
+                
+                [1, 2, 3].forEach(t => {
+                    const isApplied = appliedTimes.includes(String(t));
+                    const isPresent = history.includes(`${t}타임 입실`);
+                    let cls = "time-slot";
+                    
+                    if(isApplied) { 
+                        tApply++; // 분모 증가
+                        cls += " slot-applied"; 
+                        if(isPresent) { 
+                            cls += " slot-present"; 
+                            tPresent++; // 분자 증가
+                        } else { 
+                            cls += " slot-absent"; 
+                        } 
+                    }
+                    slotHtml += `<div class="${cls}">${t}T</div>`;
+                });
+            }
+            
             slotHtml += `</div>`;
             html += `<td><div class="day-box">${d}</div>${slotHtml}</td>`;
             if((firstDay+d)%7===0) html += `</tr><tr>`;
         }
+        
         document.getElementById('counsel-calendar-area').innerHTML = html + `</tr></tbody></table>`;
         const rate = tApply > 0 ? Math.round((tPresent / tApply) * 100) : 0;
         document.getElementById('c-total-apply').innerText = tApply;
