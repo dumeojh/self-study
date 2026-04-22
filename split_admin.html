@@ -814,18 +814,15 @@ function loadDailyDataAndRender() {
 
 
 
-    // 2. 🌟 [추가] 당일 자율석 예약 내역 감시
-
-    db.collection("daily_reservations").where("date", "==", dateStr).onSnapshot(snap => {
-
+// 2. 🌟 [수정된 코드] 당일 자율석 예약 내역 감시 (단일 문서 감시로 변경)
+    db.collection("daily_reservations_v2").doc(dateStr).onSnapshot(doc => {
         dailyReservationsData = [];
-
-        snap.forEach(doc => dailyReservationsData.push(doc.data()));
-
+        if (doc.exists) {
+            // 저장된 Map 데이터를 배열로 풀어서 기존 화면 렌더링 로직에 전달
+            dailyReservationsData = Object.values(doc.data());
+        }
         renderDailySupervisorMap();
-
-        renderDailyList(); // 🌟 이 줄을 추가하세요! (출결 찍힐 때마다 리스트도 새로고침)
-
+        renderDailyList();
     });
 
 }
