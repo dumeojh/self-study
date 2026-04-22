@@ -261,8 +261,10 @@ const scannerInput = document.getElementById('scanner-input');
             }
 
             if (appData.type === "자율석") {
-                const ticketQuery = await db.collection("daily_reservations").where("date", "==", todayStr).where("stuId", "==", id).get();
-                if (ticketQuery.empty) {
+                // [수정된 코드] 오늘 날짜 문서 1개만 열어서 해당 학생 학번이 존재하는지만 쏙 빼서 확인
+                const ticketDoc = await db.collection("daily_reservations_v2").doc(todayStr).get();
+                
+                if (!ticketDoc.exists || !ticketDoc.data()[id]) {
                     playErrorBeep(); 
                     showReceipt(studentName, "발권 필요 ⚠️", "자리를 배정받지 않음", "일일 발권기에서 먼저 자리를 선택하고 오세요!", "#dc3545", true);
                     return; 
