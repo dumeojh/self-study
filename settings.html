@@ -158,10 +158,21 @@
 <div id="tab-time" class="card">
         <h3>⏱️ 야간 자율학습 운영 시간 및 발권 설정</h3>
         <div style="display:grid; gap:15px; padding:20px; background:#f8f9fa; border-radius:12px;">
+
             
-            <div style="padding-bottom:15px; border-bottom:2px dashed #ddd;">
+<div style="padding-bottom:15px; border-bottom:2px dashed #ddd;">
+                <div style="margin-bottom:15px; background:#eef6ff; padding:15px; border-radius:8px; border:1px solid #b6d4fe;">
+                    <b style="color:#052c65;">🔐 키오스크 학생 인증 방식</b><br>
+                    <label style="display:block; margin-top:8px;"><input type="radio" name="auth-mode" value="1" checked> <b>[1단계] 학번만 입력</b> (바코드 스캐너 사용 시 추천)</label>
+                    <label style="display:block; margin-top:5px;"><input type="radio" name="auth-mode" value="2"> <b>[2단계] 학번 입력 후 '이름 확인' 팝업</b> (가장 추천)</label>
+                    <label style="display:block; margin-top:5px;"><input type="radio" name="auth-mode" value="3"> <b>[3단계] 학번 + 이름 모두 입력</b> (보안 최고, 시간 소요)</label>
+                </div>
+
                 <div style="margin-bottom:10px;">
-                    <b>🎟️ 발권 시작 시간:</b> 1타임 시작 
+                    <b>🎟️ 발권 시작 시간:</b> 1타임 시작
+
+
+                    
                     <input type="number" id="ticket-lead-time" value="30" style="width:50px; text-align:center;"> 분 전부터 가능
                 </div>
                 <div>
@@ -295,9 +306,12 @@ let currentTool = 0, seatMapData = [], rows = 20, cols = 30, currentSchedule = {
     
     async function saveApplyPeriod() { await db.collection("settings").doc("applyPeriod").set({start: document.getElementById('apply-start').value, end: document.getElementById('apply-end').value}); alert("기간 저장완료"); }
     async function saveSeatLayout() { await db.collection("settings").doc("seatLayout").set({rows, cols, grid: JSON.stringify(seatMapData)}); alert("도면 배포완료"); }
-// settings.html 하단 스크립트 수정
+
+    
+    // settings.html 하단 스크립트 수정
 async function saveTimeSettings() { 
     await db.collection("settings").doc("schedule").set({
+        authMode: document.querySelector('input[name="auth-mode"]:checked').value, // 🌟 이 줄 추가
         ticket_lead_time: document.getElementById('ticket-lead-time').value, // 분 단위
         ticket_notice: document.getElementById('ticket-notice').value,       // 공지 문구
         ticket_end: document.getElementById('t3-end').value,               // 발권 마감은 3T 종료로 자동 설정
@@ -362,6 +376,9 @@ async function loadAllSettings() {
         if(t.exists) { 
             const d = t.data(); 
             // 새로 추가한 '몇 분 전'과 '공지사항'을 화면에 채워줍니다.
+            // 🌟 이 줄 추가: 저장된 인증 방식을 라디오 버튼에 체크해줌
+            if (d.authMode) document.querySelector(`input[name="auth-mode"][value="${d.authMode}"]`).checked = true;
+            
             document.getElementById('ticket-lead-time').value = d.ticket_lead_time || "30";
             document.getElementById('ticket-notice').value = d.ticket_notice || "자율석 신청 학생만 이용 가능합니다.";
 
