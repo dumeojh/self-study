@@ -665,7 +665,7 @@ let stat = { total: targetStudents.length, present: 0, out: 0, absent: 0, finish
         if (status === "미입실" || status === "귀가(누락)") { statusColor = "var(--danger)"; stat.absent++; } 
         else if (status === "입실" || status === "복귀") { statusColor = "var(--primary)"; stat.present++; } 
         else if (status === "외출") { statusColor = "#fd7e14"; stat.out++; } 
-        else if (status === "귀가") { statusColor = "var(--gray)"; }
+else if (status === "귀가") { statusColor = "var(--gray)"; stat.finish++; }
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -685,7 +685,7 @@ let stat = { total: targetStudents.length, present: 0, out: 0, absent: 0, finish
         tbody.appendChild(tr);
     });
     
-    document.getElementById('daily-list-summary').innerHTML = `대상: ${stat.total}명 | <span style="color:var(--primary);">입실: ${stat.present}명</span> | <span style="color:#fd7e14;">외출: ${stat.out}명</span> | <span style="color:var(--danger);">미입실: ${stat.absent}명</span>`;
+document.getElementById('daily-list-summary').innerHTML = `대상: ${stat.total}명 | <span style="color:var(--primary);">입실: ${stat.present}명</span> | <span style="color:#fd7e14;">외출: ${stat.out}명</span> | <span style="color:var(--gray);">귀가: ${stat.finish}명</span> | <span style="color:var(--danger);">미입실: ${stat.absent}명</span>`;
 }
 
     
