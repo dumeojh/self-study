@@ -180,9 +180,32 @@
                     <input type="text" id="ticket-notice" placeholder="첫 화면에 표시될 안내 문구" style="width:100%; margin-top:5px; padding:8px; border:1px solid #ccc; border-radius:4px;">
                 </div>
             </div>
-            <div style="display:flex; align-items:center; gap:10px;"><b>1T:</b> <input type="time" id="t1-start" onchange="calculateMinutes(1)"> ~ <input type="time" id="t1-end" onchange="calculateMinutes(1)"> <b id="t1-min" style="margin-left:auto;">0분</b></div>
-            <div style="display:flex; align-items:center; gap:10px;"><b>2T:</b> <input type="time" id="t2-start" onchange="calculateMinutes(2)"> ~ <input type="time" id="t2-end" onchange="calculateMinutes(2)"> <b id="t2-min" style="margin-left:auto;">0분</b></div>
-            <div style="display:flex; align-items:center; gap:10px;"><b>3T:</b> <input type="time" id="t3-start" onchange="calculateMinutes(3)"> ~ <input type="time" id="t3-end" onchange="calculateMinutes(3)"> <b id="t3-min" style="margin-left:auto;">0분</b></div>
+<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; border-bottom:1px solid #eee; padding-bottom:10px;">
+                <b style="font-size:16px;">1T:</b> 
+                <input type="time" id="t1-start" onchange="calculateMinutes(1)"> ~ <input type="time" id="t1-end" onchange="calculateMinutes(1)"> 
+                <span style="color:#666; font-size:13px;">(총 <b id="t1-min" style="color:var(--primary);">0분</b>)</span>
+                <div style="margin-left:auto; background:#fff3cd; padding:6px 12px; border-radius:6px; font-size:13px; font-weight:bold; color:#856404;">
+                    최소 인정 기준: <input type="number" id="t1-req-min" value="60" style="width:45px; text-align:center; border:1px solid #ccc; border-radius:4px;"> 분 이상
+                </div>
+            </div>
+            
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; border-bottom:1px solid #eee; padding-bottom:10px;">
+                <b style="font-size:16px;">2T:</b> 
+                <input type="time" id="t2-start" onchange="calculateMinutes(2)"> ~ <input type="time" id="t2-end" onchange="calculateMinutes(2)"> 
+                <span style="color:#666; font-size:13px;">(총 <b id="t2-min" style="color:var(--primary);">0분</b>)</span>
+                <div style="margin-left:auto; background:#fff3cd; padding:6px 12px; border-radius:6px; font-size:13px; font-weight:bold; color:#856404;">
+                    최소 인정 기준: <input type="number" id="t2-req-min" value="60" style="width:45px; text-align:center; border:1px solid #ccc; border-radius:4px;"> 분 이상
+                </div>
+            </div>
+            
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <b style="font-size:16px;">3T:</b> 
+                <input type="time" id="t3-start" onchange="calculateMinutes(3)"> ~ <input type="time" id="t3-end" onchange="calculateMinutes(3)"> 
+                <span style="color:#666; font-size:13px;">(총 <b id="t3-min" style="color:var(--primary);">0분</b>)</span>
+                <div style="margin-left:auto; background:#fff3cd; padding:6px 12px; border-radius:6px; font-size:13px; font-weight:bold; color:#856404;">
+                    최소 인정 기준: <input type="number" id="t3-req-min" value="60" style="width:45px; text-align:center; border:1px solid #ccc; border-radius:4px;"> 분 이상
+                </div>
+            </div>
         </div>
         <button class="btn btn-save" onclick="saveTimeSettings()">💾 설정 저장</button>
     </div>
@@ -318,6 +341,11 @@ async function saveTimeSettings() {
         t1: document.getElementById('t1-start').value, t1_end: document.getElementById('t1-end').value, 
         t2: document.getElementById('t2-start').value, t2_end: document.getElementById('t2-end').value, 
         t3: document.getElementById('t3-start').value, t3_end: document.getElementById('t3-end').value
+        // 🟢🟢👇👇 이 3줄을 추가해 주세요 👇👇🟢🟢
+        t1_req: document.getElementById('t1-req-min').value,
+        t2_req: document.getElementById('t2-req-min').value,
+        t3_req: document.getElementById('t3-req-min').value
+        // 🟢🟢👆👆 여기까지 👆👆🟢🟢
     }); 
     alert("설정이 저장되었습니다."); 
 }
