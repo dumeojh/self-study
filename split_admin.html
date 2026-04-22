@@ -673,6 +673,9 @@ function openDailyStatus(stuId, stuName, seatNum, phone) {
         });
     }
 
+
+
+    
 function renderDailyList() {
     const tbody = document.getElementById('daily-list-body');
     if (!tbody) return;
@@ -727,7 +730,6 @@ function renderDailyList() {
                 tagTime = dt.toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit' });
             }
             
-            // 🌟👇 모든 타임 배지와 기록을 한 줄(Array)로 담아서 처리 👇🌟
             if (log.history && log.history.length > 0) {
                 let groupedHistory = { 0: [], 1: [], 2: [], 3: [] };
 
@@ -749,35 +751,42 @@ function renderDailyList() {
                     groupedHistory[slot].push(h);
                 });
 
-                let allTagsInline = []; // 줄바꿈 없이 담을 하나의 배열
+                let allTagsInline = [];
 
+                // 🌟 핵심 수정 사항: 로그가 없더라도 '신청한 타임'이면 배지를 띄워 흐름을 유지합니다.
                 [0, 1, 2, 3].forEach(t => {
-                    if (groupedHistory[t].length > 0) {
+                    const hasLogs = groupedHistory[t].length > 0;
+                    const isApplied = st.rawTimes.includes(String(t));
+                    
+                    // 0타임은 찍힌 로그가 있을 때만 표시, 1/2/3타임은 신청했거나 로그가 있으면 무조건 표시
+                    const shouldShowSlot = (t === 0 && hasLogs) || (t > 0 && (isApplied || hasLogs));
+
+                    if (shouldShowSlot) {
                         const slotLabel = t === 0 ? "0T" : `${t}T`;
-                        const slotBg = t === 0 ? "#6c757d" : "var(--primary)";
+                        // 기록 없이 시간만 흐른 타임(결석/외출 상태)은 약간 흐린 회색 배지로 표시
+                        const slotBg = (hasLogs || t === 0) ? (t === 0 ? "#6c757d" : "var(--primary)") : "#adb5bd";
                         
-                        // 1T, 2T 배지를 흐름 중간에 하나의 태그처럼 삽입 (display: inline-block)
                         allTagsInline.push(`<span style="background:${slotBg}; color:white; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; display:inline-block; vertical-align:middle; box-shadow:0 1px 2px rgba(0,0,0,0.1);">${slotLabel}</span>`);
 
-                        // 해당 교시의 스캔 기록들 삽입
-                        groupedHistory[t].forEach(h => {
-                            let tagClass = "tag-in"; 
-                            if (h.includes("외출")) tagClass = "tag-out"; 
-                            else if (h.includes("귀가") || h.includes("누락")) tagClass = "tag-home";
-                            
-                            allTagsInline.push(`<span class="mini-tag ${tagClass}" style="display:inline-block; vertical-align:middle;">${h}</span>`);
-                        });
+                        // 해당 교시의 스캔 기록들 삽입 (있는 경우에만)
+                        if (hasLogs) {
+                            groupedHistory[t].forEach(h => {
+                                let tagClass = "tag-in"; 
+                                if (h.includes("외출")) tagClass = "tag-out"; 
+                                else if (h.includes("귀가") || h.includes("누락")) tagClass = "tag-home";
+                                
+                                allTagsInline.push(`<span class="mini-tag ${tagClass}" style="display:inline-block; vertical-align:middle;">${h}</span>`);
+                            });
+                        }
                     }
                 });
                 
-                // 완성된 배열을 ➔ 기호로 한 번에 연결
                 if (allTagsInline.length > 0) {
                     historyHtml = `<div style="line-height:2.4;">` + 
                         allTagsInline.join('<span style="color:#aaa; font-size:11px; margin:0 4px; display:inline-block; vertical-align:middle;">➔</span>') + 
                         `</div>`;
                 }
             }
-            // 🌟👆 가로 일렬 배치 로직 끝 👆🌟
         }
 
         if (status === "미입실" || status === "귀가(누락)") { statusColor = "var(--danger)"; stat.absent++; } 
@@ -844,6 +853,9 @@ function renderDailyList() {
     
     document.getElementById('daily-list-summary').innerHTML = `전체 대상: ${stat.total}명 | <span style="color:var(--primary);">입실: ${stat.present}명</span> | <span style="color:#fd7e14;">외출: ${stat.out}명</span> | <span style="color:var(--gray);">귀가: ${stat.finish}명</span> | <span style="color:var(--danger);">미입실: ${stat.absent}명</span>`;
 }
+
+
+    
 
     
     function fillEditForm(id) {
