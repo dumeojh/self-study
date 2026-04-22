@@ -417,6 +417,13 @@ async function loadAllSettings() {
             document.getElementById('t2-end').value = d.t2_end; 
             document.getElementById('t3-start').value = d.t3; 
             document.getElementById('t3-end').value = d.t3_end; 
+// 🟢🟢👇👇 이 3줄을 추가해 주세요 👇👇🟢🟢
+            document.getElementById('t1-req-min').value = d.t1_req || "60";
+            document.getElementById('t2-req-min').value = d.t2_req || "60";
+            document.getElementById('t3-req-min').value = d.t3_req || "60";
+            // 🟢🟢👆👆 여기까지 👆👆🟢🟢
+
+            
         } else { 
             // 데이터가 아예 없을 때의 기본값 설정
             document.getElementById('ticket-lead-time').value = "30";
@@ -427,6 +434,11 @@ async function loadAllSettings() {
             document.getElementById('t2-end').value = "20:10"; 
             document.getElementById('t3-start').value = "20:10"; 
             document.getElementById('t3-end').value = "21:30"; 
+            // 🟢🟢👇👇 기본값일 때 이 3줄도 추가 👇👇🟢🟢
+            document.getElementById('t1-req-min').value = "60";
+            document.getElementById('t2-req-min').value = "60";
+            document.getElementById('t3-req-min').value = "60";
+            // 🟢🟢👆👆 여기까지 👆👆🟢🟢
         }
 
         // 마지막으로 화면에 있는 '0분' 표시들을 다시 계산해서 보여줍니다.
