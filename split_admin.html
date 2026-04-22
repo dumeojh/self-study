@@ -139,19 +139,32 @@
         <div id="supervisor-grid" class="seat-grid"></div>
     </div>
 
-    <div id="tab-daily-list" class="tab-content">
+ <div id="tab-daily-list" class="tab-content">
         <div class="form-card" style="margin-bottom: 15px; padding: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-            <div>
-                <b style="color: #555;">조회 정렬:</b>
-                <select id="sort-daily-list" onchange="renderDailyList()" style="padding: 6px; border-radius: 5px; border: 1px solid #ccc; margin-left: 5px;">
-                    <option value="id">학번순 보기</option>
-                    <option value="seat">좌석순 보기</option>
-                </select>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">
+                <div>
+                    <b style="color: #555;">조회 정렬:</b>
+                    <select id="sort-daily-list" onchange="renderDailyList()" style="padding: 6px; border-radius: 5px; border: 1px solid #ccc; margin-left: 5px;">
+                        <option value="id">학번순 보기</option>
+                        <option value="seat">좌석순 보기</option>
+                    </select>
+                </div>
+                <div>
+                    <b style="color: #555;">상태 필터:</b>
+                    <select id="filter-daily-status" onchange="renderDailyList()" style="padding: 6px; border-radius: 5px; border: 1px solid #ccc; margin-left: 5px;">
+                        <option value="all">전체 보기</option>
+                        <option value="미입실">🔴 미입실 (결석/누락)</option>
+                        <option value="입실">🟢 입실 완료 (정상/복귀)</option>
+                        <option value="외출">🟡 외출 중</option>
+                        <option value="귀가">⚪ 귀가 완료</option>
+                    </select>
+                </div>
             </div>
             <div id="daily-list-summary" style="font-size: 15px; font-weight: bold; background: white; padding: 8px 15px; border-radius: 20px; border: 1px solid #ddd;">
-                </div>
+            </div>
         </div>
 
+        
         <div style="overflow-x:auto;">
             <table>
                 <thead>
@@ -616,6 +629,10 @@ function renderDailyList() {
     const targetDay = ['sun','mon','tue','wed','thu','fri','sat'][new Date(targetDateStr).getDay()];
     const sortBy = document.getElementById('sort-daily-list').value;
     
+    // 🌟 [추가] 선택된 상태 필터 값 가져오기 (없으면 all)
+    const filterStatusElement = document.getElementById('filter-daily-status');
+    const statusFilter = filterStatusElement ? filterStatusElement.value : 'all';
+    
     let targetStudents = [];
 
     Object.values(applicationData).forEach(app => {
@@ -623,7 +640,7 @@ function renderDailyList() {
             targetStudents.push({
                 stuId: app.stuId, stuName: app.stuName, seatNum: app.seatNum, 
                 appliedTimes: app[targetDay] + "타임", type: "고정석", 
-                phone: rosterPhones[String(app.stuId)] // 🌟 수정됨
+                phone: rosterPhones[String(app.stuId)] 
             });
         }
     });
@@ -632,14 +649,14 @@ function renderDailyList() {
         targetStudents.push({
             stuId: res.stuId, stuName: res.stuName, seatNum: res.seatNum, 
             appliedTimes: (res.times || "-") + "타임", type: "자율석", 
-            phone: rosterPhones[String(res.stuId)] // 🌟 수정됨
+            phone: rosterPhones[String(res.stuId)] 
         });
     });
 
     if (sortBy === "id") targetStudents.sort((a, b) => String(a.stuId).localeCompare(String(b.stuId)));
     else if (sortBy === "seat") targetStudents.sort((a, b) => String(a.seatNum).localeCompare(String(b.seatNum)));
 
-let stat = { total: targetStudents.length, present: 0, out: 0, absent: 0, finish: 0 };
+    let stat = { total: targetStudents.length, present: 0, out: 0, absent: 0, finish: 0 };
 
     targetStudents.forEach(st => {
         const log = attendanceLogsData[String(st.stuId)];
@@ -662,10 +679,23 @@ let stat = { total: targetStudents.length, present: 0, out: 0, absent: 0, finish
             }
         }
 
+        // 전체 통계를 위한 카운트 누적
         if (status === "미입실" || status === "귀가(누락)") { statusColor = "var(--danger)"; stat.absent++; } 
         else if (status === "입실" || status === "복귀") { statusColor = "var(--primary)"; stat.present++; } 
         else if (status === "외출") { statusColor = "#fd7e14"; stat.out++; } 
-else if (status === "귀가") { statusColor = "var(--gray)"; stat.finish++; }
+        else if (status === "귀가") { statusColor = "var(--gray)"; stat.finish++; }
+
+        // 🌟 [추가] 화면에 표시하기 전 필터 검사
+        // 귀가(누락)은 미입실로, 복귀는 입실로 묶어서 필터링합니다.
+        let mappedGroup = "미입실";
+        if (status === "입실" || status === "복귀") mappedGroup = "입실";
+        else if (status === "외출") mappedGroup = "외출";
+        else if (status === "귀가") mappedGroup = "귀가";
+
+        // '전체 보기'가 아니고, 학생의 상태가 선택한 필터와 다르면 화면에 안 그리고 건너뜀!
+        if (statusFilter !== "all" && mappedGroup !== statusFilter) {
+            return; 
+        }
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -685,9 +715,9 @@ else if (status === "귀가") { statusColor = "var(--gray)"; stat.finish++; }
         tbody.appendChild(tr);
     });
     
-document.getElementById('daily-list-summary').innerHTML = `대상: ${stat.total}명 | <span style="color:var(--primary);">입실: ${stat.present}명</span> | <span style="color:#fd7e14;">외출: ${stat.out}명</span> | <span style="color:var(--gray);">귀가: ${stat.finish}명</span> | <span style="color:var(--danger);">미입실: ${stat.absent}명</span>`;
+    // 🌟 요약 통계는 필터와 무관하게 '전체 인원' 상황을 보여주도록 유지합니다.
+    document.getElementById('daily-list-summary').innerHTML = `전체 대상: ${stat.total}명 | <span style="color:var(--primary);">입실: ${stat.present}명</span> | <span style="color:#fd7e14;">외출: ${stat.out}명</span> | <span style="color:var(--gray);">귀가: ${stat.finish}명</span> | <span style="color:var(--danger);">미입실: ${stat.absent}명</span>`;
 }
-
     
 
     function fillEditForm(id) {
