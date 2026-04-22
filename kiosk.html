@@ -55,9 +55,12 @@
         <button class="status-btn btn-home" onclick="selectStatus('귀가', this)">🔴 최종 귀가</button>
     </div>
 
-    <div class="input-area">
+<div class="input-area">
         <div class="guide-text" id="guide-msg">학생증을 스캔하거나 학번을 입력하세요.</div>
-        <input type="number" id="scanner-input" placeholder="학번" autocomplete="off">
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <input type="number" id="scanner-input" placeholder="학번" autocomplete="off">
+            <input type="text" id="name-input" placeholder="이름" autocomplete="off" style="display:none; width: 100%; max-width: 150px; padding: 15px; font-size: 24px; font-weight: bold; text-align: center; border: 3px solid #ccc; border-radius: 10px;">
+        </div>
     </div>
 
     <div id="result-overlay">
@@ -138,114 +141,162 @@ function playErrorBeep() {
         focusScanner();
     }
 
-    const scannerInput = document.getElementById('scanner-input');
+
+
+
+    
+const scannerInput = document.getElementById('scanner-input');
+    const nameInput = document.getElementById('name-input');
     function focusScanner() { scannerInput.focus(); }
     document.addEventListener('click', focusScanner);
-    setInterval(() => { if(document.activeElement !== scannerInput) focusScanner(); }, 2000);
+    setInterval(() => { if(document.activeElement !== scannerInput && document.activeElement !== nameInput) focusScanner(); }, 2000);
 
+    let authMode = "1"; // 기본값 (1단계)
+
+    // 🌟 서버에서 인증 방식 설정을 가져옵니다.
+    async function fetchSettings() {
+        const doc = await db.collection("settings").doc("schedule").get();
+        if (doc.exists && doc.data().authMode) {
+            authMode = doc.data().authMode;
+            if (authMode === "3") {
+                nameInput.style.display = 'block'; // 3단계면 이름 입력창 열기
+            }
+        }
+    }
+    fetchSettings();
+
+    // 🌟 키보드 엔터키 제어 (3단계일 때는 학번 치고 엔터 치면 이름 칸으로 넘어감)
     scannerInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') { 
+            e.preventDefault(); 
+            if (authMode === "3" && scannerInput.value.trim() !== "") nameInput.focus();
+            else processCheckInOut(); 
+        }
+    });
+    nameInput.addEventListener('keypress', function (e) {
         if (e.key === 'Enter') { e.preventDefault(); processCheckInOut(); }
     });
 
-// ========================================================
-// 🌟 스마트 선택창 (외출/귀가) 관련 변수 및 함수 모음
-// ========================================================
-// [기존 변수 선언부 아래에 추가]
-let selectionTimer = null; // 자동 취소용 타이머
+    let selectionTimer = null; 
 
-async function processCheckInOut() {
-    const id = scannerInput.value.trim();
-    if (!id) return;
-    scannerInput.value = ""; 
-    
-    const studentName = serverRoster[id];
-    if (!studentName) {
-        showReceipt("오류", `[${id}]`, "등록되지 않은 학번입니다.", "명단을 확인해 주세요.", "#dc3545");
-        return;
-    }
-
-    const now = new Date();
-    // 🌟 현재 월과 요일 계산 (DB 대조용)
-    const currentMonthStr = (now.getMonth() + 1) + "월";
-    const todayDayEng = ['sun','mon','tue','wed','thu','fri','sat'][now.getDay()];
-
-    try {
-        // ========================================================
-        // 🌟 [새로 추가된 검증 로직] 신청 내역 및 발권 여부 확인
-        // ========================================================
+    // 🌟 1차 검증 함수 (학번, 이름 맞는지 검사)
+    async function processCheckInOut() {
+        const id = scannerInput.value.trim();
+        const nameVal = nameInput.value.trim();
+        if (!id) return;
         
-        // 1. 이번 달 야자 신청 내역이 있는지 확인
-        const appQuery = await db.collection("applications")
-            .where("stuId", "==", id)
-            .where("targetMonth", "==", currentMonthStr)
-            .get();
-
-        if (appQuery.empty) {
-            showReceipt(studentName, "입실 불가", "신청 내역 없음", `이번 달(${currentMonthStr}) 야자 신청자가 아닙니다.`, "#dc3545");
-            return; // 여기서 로직 종료
+        const studentName = serverRoster[id];
+        if (!studentName) {
+            showReceipt("오류", `[${id}]`, "등록되지 않은 학번입니다.", "명단을 확인해 주세요.", "#dc3545");
+            scannerInput.value = ""; nameInput.value = "";
+            return;
         }
 
-        const appData = appQuery.docs[0].data();
-
-        // 2. 오늘이 학생이 신청한 요일인지 확인
-        if (!appData[todayDayEng]) {
-             showReceipt(studentName, "입실 불가", "오늘 신청 아님", "오늘은 야자를 신청한 요일이 아닙니다.", "#dc3545");
-             return; // 여기서 로직 종료
-        }
-
-// 3. 자율석 학생일 경우 -> 오늘 '일일 발권'을 했는지 검사
-if (appData.type === "자율석") {
-    const ticketQuery = await db.collection("daily_reservations")
-        .where("date", "==", todayStr)
-        .where("stuId", "==", id)
-        .get();
-
-    if (ticketQuery.empty) {
-        // 발권을 안 한 상태로 키오스크를 찍은 경우 (입실 차단!)
-        playErrorBeep(); // 🔊 삐-삐-삐 경고음 발생!
-        
-        // 🌟 색상을 #dc3545(빨강)로 변경하고, 마지막 인자로 true(깜빡임 켜기) 전달
-        showReceipt(studentName, "발권 필요 ⚠️", "자리를 배정받지 않음", "일일 발권기에서 먼저 자리를 선택하고 오세요!", "#dc3545", true);
-        return; // 여기서 로직 종료
-    }
-}
-        // ========================================================
-
-        // 아래부터는 기존의 정상 출결 처리 로직입니다.
-        const logId = `${todayStr}_${id}`;
-        const logDoc = await db.collection("attendance_logs").doc(logId).get();
-        const logData = logDoc.exists ? logDoc.data() : null;
-        const lastStatus = logData ? logData.status : "미입실";
-
-        // 1. 중복 스캔 방지 (40초)
-        if (logData && logData.lastUpdateTime) {
-            const diffSec = Math.floor((now - logData.lastUpdateTime.toDate()) / 1000);
-            if (diffSec < 40) {
-                showReceipt(studentName, "방금 처리됨", `${diffSec}초 전에 [${lastStatus}] 처리되었습니다.`, "잠시 후 이용해 주세요.", "#6c757d");
-                return;
+        // [3단계] 학번 + 이름 모두 일치해야 통과
+        if (authMode === "3") {
+            if (!nameVal) { nameInput.focus(); return; }
+            if (studentName !== nameVal) {
+                showReceipt("오류", "이름 불일치", `학번 [${id}]의 이름이 틀립니다.`, "다시 입력해주세요.", "#dc3545");
+                scannerInput.value = ""; nameInput.value = "";
+                focusScanner(); return;
             }
-        }
-
-        // 2. 상태별 분기 로직
-        if (lastStatus === "미입실") {
-            saveAttendance(id, studentName, "입실", now);
+            executeLogic(id, studentName); // 통과하면 실행
         } 
-        else if (lastStatus === "입실" || lastStatus === "복귀") {
-            // 🌟 핵심: 메시지창 대신 전용 선택 UI 호출
-            showSmartSelection(id, studentName); 
+        // [2단계] 학번 치면 이름 확인 팝업 띄우기
+        else if (authMode === "2") {
+            showNameConfirm(id, studentName);
+        } 
+        // [1단계] 학번만 치면 바로 패스 (기존 방식)
+        else {
+            executeLogic(id, studentName);
         }
-        else if (lastStatus === "외출") {
-            saveAttendance(id, studentName, "복귀", now);
-        }
-        else if (lastStatus === "귀가") {
-            showReceipt(studentName, "이미 귀가함", "최종 귀가 처리된 학생입니다.", "재입실은 관리자에게 문의하세요.", "#6c757d");
-        }
-
-    } catch (e) {
-        showReceipt("오류", "통신 실패", "연결 상태 확인 요망", e.message, "#dc3545");
     }
-}
 
+    // 🌟 2단계 전용 팝업 (본인 맞습니까?)
+    function showNameConfirm(id, name) {
+        const rName = document.getElementById('r-name');
+        const rStatus = document.getElementById('r-status');
+        const rTime = document.getElementById('r-time');
+        const rMsg = document.getElementById('r-msg');
+        
+        rName.innerText = `🙋 ${name} 학생`;
+        rStatus.innerText = "본인 확인";
+        rStatus.style.color = "var(--primary)";
+        rTime.innerText = "화면의 이름이 본인이 맞습니까?";
+        
+        rMsg.innerHTML = `
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="confirmYes('${id}', '${name}')" style="flex: 1; padding: 25px; font-size: 20px; font-weight: bold; background: var(--primary); color: white; border: none; border-radius: 10px; cursor: pointer;">예 (맞습니다)</button>
+                <button onclick="confirmNo()" style="flex: 1; padding: 25px; font-size: 20px; font-weight: bold; background: var(--gray); color: white; border: none; border-radius: 10px; cursor: pointer;">아니오</button>
+            </div>
+        `;
+        document.getElementById('result-overlay').style.display = 'flex';
+        document.querySelector('.receipt').classList.remove('blink-warning');
+    }
+
+    function confirmYes(id, name) { executeLogic(id, name); }
+    function confirmNo() {
+        document.getElementById('result-overlay').style.display = 'none';
+        scannerInput.value = ""; focusScanner();
+    }
+
+    // 🌟 실제 출결 DB 처리 로직 (원래 있던 긴 코드들)
+    async function executeLogic(id, studentName) {
+        scannerInput.value = ""; nameInput.value = ""; 
+        
+        const now = new Date();
+        const currentMonthStr = (now.getMonth() + 1) + "월";
+        const todayDayEng = ['sun','mon','tue','wed','thu','fri','sat'][now.getDay()];
+
+        try {
+            const appQuery = await db.collection("applications").where("stuId", "==", id).where("targetMonth", "==", currentMonthStr).get();
+            if (appQuery.empty) {
+                showReceipt(studentName, "입실 불가", "신청 내역 없음", `이번 달(${currentMonthStr}) 야자 신청자가 아닙니다.`, "#dc3545");
+                return; 
+            }
+            const appData = appQuery.docs[0].data();
+            if (!appData[todayDayEng]) {
+                 showReceipt(studentName, "입실 불가", "오늘 신청 아님", "오늘은 야자를 신청한 요일이 아닙니다.", "#dc3545");
+                 return; 
+            }
+
+            if (appData.type === "자율석") {
+                const ticketQuery = await db.collection("daily_reservations").where("date", "==", todayStr).where("stuId", "==", id).get();
+                if (ticketQuery.empty) {
+                    playErrorBeep(); 
+                    showReceipt(studentName, "발권 필요 ⚠️", "자리를 배정받지 않음", "일일 발권기에서 먼저 자리를 선택하고 오세요!", "#dc3545", true);
+                    return; 
+                }
+            }
+
+            const logId = `${todayStr}_${id}`;
+            const logDoc = await db.collection("attendance_logs").doc(logId).get();
+            const logData = logDoc.exists ? logDoc.data() : null;
+            const lastStatus = logData ? logData.status : "미입실";
+
+            if (logData && logData.lastUpdateTime) {
+                const diffSec = Math.floor((now - logData.lastUpdateTime.toDate()) / 1000);
+                if (diffSec < 40) {
+                    showReceipt(studentName, "방금 처리됨", `${diffSec}초 전에 [${lastStatus}] 처리되었습니다.`, "잠시 후 이용해 주세요.", "#6c757d");
+                    return;
+                }
+            }
+
+            if (lastStatus === "미입실") saveAttendance(id, studentName, "입실", now);
+            else if (lastStatus === "입실" || lastStatus === "복귀") showSmartSelection(id, studentName); 
+            else if (lastStatus === "외출") saveAttendance(id, studentName, "복귀", now);
+            else if (lastStatus === "귀가") showReceipt(studentName, "이미 귀가함", "최종 귀가 처리된 학생입니다.", "재입실은 관리자에게 문의하세요.", "#6c757d");
+
+        } catch (e) { showReceipt("오류", "통신 실패", "연결 상태 확인 요망", e.message, "#dc3545"); }
+    }
+
+// (이 아래의 showSmartSelection, saveAttendance 등은 그대로 유지됩니다)
+
+
+
+
+    
+    
 // 🌟 [추가] 스마트 선택 화면 (외출/귀가 전용)
 function showSmartSelection(id, name) {
     // 결과창(receipt) 영역을 선택창으로 변신시킵니다.
