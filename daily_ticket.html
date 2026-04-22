@@ -162,9 +162,14 @@
                 seatMapData = JSON.parse(data.grid).map(row => row.map(c => typeof c === 'number' ? {type: c, label: ""} : c));
             }
 
-            // 오늘 날짜의 자율석 예약 기록 몽땅 가져오기
-            const resQuery = await db.collection("daily_reservations").where("date", "==", todayStr).get();
-            resQuery.forEach(doc => { todayReservations.push(doc.data()); });
+// [수정된 코드] 오늘 날짜 문서 단 1개만 읽어오기 (읽기 횟수 획기적 감소)
+            const resDoc = await db.collection("daily_reservations_v2").doc(todayStr).get();
+            if (resDoc.exists) {
+                // Object.values를 통해 맵 형태의 데이터를 기존 코드와 호환되는 배열 형태로 변환
+                todayReservations = Object.values(resDoc.data()); 
+            } else {
+                todayReservations = [];
+            }
 
         } catch(e) { console.error("데이터 로드 에러:", e); }
     }
@@ -360,7 +365,11 @@ async function verifyForTicket() {
 
         try {
             // daily_reservations 컬렉션에 새 문서 추가
-            await db.collection("daily_reservations").add(ticketData);
+// [수정된 코드] 문서 추가(add) 대신, 오늘 날짜 문서 1개에 학번을 Key로 덮어쓰기(merge)
+            const stuId = document.getElementById('stu-id').value.trim();
+            await db.collection("daily_reservations_v2").doc(todayStr).set({
+                [stuId]: ticketData 
+            }, { merge: true });
             
             // 시각적 피드백을 위해 내 티켓 화면으로 바로 넘기기
             document.getElementById('map-area').style.display = 'none';
