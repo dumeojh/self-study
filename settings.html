@@ -331,25 +331,21 @@ let currentTool = 0, seatMapData = [], rows = 20, cols = 30, currentSchedule = {
     async function saveSeatLayout() { await db.collection("settings").doc("seatLayout").set({rows, cols, grid: JSON.stringify(seatMapData)}); alert("도면 배포완료"); }
 
     
-    // settings.html 하단 스크립트 수정
 async function saveTimeSettings() { 
     await db.collection("settings").doc("schedule").set({
-        authMode: document.querySelector('input[name="auth-mode"]:checked').value, // 🌟 이 줄 추가
-        ticket_lead_time: document.getElementById('ticket-lead-time').value, // 분 단위
-        ticket_notice: document.getElementById('ticket-notice').value,       // 공지 문구
-        ticket_end: document.getElementById('t3-end').value,               // 발권 마감은 3T 종료로 자동 설정
+        authMode: document.querySelector('input[name="auth-mode"]:checked').value,
+        ticket_lead_time: document.getElementById('ticket-lead-time').value, 
+        ticket_notice: document.getElementById('ticket-notice').value,       
+        ticket_end: document.getElementById('t3-end').value,               
         t1: document.getElementById('t1-start').value, t1_end: document.getElementById('t1-end').value, 
         t2: document.getElementById('t2-start').value, t2_end: document.getElementById('t2-end').value, 
-        t3: document.getElementById('t3-start').value, t3_end: document.getElementById('t3-end').value
-        // 🟢🟢👇👇 이 3줄을 추가해 주세요 👇👇🟢🟢
+        t3: document.getElementById('t3-start').value, t3_end: document.getElementById('t3-end').value, // 🚨 바로 이 끝에 쉼표(,)가 빠져있었습니다!
         t1_req: document.getElementById('t1-req-min').value,
         t2_req: document.getElementById('t2-req-min').value,
         t3_req: document.getElementById('t3-req-min').value
-        // 🟢🟢👆👆 여기까지 👆👆🟢🟢
     }); 
     alert("설정이 저장되었습니다."); 
 }
-
 
 
 
