@@ -639,7 +639,7 @@ function renderDailyList() {
     if (sortBy === "id") targetStudents.sort((a, b) => String(a.stuId).localeCompare(String(b.stuId)));
     else if (sortBy === "seat") targetStudents.sort((a, b) => String(a.seatNum).localeCompare(String(b.seatNum)));
 
-    let stat = { total: targetStudents.length, present: 0, out: 0, absent: 0 };
+let stat = { total: targetStudents.length, present: 0, out: 0, absent: 0, finish: 0 };
 
     targetStudents.forEach(st => {
         const log = attendanceLogsData[String(st.stuId)];
