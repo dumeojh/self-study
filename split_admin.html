@@ -727,6 +727,7 @@ function renderDailyList() {
                 tagTime = dt.toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit' });
             }
             
+            // 🌟👇 모든 타임 배지와 기록을 한 줄(Array)로 담아서 처리 👇🌟
             if (log.history && log.history.length > 0) {
                 let groupedHistory = { 0: [], 1: [], 2: [], 3: [] };
 
@@ -748,33 +749,35 @@ function renderDailyList() {
                     groupedHistory[slot].push(h);
                 });
 
-                let historyHtmlArr = [];
+                let allTagsInline = []; // 줄바꿈 없이 담을 하나의 배열
+
                 [0, 1, 2, 3].forEach(t => {
                     if (groupedHistory[t].length > 0) {
-                        const tags = groupedHistory[t].map(h => {
-                            let tagClass = "tag-in"; 
-                            if (h.includes("외출")) tagClass = "tag-out"; 
-                            else if (h.includes("귀가")) tagClass = "tag-home"; 
-                            else if (h.includes("누락")) tagClass = "tag-home";
-                            return `<span class="mini-tag ${tagClass}">${h}</span>`;
-                        }).join('<span style="color:#ccc; font-size:10px; margin:0 3px;">➔</span>');
-
                         const slotLabel = t === 0 ? "0T" : `${t}T`;
                         const slotBg = t === 0 ? "#6c757d" : "var(--primary)";
                         
-                        // 🌟 여기를 변경했습니다: display: inline-flex 로 가로로 묶고 여백을 조정했습니다.
-                        historyHtmlArr.push(`
-                            <div style="display:inline-flex; align-items:center; gap:6px; margin-right:12px; margin-bottom:4px;">
-                                <span style="background:${slotBg}; color:white; font-size:10px; padding:2px 5px; border-radius:4px; font-weight:bold;">${slotLabel}</span>
-                                <div style="display:flex; align-items:center; flex-wrap:wrap;">${tags}</div>
-                            </div>
-                        `);
+                        // 1T, 2T 배지를 흐름 중간에 하나의 태그처럼 삽입 (display: inline-block)
+                        allTagsInline.push(`<span style="background:${slotBg}; color:white; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; display:inline-block; vertical-align:middle; box-shadow:0 1px 2px rgba(0,0,0,0.1);">${slotLabel}</span>`);
+
+                        // 해당 교시의 스캔 기록들 삽입
+                        groupedHistory[t].forEach(h => {
+                            let tagClass = "tag-in"; 
+                            if (h.includes("외출")) tagClass = "tag-out"; 
+                            else if (h.includes("귀가") || h.includes("누락")) tagClass = "tag-home";
+                            
+                            allTagsInline.push(`<span class="mini-tag ${tagClass}" style="display:inline-block; vertical-align:middle;">${h}</span>`);
+                        });
                     }
                 });
                 
-                // 🌟 전체 컨테이너도 flex-wrap: wrap 으로 설정하여 넘치면 자연스럽게 다음 줄로 넘어가게 했습니다.
-                historyHtml = `<div style="display:flex; flex-wrap:wrap; align-items:center; margin-top:4px;">${historyHtmlArr.join('')}</div>`;
+                // 완성된 배열을 ➔ 기호로 한 번에 연결
+                if (allTagsInline.length > 0) {
+                    historyHtml = `<div style="line-height:2.4;">` + 
+                        allTagsInline.join('<span style="color:#aaa; font-size:11px; margin:0 4px; display:inline-block; vertical-align:middle;">➔</span>') + 
+                        `</div>`;
+                }
             }
+            // 🌟👆 가로 일렬 배치 로직 끝 👆🌟
         }
 
         if (status === "미입실" || status === "귀가(누락)") { statusColor = "var(--danger)"; stat.absent++; } 
