@@ -212,7 +212,7 @@ const scannerInput = document.getElementById('scanner-input');
         }
     }
 
-    // 🌟 2단계 전용 팝업 (본인 맞습니까?)
+// 🌟 2단계 전용 팝업 (본인 맞습니까?) - 색상 오류 수정
     function showNameConfirm(id, name) {
         const rName = document.getElementById('r-name');
         const rStatus = document.getElementById('r-status');
@@ -221,20 +221,36 @@ const scannerInput = document.getElementById('scanner-input');
         
         rName.innerText = `🙋 ${name} 학생`;
         rStatus.innerText = "본인 확인";
-        rStatus.style.color = "var(--primary)";
+        rStatus.style.color = "#0d6efd"; // 정의되지 않았던 var(--primary) 대신 명확한 파란색(#0d6efd)으로 지정
         rTime.innerText = "화면의 이름이 본인이 맞습니까?";
         
+        // 버튼 색상도 확실한 파란색과 회색 헥스코드로 지정
         rMsg.innerHTML = `
             <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button onclick="confirmYes('${id}', '${name}')" style="flex: 1; padding: 25px; font-size: 20px; font-weight: bold; background: var(--primary); color: white; border: none; border-radius: 10px; cursor: pointer;">예 (맞습니다)</button>
-                <button onclick="confirmNo()" style="flex: 1; padding: 25px; font-size: 20px; font-weight: bold; background: var(--gray); color: white; border: none; border-radius: 10px; cursor: pointer;">아니오</button>
+                <button onclick="confirmYes('${id}', '${name}')" style="flex: 1; padding: 25px; font-size: 20px; font-weight: bold; background: #0d6efd; color: white; border: none; border-radius: 10px; cursor: pointer;">예 (맞습니다)</button>
+                <button onclick="confirmNo()" style="flex: 1; padding: 25px; font-size: 20px; font-weight: bold; background: #6c757d; color: white; border: none; border-radius: 10px; cursor: pointer;">아니오</button>
             </div>
         `;
         document.getElementById('result-overlay').style.display = 'flex';
         document.querySelector('.receipt').classList.remove('blink-warning');
     }
 
-    function confirmYes(id, name) { executeLogic(id, name); }
+    // 🌟 '예' 버튼 눌렀을 때 멈춘 것처럼 보이는 현상 수정 (로딩 피드백 추가)
+    function confirmYes(id, name) {
+        // 버튼을 즉시 없애고 로딩 메시지를 띄워서 반응성 확보 및 중복 클릭 방지
+        const rMsg = document.getElementById('r-msg');
+        rMsg.innerHTML = `
+            <div style="margin-top: 20px; padding: 20px; font-size: 20px; font-weight: bold; color: #0d6efd; background: #f0f9ff; border-radius: 10px;">
+                ⏳ 출결 데이터를 확인 중입니다...<br><span style="font-size:16px; color:#666;">(잠시만 기다려주세요)</span>
+            </div>
+        `;
+        
+        // 시각적 피드백을 먼저 준 뒤에 서버 통신 시작
+        executeLogic(id, name); 
+    }
+
+
+    
     function confirmNo() {
         document.getElementById('result-overlay').style.display = 'none';
         scannerInput.value = ""; focusScanner();
