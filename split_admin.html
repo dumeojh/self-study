@@ -708,18 +708,7 @@ let dailyReservationsData = []; // 당일 자율석 발권 데이터 저장용
 
     const db = firebase.firestore();
 
-// 👇 2. 관리자 로그인 상태 실시간 감시 코드 추가 👇
-    firebase.auth().onAuthStateChanged((user) => {
-        if (user) {
-            // 로그인 성공 상태: 콘솔에만 기록하고 화면은 정상적으로 보여줍니다.
-            console.log("관리자 접속 확인됨:", user.email);
-        } else {
-            // 로그인이 안 된 상태: 경고창을 띄우고 로그인 화면(settings.html)으로 튕겨냅니다.
-            alert("🚨 보안 구역입니다. 관리자 로그인이 필요합니다.");
-            window.location.replace("settings.html"); // 뒤로가기를 방지하기 위해 replace 사용
-        }
-    });
-    // 👆 여기까지 추가 👆
+
 
     let applicationData = {}; let attendanceLogsData = {}; let seatMapData = []; let rows = 20, cols = 30;
 
