@@ -48,8 +48,10 @@
 
 <div id="auth-overlay">
     <div class="auth-box">
+<div class="auth-box">
         <h2>🔒 관리자 인증</h2>
-         <input type="password" id="pass-input" placeholder="Password" autofocus onkeypress="if(event.key === 'Enter') checkPass()">
+        <input type="email" id="email-input" placeholder="관리자 이메일">
+        <input type="password" id="pass-input" placeholder="비밀번호" onkeypress="if(event.key === 'Enter') checkPass()">
         <div style="display: flex; gap: 10px;">
             <button class="btn" style="background:var(--primary); flex:2;" onclick="checkPass()">확인</button>
             <button class="btn" style="background:var(--gray); flex:1;" onclick="location.href='split_admin.html'">취소</button>
@@ -226,13 +228,28 @@
     let currentTool = 0, seatMapData = [], rows = 20, cols = 30, currentSchedule = {}, historyStack = [];
     let defaultOperatingDays = [1, 2, 3, 4, 5]; 
 
-    // [핵심 해결] checkPass 함수 정상 복구
-    function checkPass() {
-        if(document.getElementById('pass-input').value === "1234") {
+async function checkPass() {
+        const email = document.getElementById('email-input').value.trim();
+        const pass = document.getElementById('pass-input').value.trim();
+        
+        // 이메일이나 비밀번호 칸이 비어있으면 안내합니다.
+        if (!email || !pass) {
+            alert("이메일과 비밀번호를 모두 입력해주세요.");
+            return;
+        }
+        
+        try {
+            // 파이어베이스 서버에 진짜 로그인 요청을 보냅니다.
+            await firebase.auth().signInWithEmailAndPassword(email, pass);
+            
+            // 서버가 "관리자 맞습니다"라고 허락하면 화면을 엽니다.
             document.getElementById('auth-overlay').style.display = 'none';
             document.getElementById('main-content').style.display = 'block';
             loadAllSettings();
-        } else { alert("비밀번호 오류입니다. (초기 비밀번호: 1234)"); }
+        } catch (error) {
+            alert("로그인 실패! 이메일이나 비밀번호를 다시 확인해주세요.");
+            console.error(error);
+        }
     }
 
     function showTab(tabId, btn) {
