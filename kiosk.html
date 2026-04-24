@@ -184,13 +184,50 @@ const scannerInput = document.getElementById('scanner-input');
         if (e.key === 'Enter') { e.preventDefault(); processCheckInOut(); }
     });
 
+
+
+
+    // 🌟 [추가] 한글 타자를 영문 QWERTY 배열로 자동 변환해주는 함수
+function convertKorToEng(text) {
+    const cho = ["r","R","s","e","E","f","a","q","Q","t","T","d","w","W","c","z","x","v","g"];
+    const jung = ["k","o","i","O","j","p","u","P","h","hk","ho","hl","y","n","nj","np","nl","b","m","ml","l"];
+    const jong = ["","r","R","rt","s","sw","sg","e","f","fr","fa","fq","ft","fx","fv","fg","a","q","qt","t","T","d","w","c","z","x","v","g"];
+    const jamoMap = {
+        'ㄱ':'r','ㄲ':'R','ㄳ':'rt','ㄴ':'s','ㄵ':'sw','ㄶ':'sg','ㄷ':'e','ㄸ':'E','ㄹ':'f','ㄺ':'fr','ㄻ':'fa','ㄼ':'fq','ㄽ':'ft','ㄾ':'fx','ㄿ':'fv','ㅀ':'fg','ㅁ':'a','ㅂ':'q','ㅃ':'Q','ㅄ':'qt','ㅅ':'t','ㅆ':'T','ㅇ':'d','ㅈ':'w','ㅉ':'W','ㅊ':'c','ㅋ':'z','ㅌ':'x','ㅍ':'v','ㅎ':'g',
+        'ㅏ':'k','ㅐ':'o','ㅑ':'i','ㅒ':'O','ㅓ':'j','ㅔ':'p','ㅕ':'u','ㅖ':'P','ㅗ':'h','ㅘ':'hk','ㅙ':'ho','ㅚ':'hl','ㅛ':'y','ㅜ':'n','ㅝ':'nj','ㅞ':'np','ㅟ':'nl','ㅠ':'b','ㅡ':'m','ㅢ':'ml','ㅣ':'l'
+    };
+
+    let result = "";
+    for (let i = 0; i < text.length; i++) {
+        let code = text.charCodeAt(i);
+        if (code >= 44032 && code <= 55203) { // 완전한 글자 (예: '가')
+            code -= 44032;
+            let c = Math.floor(code / (21 * 28));
+            let j = Math.floor((code % (21 * 28)) / 28);
+            let jo = (code % (21 * 28)) % 28;
+            result += cho[c] + jung[j] + jong[jo];
+        } else if (code >= 12593 && code <= 12643) { // 자음/모음 낱개 (예: 'ㅛ', 'ㅊ')
+            result += jamoMap[text[i]] || text[i];
+        } else { // 숫자나 이미 영문인 경우
+            result += text[i];
+        }
+    }
+    return result;
+}
+
+////////////////////////////////////////////////////////////////////
+    
     let selectionTimer = null; 
 
 // 🌟 1차 검증 함수 (학번, 이름 맞는지 검사)
     async function processCheckInOut() {
-        let id = scannerInput.value.trim().toUpperCase(); // 🌟 const를 let으로 변경하고 영문 대문자로 통일
+        let rawId = scannerInput.value.trim();
+        if (!rawId) return;
+
+        // 🌟 [핵심 변경] 한글로 잘못 스캔된 값을 영문으로 바꾸고 대문자로 통일!
+        let id = convertKorToEng(rawId).toUpperCase(); 
+        
         const nameVal = nameInput.value.trim();
-        if (!id) return;
         
         // 🌟 [핵심 로직] 스캔한 값이 바코드 리스트에 있다면, 연결된 진짜 학번으로 변환!
         // 예: id가 "3301C"인데 serverBarcodes에 있으면, id를 "3301"로 바꿔버림.
