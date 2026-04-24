@@ -58,7 +58,7 @@
 <div class="input-area">
         <div class="guide-text" id="guide-msg">학생증을 스캔하거나 학번을 입력하세요.</div>
         <div style="display: flex; gap: 10px; justify-content: center;">
-            <input type="number" id="scanner-input" placeholder="학번" autocomplete="off">
+            <input type="text" id="scanner-input" placeholder="학생증 스캔 또는 학번" autocomplete="off" style="text-transform: uppercase;">
             <input type="text" id="name-input" placeholder="이름" autocomplete="off" style="display:none; width: 100%; max-width: 150px; padding: 15px; font-size: 24px; font-weight: bold; text-align: center; border: 3px solid #ccc; border-radius: 10px;">
         </div>
     </div>
@@ -85,7 +85,10 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
+
+////////////////////////////////////
     let serverRoster = {}; 
+    let serverBarcodes = {}; // 🌟 바코드 매핑용 변수 추가
     let currentStatus = "입실"; 
     const todayObj = new Date();
     const todayStr = todayObj.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }); 
@@ -100,7 +103,11 @@
 
     async function fetchRoster() {
         const doc = await db.collection("settings").doc("roster").get();
-        if (doc.exists) serverRoster = JSON.parse(doc.data().list || "{}");
+        if (doc.exists) {
+            const data = doc.data();
+            serverRoster = JSON.parse(data.list || "{}");
+            serverBarcodes = JSON.parse(data.barcodeList || "{}"); // 🌟 바코드 목록도 서버에서 가져옴
+        }
     }
     fetchRoster();
 
@@ -179,11 +186,17 @@ const scannerInput = document.getElementById('scanner-input');
 
     let selectionTimer = null; 
 
-    // 🌟 1차 검증 함수 (학번, 이름 맞는지 검사)
+// 🌟 1차 검증 함수 (학번, 이름 맞는지 검사)
     async function processCheckInOut() {
-        const id = scannerInput.value.trim();
+        let id = scannerInput.value.trim().toUpperCase(); // 🌟 const를 let으로 변경하고 영문 대문자로 통일
         const nameVal = nameInput.value.trim();
         if (!id) return;
+        
+        // 🌟 [핵심 로직] 스캔한 값이 바코드 리스트에 있다면, 연결된 진짜 학번으로 변환!
+        // 예: id가 "3301C"인데 serverBarcodes에 있으면, id를 "3301"로 바꿔버림.
+        if (serverBarcodes[id]) {
+            id = serverBarcodes[id];
+        }
         
         const studentName = serverRoster[id];
         if (!studentName) {
@@ -194,6 +207,9 @@ const scannerInput = document.getElementById('scanner-input');
 
         // [3단계] 학번 + 이름 모두 일치해야 통과
         if (authMode === "3") {
+// ... (이 아래 코드는 기존과 동일하게 유지) ...
+
+            
             if (!nameVal) { nameInput.focus(); return; }
             if (studentName !== nameVal) {
                 showReceipt("오류", "이름 불일치", `학번 [${id}]의 이름이 틀립니다.`, "다시 입력해주세요.", "#dc3545");
