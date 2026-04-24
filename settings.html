@@ -96,7 +96,12 @@
         <button class="btn btn-save" onclick="saveCalendarSchedule()">💾 달력 및 요일 설정 저장</button>
     </div>
 
-    <div id="tab-period" class="card">
+
+
+
+
+    
+<div id="tab-period" class="card">
         <h3>⏰ 학생 신청 가능 기간 설정</h3>
         <div style="display:grid; gap:15px; padding:20px; background:#f8f9fa; border-radius:10px;">
             <div>시작: <input type="datetime-local" id="apply-start"></div>
@@ -105,7 +110,7 @@
         <button class="btn btn-save" onclick="saveApplyPeriod()">💾 신청 기간 저장</button>
     </div>
 
-<div id="tab-roster" class="card">
+    <div id="tab-roster" class="card">
         <h3>⚙️ 기초 명단 업로드 (엑셀)</h3>
         
         <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
@@ -120,6 +125,9 @@
     </div>
 
     <div id="tab-seats" class="card">
+
+
+        
         <h3>🪑 자율학습실 좌석 도면 설계</h3>
         <div style="background: #f1f3f5; padding: 15px; border-radius: 10px; margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
             <div>가로 <input type="number" id="grid-cols" value="30" style="width:45px;"> X 세로 <input type="number" id="grid-rows" value="20" style="width:45px;"> <button class="btn" style="background:var(--gray); padding: 5px 8px; font-size:11px;" onclick="resizeGrid()">리셋</button></div>
