@@ -108,18 +108,16 @@
 <div id="tab-roster" class="card">
         <h3>⚙️ 기초 명단 업로드 (엑셀)</h3>
         
-<div style="background: #eef6ff; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #b6d4fe;">
-            <strong style="color: #052c65;">📌 학교 학번 체계 선택</strong>
-            <p style="font-size: 12px; color: #666; margin: 5px 0 10px 0;">현재 시스템 안정성을 위해 4자리 학번으로 고정 운영 중입니다.</p>
-            
-            <label style="margin-right: 15px; cursor: pointer;">
-                <input type="radio" name="id-length" id="len-4" value="4" checked> 4자리 (예: 2101)
-            </label>
-            
-            <label style="cursor: not-allowed; color: #888; opacity: 0.5; display: inline-flex; align-items: center;">
-                <input type="radio" name="id-length" id="len-5" value="5" disabled style="cursor: not-allowed; margin-right: 5px;"> 5자리 (🔒 기능 잠금)
-            </label>
-        </div>
+        <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
+            ※ 엑셀 양식: A열(학번), B열(이름), C열(학생증번호/바코드), D열(전화번호) 순서로 작성하여 업로드하세요.
+        </p>
+
+        <input type="file" id="excel-input" accept=".xlsx, .xls">
+        <button class="btn" style="background:var(--success); margin-top:10px;" onclick="handleExcelUpload()">🚀 명단 서버 전송</button>
+        <hr>
+        <h4>등록 명단 (<span id="roster-count">0</span>명)</h4>
+        <div id="roster-list" style="max-height:200px; overflow-y:auto; font-size:12px; border:1px solid #ddd; padding:10px;"></div>
+    </div>
 
         <input type="file" id="excel-input" accept=".xlsx, .xls">
         <button class="btn" style="background:var(--success); margin-top:10px;" onclick="handleExcelUpload()">🚀 명단 서버 전송</button>
@@ -387,11 +385,7 @@ async function checkPass() {
                     document.getElementById('roster-count').innerText = Object.keys(list).length; 
                     document.getElementById('roster-list').innerText = Object.entries(list).map(([id, n]) => `${id}(${n})`).join(', '); 
                 }
-                if(data.idLength === "5") {
-                    document.getElementById('len-5').checked = true;
-                } else {
-                    document.getElementById('len-4').checked = true;
-                }
+          
             }
 
             // 4. 좌석 도면
@@ -449,47 +443,43 @@ async function checkPass() {
         }
     }
 
+
+    /////////////////////////////////////
+    
 // 엑셀 업로드 (수정된 양식: 학번, 이름, 학생증번호, 전화번호)
     async function handleExcelUpload() {
         const file = document.getElementById('excel-input').files[0]; 
         if(!file) return;
-        
-        const idLength = document.querySelector('input[name="id-length"]:checked').value; 
 
         const reader = new FileReader(); 
         reader.onload = async (e) => {
-            // 엑셀 데이터를 배열 형태로 읽어옵니다.
             const data = XLSX.utils.sheet_to_json(XLSX.read(new Uint8Array(e.target.result), {type:'array'}).Sheets[XLSX.read(new Uint8Array(e.target.result), {type:'array'}).SheetNames[0]], {header:1});
             
-            let roster = {};      // 학번 -> 이름 매핑
-            let phones = {};      // 학번 -> 전화번호 매핑
-            let barcodes = {};    // 학생증번호 -> 학번 매핑 (키오스크 바코드 스캔용)
+            let roster = {}; 
+            let phones = {}; 
+            let barcodes = {}; 
             
             data.forEach((r, index) => {
-                // 첫 번째 줄이 제목(헤더)일 경우 건너뛰기
-                if (index === 0 && isNaN(parseInt(r[0]))) return; 
+                if (index === 0 && isNaN(parseInt(r[0]))) return; // 첫 줄이 제목이면 무시
 
-                // 데이터가 비어있거나 학번/이름이 없는 행은 무시
-                if (!r[0] || !r[1]) return;
+                if (!r[0] || !r[1]) return; // 학번이나 이름이 빈칸이면 무시
 
-                // 새 엑셀 양식에 맞춘 인덱스 매핑
-                let stuId = String(r[0]).trim();            // A열: 학번
-                let name = String(r[1]).trim();             // B열: 이름
-                let barcode = r[2] ? String(r[2]).trim() : ""; // C열: 학생증 번호
-                let phoneNum = r[3] ? String(r[3]).trim() : ""; // D열: 전화번호
+                let stuId = String(r[0]).trim();            
+                let name = String(r[1]).trim();             
+                // 🌟 바코드는 무조건 대문자로 저장되도록 toUpperCase() 추가
+                let barcode = r[2] ? String(r[2]).trim().toUpperCase() : ""; 
+                let phoneNum = r[3] ? String(r[3]).trim() : ""; 
 
-                // 데이터 저장
                 roster[stuId] = name; 
                 if (phoneNum) phones[stuId] = phoneNum; 
-                if (barcode) barcodes[barcode] = stuId; // 학생증 번호를 스캔하면 학번을 찾을 수 있게 연결
+                if (barcode) barcodes[barcode] = stuId; 
             });
             
-            // 파이어베이스에 저장
             await db.collection("settings").doc("roster").set({
                 list: JSON.stringify(roster),
                 phoneList: JSON.stringify(phones), 
-                barcodeList: JSON.stringify(barcodes), // 🌟 추가됨: 학생증 번호 목록
-                idLength: idLength
+                barcodeList: JSON.stringify(barcodes)
+                // idLength 저장 로직 삭제됨
             }); 
             
             alert(`명단 업데이트 완료 (총 ${Object.keys(roster).length}명)`); 
