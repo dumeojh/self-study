@@ -1378,49 +1378,44 @@ function renderDailyList() {
 
     
 
-    let targetStudents = [];
+// 🌟 1. 배열 대신 Map을 사용하여 중복 방지 (학번을 키값으로 사용)
+    let targetStudentsMap = new Map();
 
-
-
+    // 🌟 2. 고정석 학생 먼저 Map에 담기
     Object.values(applicationData).forEach(app => {
-
         if (app.type === "고정석" && app[targetDay]) {
-
-            targetStudents.push({
-
+            targetStudentsMap.set(String(app.stuId), {
                 stuId: app.stuId, stuName: app.stuName, seatNum: app.seatNum, 
-
                 appliedTimes: app[targetDay] + "타임", type: "고정석", 
-
                 phone: rosterPhones[String(app.stuId)],
-
                 rawTimes: app[targetDay] 
-
             });
-
         }
-
     });
 
-
-
+    // 🌟 3. 자율석 학생 담기 (단, 고정석에 이미 등록된 학번이면 무시하여 중복 방지!)
     dailyReservationsData.forEach(res => {
-
-        targetStudents.push({
-
-            stuId: res.stuId, stuName: res.stuName, seatNum: res.seatNum, 
-
-            appliedTimes: (res.times || "-") + "타임", type: "자율석", 
-
-            phone: rosterPhones[String(res.stuId)],
-
-            rawTimes: res.times || "" 
-
-        });
-
+        const stuIdStr = String(res.stuId);
+        
+        // targetStudentsMap에 해당 학번이 없을 때만 자율석으로 추가
+        if (!targetStudentsMap.has(stuIdStr)) {
+            targetStudentsMap.set(stuIdStr, {
+                stuId: res.stuId, stuName: res.stuName, seatNum: res.seatNum, 
+                appliedTimes: (res.times || "-") + "타임", type: "자율석", 
+                phone: rosterPhones[String(res.stuId)],
+                rawTimes: res.times || "" 
+            });
+        }
     });
 
+    // 🌟 4. Map에 담긴 데이터를 다시 배열로 변환해서 아래의 기존 정렬 로직과 연결
+    let targetStudents = Array.from(targetStudentsMap.values());
 
+
+
+
+
+    
 
     if (sortBy === "id") targetStudents.sort((a, b) => String(a.stuId).localeCompare(String(b.stuId)));
 
