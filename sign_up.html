@@ -137,7 +137,7 @@ let takenSeats = [];
 const daysEng = ['mon','tue','wed','thu','fri','sat','sun'];
 
 // =========================================================
-// 3. 신청 기간 확인 함수
+// 3. 신청 기간 확인 함수 (🌟신청 월 강제 고정 기능 추가🌟)
 // =========================================================
 async function checkApplyPeriod() {
     const searchBtn = document.getElementById('search-btn');
@@ -147,6 +147,25 @@ async function checkApplyPeriod() {
         const doc = await db.collection("settings").doc("applyPeriod").get();
         if (doc.exists) {
             const data = doc.data();
+            
+            // 🌟 1. [추가] 관리자가 설정한 '신청 대상 월' 강제 적용 및 잠금
+            if (data.targetMonth) {
+                const monthSelect = document.getElementById('target-month');
+                
+                // 설정된 월로 값 변경
+                monthSelect.value = data.targetMonth;
+                
+                // 학생이 마음대로 바꾸지 못하도록 선택 박스 잠금(비활성화)
+                monthSelect.disabled = true; 
+                
+                // 시각적으로 잠겨있음을 알 수 있도록 회색 바탕 처리
+                monthSelect.style.backgroundColor = "#e9ecef";
+                monthSelect.style.color = "#6c757d";
+                monthSelect.style.cursor = "not-allowed";
+                monthSelect.style.border = "1px solid #ced4da";
+            }
+
+            // 2. 기존 신청 기간(날짜/시간) 체크 로직
             const now = new Date();
             const startTime = new Date(data.start);
             const endTime = new Date(data.end);
