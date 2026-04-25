@@ -104,12 +104,30 @@
 <div id="tab-period" class="card">
         <h3>⏰ 학생 신청 가능 기간 설정</h3>
         <div style="display:grid; gap:15px; padding:20px; background:#f8f9fa; border-radius:10px;">
+            <div style="padding-bottom: 10px; border-bottom: 1px dashed #ccc;">
+                <b style="color:var(--primary); font-size: 16px;">📌 신청 대상 월:</b>
+                <select id="apply-target-month" style="padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold; margin-left: 10px; font-size: 16px;">
+                    <option value="3월">3월</option>
+                    <option value="4월">4월</option>
+                    <option value="5월" selected>5월</option>
+                    <option value="6월">6월</option>
+                    <option value="7월">7월</option>
+                    <option value="8월">8월</option>
+                    <option value="9월">9월</option>
+                    <option value="10월">10월</option>
+                    <option value="11월">11월</option>
+                    <option value="12월">12월</option>
+                </select>
+                <span style="font-size: 12px; color: #666; margin-left: 10px;">(학생들은 이 월로만 신청할 수 있습니다)</span>
+            </div>
             <div>시작: <input type="datetime-local" id="apply-start"></div>
             <div>종료: <input type="datetime-local" id="apply-end"></div>
         </div>
         <button class="btn btn-save" onclick="saveApplyPeriod()">💾 신청 기간 저장</button>
     </div>
 
+
+    
     <div id="tab-roster" class="card">
         <h3>⚙️ 기초 명단 업로드 (엑셀)</h3>
         
@@ -332,8 +350,15 @@ async function checkPass() {
         }); 
         alert("달력 및 요일 설정 저장완료"); 
     }
+ async function saveApplyPeriod() { 
+        await db.collection("settings").doc("applyPeriod").set({
+            targetMonth: document.getElementById('apply-target-month').value, // 🌟 이 줄이 추가되었습니다!
+            start: document.getElementById('apply-start').value, 
+            end: document.getElementById('apply-end').value
+        }); 
+        alert("신청 대상 월 및 기간 저장완료"); 
+    }
     
-    async function saveApplyPeriod() { await db.collection("settings").doc("applyPeriod").set({start: document.getElementById('apply-start').value, end: document.getElementById('apply-end').value}); alert("기간 저장완료"); }
     async function saveSeatLayout() { await db.collection("settings").doc("seatLayout").set({rows, cols, grid: JSON.stringify(seatMapData)}); alert("도면 배포완료"); }
 
     async function saveTimeSettings() { 
@@ -370,11 +395,16 @@ async function checkPass() {
             }
             renderCalendar();
 
-            // 2. 신청 기간
+// 2. 신청 기간
             const p = await db.collection("settings").doc("applyPeriod").get(); 
             if(p.exists) { 
                 document.getElementById('apply-start').value = p.data().start || ""; 
                 document.getElementById('apply-end').value = p.data().end || ""; 
+                
+                // 🌟 저장된 '신청 대상 월'이 있으면 불러와서 세팅합니다.
+                if(p.data().targetMonth) {
+                    document.getElementById('apply-target-month').value = p.data().targetMonth;
+                }
             }
 
             // 3. 기초 명단
